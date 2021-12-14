@@ -12,8 +12,12 @@
 import datetime
 import flask
 import github
+import json
 import os
 import pprint
+import sys
+from collections import namedtuple
+from requests.structures import CaseInsensitiveDict
 
 LOG = os.path.join(os.getenv('HOME'), 'eessi-bot-software-layer.log')
 
@@ -41,6 +45,18 @@ def log_event(request):
     log(msg_txt)
 
 
+def read_event_from_json(jsonfile):
+    """
+    Read in event data from a json file.
+    """
+    req = namedtuple('Request', ['headers', 'json'])
+    with open(jsonfile, 'r') as jf:
+        event_data = json.load(jf)
+        req.headers = CaseInsensitiveDict(event_data['headers'])
+        req.json = event_data['json']
+    return req
+
+
 def create_app(gh):
     """
     Create Flask app.
@@ -66,5 +82,9 @@ def main():
 
 
 if __name__ == '__main__':
-    app = main()
-    app.run()
+    if len(sys.argv) > 1:
+        event = read_event_from_json(sys.argv[1])
+        log_event(event)
+    else:
+        app = main()
+        app.run()
