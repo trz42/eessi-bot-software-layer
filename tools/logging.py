@@ -1,8 +1,16 @@
 import datetime
 import json
 import os
+import sys
 
 LOG = os.path.join(os.getenv('HOME'), 'eessi-bot-software-layer.log')
+
+def error(msg, rc=1):
+    """
+    Print an error and exit
+    """
+    sys.stderr.write(msg + "\n")
+    sys.exit(rc)
 
 def log(msg):
     """
