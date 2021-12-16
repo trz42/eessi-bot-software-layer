@@ -25,5 +25,5 @@ def build_easystack_from_pr(pr, request):
 
     # Run the build job submission script
     # Submit functionality should probably moved here at some point, now all part of the Bash script
-    submit_cmd = subprocess.run(['automatic-build.sh', jobdir] cwd=SCRIPTS_DIR, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    submit_cmd = subprocess.run(['automatic-build.sh', jobdir], cwd=SCRIPTS_DIR, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     log("Submit command executed!\nStdout: %s\nStderr: %s" % (submit_cmd.stdout, submit_cmd.stderr))
