@@ -20,6 +20,8 @@ from collections import namedtuple
 from requests.structures import CaseInsensitiveDict
 
 import handlers
+from connections import gh
+from tools import args, config
 from tools.logging import log, log_event
 
 
@@ -35,7 +37,7 @@ def read_event_from_json(jsonfile):
     return req
 
 
-def handle_event(gh, request):
+def handle_event(request):
     """
     Handle event
     """
@@ -43,7 +45,7 @@ def handle_event(gh, request):
 
     event_handler = handlers.event_handlers.get(event_type)
     if event_handler:
-        event_handler(gh, request)
+        event_handler(request)
     else:
         log("Unsupported event type: %s" % event_type)
         response_data = {'Unsupported event type': event_type}
@@ -51,7 +53,7 @@ def handle_event(gh, request):
         return flask.Response(response_object, status=400, mimetype='application/json')
 
 
-def create_app(gh):
+def create_app():
     """
     Create Flask app.
     """
@@ -62,7 +64,7 @@ def create_app(gh):
     def main():
         # verify_request(flask.request)
         log_event(flask.request)
-        # handle_event(gh, flask.request)
+        # handle_event(flask.request)
         return ''
 
     return app
@@ -71,13 +73,17 @@ def create_app(gh):
 def main():
     """Main function."""
 
-    gh = github.Github(os.getenv('GITHUB_TOKEN'))
-    if len(sys.argv) > 1:
-        event = read_event_from_json(sys.argv[1])
+    opts = args.parse()
+
+    if opts.file:
+        event = read_event_from_json(opts.file)
         log_event(event)
-        handle_event(gh, event)
+        handle_event(event)
+    elif opts.cron:
+        log("Running in cron mode")
     else:
-        app = create_app(gh)
+        # Run as web app
+        app = create_app()
         app.run()
 
 
