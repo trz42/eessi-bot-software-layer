@@ -1,22 +1,27 @@
 import flask
+import os
 
+from connections import gh
+from tasks.build import build_easystack_from_pr
 from tools.logging import log
 
-def handle_pr_label_event(gh, request, pr):
+
+def handle_pr_label_event(request, pr):
     """
     Handle adding of a label to a pull request.
     """
     log("PR labeled")
 
 
-def handle_pr_opened_event(gh, request, pr):
+def handle_pr_opened_event(request, pr):
     """
     Handle opening of a pull request.
     """
     log("PR opened")
+    build_easystack_from_pr(pr, request)
 
 
-def handle_pr_event(gh, request):
+def handle_pr_event(request):
     """
     Handle 'pull_request' event
     """
@@ -34,7 +39,7 @@ def handle_pr_event(gh, request):
     handler = handlers.get(action)
     if handler:
         log("Handling PR action '%s' for PR #%d..." % (action, pr.number))
-        handler(gh, request, pr)
+        handler(request, pr)
     else:
         log("No handler for PR action '%s'" % action)
 
