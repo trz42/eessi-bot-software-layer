@@ -1,3 +1,4 @@
 flask
 PyGithub
 Waitress
+cryptography
