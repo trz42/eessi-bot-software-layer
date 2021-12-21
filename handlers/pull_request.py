@@ -1,10 +1,9 @@
 import flask
 import os
 
-from connections import gh
+from connections import github
 from tasks.build import build_easystack_from_pr
 from tools.logging import log
-
 
 def handle_pr_label_event(request, pr):
     """
@@ -27,6 +26,7 @@ def handle_pr_event(request):
     """
     action = request.json['action']
     log("PR action: %s" % action)
+    gh = github.get_instance()
     pr = gh.get_repo(request.json['repository']['full_name']).get_pull(request.json['pull_request']['number'])
     log("PR data: %s" % pr)
 

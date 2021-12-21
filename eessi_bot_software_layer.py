@@ -20,7 +20,7 @@ from collections import namedtuple
 from requests.structures import CaseInsensitiveDict
 
 import handlers
-from connections import gh
+from connections import github
 from tools import args, config
 from tools.logging import log, log_event
 
@@ -72,8 +72,9 @@ def create_app():
 
 def main():
     """Main function."""
-
     opts = args.parse()
+    config.read_file("app.cfg")
+    github.connect()
 
     if opts.file:
         event = read_event_from_json(opts.file)

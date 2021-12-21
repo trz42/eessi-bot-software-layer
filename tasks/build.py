@@ -2,7 +2,7 @@ import os
 import subprocess
 #import shutil
 
-from connections import gh
+from connections import github
 from tools.logging import log
 
 JOBS_DIR = os.path.join(os.getenv('HOME'), 'jobs')
@@ -18,6 +18,7 @@ def build_easystack_from_pr(pr, request):
     # TODO: checkout the branch that belongs to the PR
     # PyGitHub doesn't seem capable of doing that (easily);
     # for now, keep it simple and just download the easystack file
+    gh = github.get_instance()
     repo = gh.get_repo(pr.head.repo.full_name)
     easystack = repo.get_contents(EASYSTACK_PATH, ref=pr.head.ref)
     with open(os.path.join(jobdir, os.path.basename(EASYSTACK_PATH)), 'w') as easystack_file:
