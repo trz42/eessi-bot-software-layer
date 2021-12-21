@@ -2,25 +2,24 @@ import configparser
 
 from .logging import error
 
-CONFIG = {}
+_config = {}
 
 def read_file(path):
     """
     Read a given configuration file.
     """
-    global CONFIG
-    CONFIG = configparser.ConfigParser()
+    global _config
+    _config = configparser.ConfigParser()
     try:
-        CONFIG.read(path)
+        _config.read(path)
+        print("read")
     except Exception as e:
         print(e)
         error(f'Unable to read configuration file {path}!')
 
 
 def get_section(name):
-    if name in CONFIG:
-        return CONFIG[name]
+    if name in _config:
+        return _config[name]
     else:
         return {}
-
-#CONFIG = parse_config('../test.cfg')
