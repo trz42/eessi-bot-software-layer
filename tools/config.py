@@ -12,7 +12,6 @@ def read_file(path):
     _config = configparser.ConfigParser()
     try:
         _config.read(path)
-        print("read")
     except Exception as e:
         print(e)
         error(f'Unable to read configuration file {path}!')
