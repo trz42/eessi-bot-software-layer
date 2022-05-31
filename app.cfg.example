@@ -1,0 +1,41 @@
+[github]
+# replace with ID of your GitHub App
+app_id = 199740
+# replace with ID of the installation of your GitHub App (can be derived by
+#   creating an event and then checking for the list of sent events and
+#   its extensive log of attributes; if not by any other easier means)
+installation_id = 25669742
+private_key = PATH_TO_PRIVATE_KEY_FOR_YOUR_GITHUB_APP
+
+[buildenv]
+# directory under which the bot prepares directories per job
+#   structure created is as follows: EVENT_ID/RUN_HASH/EESSI_VERSION/OS+SUBDIR
+jobs_base_dir = /mnt/shared/home/trz42/jobs
+# directory where the bot expects scripts from GH repos
+#   most from EESSI/software-layer
+#   some from EESSI/eessi-bot-software-layer
+scripts_dir = /mnt/shared/home/trz42/jobs/scripts
+# PATH to temporary directory on build node ... ends up being used for
+#   EESSI_TMPDIR --> /tmp/$USER/EESSI
+local_tmp = /tmp
+# directory for containers (not being used right now)
+containers = /mnt/shared/home/trz42/containers
+# name of the job script used for building an EESSI stack
+build_job_script = build_with_EESSI_install.slurm
+# full path to the job submission command
+submit_command = /usr/bin/sbatch
+
+[softwaretargets]
+# name of the file defining an EasyStack
+software_file = softwarelist.yaml
+# list of EESSI versions this bot instance would build for
+#   bot assumes structure of EESSI stack repo is
+#     /VERSION_1/{software_file}
+#     /VERSION_2/{software_file}
+#     ...
+whitelist_versions = [ "2021.06", "2021.12", "2022.06" ]
+
+[architecturetargets]
+# defines both for which architectures the bot will build
+#   and what submission parameters shall be used
+arch_target_map = { "linux/x86_64/intel/haswell": "--constraint shape=c4.2xlarge", "linux/x86_64/amd/zen2": "--constraint shape=c5a.2xlarge" }
