@@ -54,21 +54,6 @@ env | egrep 'SOFTWARE_FILE|SCRIPTS_DIR|LOCAL_TMP|BUILD_TARGET_ARCHITECTURE|BUILD
 #   configure_easybuild --> stored under $SCRIPTS_DIR
 #   eessi_software_subdir.py --> stored under $SCRIPTS_DIR
 
-
-# setup environment variables for build container
-#   mostly what standard build environment contains with the additional bind mount
-#   for the job directory assumed to be the current directory $(pwd) which is mapped to
-#   /eessi_bot_job inside the container
-export EESSI_TMPDIR=${LOCAL_TMP}/${USER}/EESSI
-export SINGULARITY_CACHEDIR=${EESSI_TMPDIR}/singularity_cache
-export SINGULARITY_BIND="${EESSI_TMPDIR}/var-run-cvmfs:/var/run/cvmfs,${EESSI_TMPDIR}/var-lib-cvmfs:/var/lib/cvmfs,$(pwd):/eessi_bot_job"
-export SINGULARITY_HOME="${EESSI_TMPDIR}/home:/home/${USER}"
-export EESSI_PILOT_READONLY="container:cvmfs2 pilot.eessi-hpc.org /cvmfs_ro/pilot.eessi-hpc.org"
-export EESSI_PILOT_WRITABLE_OVERLAY="container:fuse-overlayfs -o lowerdir=/cvmfs_ro/pilot.eessi-hpc.org -o upperdir=${EESSI_TMPDIR}/overlay-upper -o workdir=${EESSI_TMPDIR}/overlay-work /cvmfs/pilot.eessi-hpc.org"
-
-# create directories needed by the container
-mkdir -p ${EESSI_TMPDIR}/{home,overlay-upper,overlay-work,var-lib-cvmfs,var-run-cvmfs}
-
 # save some environment settings we may need after entering the Gentoo Prefix
 #   softwarelist.yaml could be stored directly by EESSI bot into some job definition file
 echo "export SOFTWARE_FILE=${SOFTWARE_FILE}" > _env
@@ -84,12 +69,8 @@ echo "export BUILD_TARGET_ARCHITECTURE=${BUILD_TARGET_ARCHITECTURE}" >> _env
 echo "export BUILD_EESSI_VERSION=${BUILD_EESSI_VERSION}" >> _env
 
 # the container script launches the container
-#${SCRIPTS_DIR}/launch_build_container.sh ${SCRIPTS_DIR}/run_in_compat_layer_env.sh ${SCRIPTS_DIR}/mod_EESSI_install.sh
 export EESSI_PILOT_VERSION=${BUILD_EESSI_VERSION}
-singularity exec \
-    --bind "${SCRIPTS_DIR}:${SCRIPTS_DIR}" \
-    --fusemount "${EESSI_PILOT_READONLY}" \
-    --fusemount "${EESSI_PILOT_WRITABLE_OVERLAY}" \
-    docker://ghcr.io/eessi/build-node:debian10 \
-    ${SCRIPTS_DIR}/run_in_compat_layer_env.sh ${SCRIPTS_DIR}/mod_EESSI_install.sh
+export SINGULARITY_BIND="${SCRIPTS_DIR}:${SCRIPTS_DIR},$(pwd):/eessi_bot_job"
+
+${SCRIPTS_DIR}/build_container.sh run ${LOCAL_TMP}/${USER}/EESSI ${SCRIPTS_DIR}/run_in_compat_layer_env.sh ${SCRIPTS_DIR}/mod_EESSI_install.sh
 
