@@ -39,8 +39,9 @@ class EESSIBotSoftwareLayer(PyGHee):
         """
         request_body = event_info['raw_request_body']
         user = request_body['sender']['login']
-        repo_name = request_body['repositories'][0]['full_name']
-        log("App installed by user %s into repository %s" % (user,repo_name))
+        action = request_body['action']
+        # repo_name = request_body['repositories'][0]['full_name'] # not every action has that attribute
+        log("App installation event by user %s with action '%s'" % (user,action))
         log("installation event handled!", log_file=log_file)
 
 
