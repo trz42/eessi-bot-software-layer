@@ -6,6 +6,8 @@
 # see https://github.com/EESSI/software-layer
 #
 # author: Kenneth Hoste (@boegel)
+# author: Bob Droege (@bedroge)
+# author: Thomas Roeblitz (@trz42)
 #
 # license: GPLv2
 #
