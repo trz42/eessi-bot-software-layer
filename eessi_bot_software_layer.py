@@ -47,14 +47,14 @@ class EESSIBotSoftwareLayer(PyGHee):
         log("installation event handled!", log_file=log_file)
 
 
-    def handle_pr_label_event(self, event_info, pr):
+    def handle_pull_request_label_event(self, event_info, pr):
         """
         Handle adding of a label to a pull request.
         """
         log("PR labeled")
 
 
-    def handle_pr_opened_event(self, event_info, pr):
+    def handle_pull_request_opened_event(self, event_info, pr):
         """
         Handle opening of a pull request.
         """
@@ -67,22 +67,14 @@ class EESSIBotSoftwareLayer(PyGHee):
         Handle 'pull_request' event
         """
         action = event_info['action']
-        log("PR action: %s" % action)
         gh = github.get_instance()
-#        log("raw_request_body: '%s'" % event_info['raw_request_body'])
-#        log("repository: '%s'" % json.dumps(event_info['raw_request_body']['repository'],indent=4,sort_keys=True) )
         log("repository: '%s'" % event_info['raw_request_body']['repository']['full_name'] )
         pr = gh.get_repo(event_info['raw_request_body']['repository']['full_name']).get_pull(event_info['raw_request_body']['pull_request']['number'])
         log("PR data: %s" % pr)
 
-        handlers = {
-            'labeled': self.handle_pr_label_event,
-            'opened': self.handle_pr_opened_event,
-        #    'closed': handle_pr_opened_event,
-        #    'unlabeled': handle_pr_label_event,
-        }
-        handler = handlers.get(action)
-        if handler:
+        handler_name = 'handle_pull_request_%s_event' % action
+        if hasattr(self, handler_name):
+            handler = getattr(self, handler_name)
             log("Handling PR action '%s' for PR #%d..." % (action, pr.number))
             handler(event_info, pr)
         else:
