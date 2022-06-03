@@ -157,7 +157,35 @@ Open the page https://github.com/settings/apps and then click on the icon left t
 export GITHUB_PRIVATE_KEY="$(cat PATH_TO_PRIVATE_KEY_FILE)"
 ```
 
-### Step 4.4: Run the EESSI bot
+### Step 4.4: Create a directory containing all necessary scripts
+
+At the moment the bot requires scripts from the repositories [EESSI/software-layer](https://github.com/EESSI/software-layer) and [EESSI/eessi-bot-software-layer](https://github.com/EESSI/eessi-bot-software-layer) stored under a common directory (tree). Let's assume the main directory for such a directory tree would be `$USER/bot_scripts` then follow the procedure below to prepare the directory and let the bot know its location. 
+
+```
+mkdir -p $USER/bot_scripts
+mkdir -p $USER/bot_scripts/gh
+cd $USER/bot_scripts/gh
+git clone https://github.com/EESSI/software-layer
+cp software-layer/{*.sh,*.py,configure_easybuild} ..
+mkdir -p ../init
+cp software-layer/init/{eessi_environment_variables,minimal_eessi_env,eessi_software_subdir_for_host.py} ../init
+git clone https://github.com/EESSI/eessi-bot-software-layer
+cp eessi-bot-software-layer/scripts/{*.slurm,*.sh} ..
+```
+
+Inside the directory that contains the bot's python script (`eessi_bot_software_layer.py`) add the configuration file `app.cfg` and update the location of the scripts directory. That is for the above example procedure there need to be a line
+
+```
+scripts_dir = $USER/bot_scripts
+```
+
+You can obtain an example `app.cfg` from the bot's repository, e.g., assuming the above clone you could do
+
+```
+cp $USER/bot_scripts/gh/eessi-bot-software-layer/app.cfg.example PATH_TO_BOTS_PYTHON_SCRIPT/app.cfg
+```
+
+### Step 4.5: Run the EESSI bot
 
 Change directory to `eessi-bot-software-layer` (which was created by cloning the repository in Step 3 - either the original one from EESSI or your fork). Then, simply run the bot by executing
 ```
