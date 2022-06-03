@@ -1,5 +1,16 @@
 #!/usr/bin/env bash
-
+#
+# GitHub App for the EESSI project: slurm batch script
+#
+# A bot to help with requests to add software installations to the EESSI software layer,
+# see https://github.com/EESSI/software-layer
+#
+# author: Kenneth Hoste (@boegel)
+# author: Thomas Roeblitz (@trz42)
+#
+# license: GPLv2
+#
+#
 #SBATCH --time 24:00:00
 #SBATCH --nodes 1
 #SBATCH --exclusive
@@ -11,7 +22,7 @@
 #  - the job environment contains a checkout of the branch of the pull
 #    request
 #  - arguments: 
-#    - BOT_TMPDIR: hand over as argument to script (alternatives: app.cfg / ENV)
+#    - eessi_tmpdir: hand over as argument to script
 
 if [ $# -ne 1 ]; then
     echo "ERROR: Usage: $0 <EESSI tmp dir (example: /tmp/$USER/EESSI)>" >&2
@@ -21,7 +32,7 @@ eessi_tmpdir=$1
 
 # map the current directory (job environment which contains checkout
 #   of the branch of the pull request) to a specific path inside the container
-export SINGULARITY_BIND="$(pwd):/eessi_bot_job"
+#export SINGULARITY_BIND="$(pwd):/eessi_bot_job"
 
 # run standard EESSI software-layer build script via compat layer
 #   inside build container
