@@ -118,6 +118,13 @@ pip3 install --user PyNaCl==1.4.0
 pip3 install --user -r requirements.txt
 ```
 
+### Step 3.1 Using the development version of PyGHee
+
+The above command `pip3 install --user -r requirements.txt` installs the latest release of the PyGHee library. If you want to use the development version, i.e., what is available from GitHub or your own local copy, you have to set `PYTHONPATH` correctly. Assume the library's main directory is `SOME_PATH/PyGHee` then do the following in the terminal/shell/script where you run the bot:
+
+```
+export PYTHONPATH=SOME_PATH/PyGHee
+```
 
 ## Step 4: Configuring and running EESSI bot on Linux machine
 
