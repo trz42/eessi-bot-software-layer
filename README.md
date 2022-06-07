@@ -159,6 +159,28 @@ export GITHUB_PRIVATE_KEY="$(cat PATH_TO_PRIVATE_KEY_FILE)"
 
 ### Step 4.4: Create a directory containing all necessary scripts
 
+#### After [PR#10](https://github.com/EESSI/eessi-bot-software-layer/pull/10) has been merged
+
+The bot just needs one script `eessi-bot-build.slurm` available from the `scripts` directory in the repository [EESSI/eessi-bot-software-layer](https://github.com/EESSI/eessi-bot-software-layer) (or your fork of it) and an `app.cfg` that points to the location of that script on your system.
+
+First, clone the EESSI/eessi-bot-software-layer repository (or your fork of it) by running
+
+```
+git clone https://github.com/EESSI/eessi-bot-software-layer.git
+```
+
+Change directory with `cd eessi-bot-software-layer` and note the full path of the directory (`pwd`).
+
+Add a configuration file (if it doesn't exist yet) by running
+
+```
+cp -i app.cfg.example app.cfg
+```
+
+Inside `app.cfg` change the value of `build_job_script` to `FULL_PATH/scripts/eessi-bot-build.slurm`
+
+#### Before [PR#10](https://github.com/EESSI/eessi-bot-software-layer/pull/10) has been merged
+
 At the moment the bot requires scripts from the repositories [EESSI/software-layer](https://github.com/EESSI/software-layer) and [EESSI/eessi-bot-software-layer](https://github.com/EESSI/eessi-bot-software-layer) stored under a common directory (tree). Let's assume the main directory for such a directory tree would be `$USER/bot_scripts` then follow the procedure below to prepare the directory and let the bot know its location. 
 
 ```
