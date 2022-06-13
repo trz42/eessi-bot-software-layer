@@ -19,6 +19,11 @@ def process_job_result(pr, event_info, jobid, pr_dir):
     #   jobs_base_dir/YYYY.MM/pr_<id>/event_<id>/run_<id>/target_<cpuarch>
     #   jobs_base_dir/YYYY.MM/pr_<id>/<jobid> - being a link to the job dir
     #   jobs_base_dir/YYYY.MM/pr_<id>/<jobid>/slurm-<jobid>.out
+    gh = github.get_instance()
+    repo_name = pr.head.repo.full_name
+    repo = gh.get_repo(repo_name)
+    pull_request = repo.get_pull(pr.number)
+
     job_dir = os.path.join(pr_dir,jobid)
     sym_dst = os.readlink(job_dir)
     slurm_out = os.path.join(sym_dst,'slurm-%s.out' % (jobid))
@@ -53,7 +58,8 @@ def process_job_result(pr, event_info, jobid, pr_dir):
         comment += ' - No missing modules!\n'
         comment += ' - Tarball with size %.2f GiB available at %s.\n' % (os.path.getsize(eessi_tarballs[0])/2**30,eessi_tarballs[0])
         comment += 'Awaiting approval to ingest this into the repository.\n'
-        # TODO report back to PR (just the comment + maybe add a label? (require manual check))
+        # report back to PR (just the comment + maybe add a label? (require manual check))
+        pull_request.create_issue_comment(comment)
     else:
         # something is not allright:
         #  - no slurm out or
@@ -78,7 +84,8 @@ def process_job_result(pr, event_info, jobid, pr_dir):
             # something's fishy, we only expected a single tar.gz file
             comment += ' - Found %d tarballs in %s - only 1 expected.\n' % (len(eessi_tarballs),sym_dst)
         comment += 'If a tarball has been created, it might still be ok to approve the pull request (e.g., after receiving additional information from the build host).'
-        # TODO report back to PR (just the comment + maybe add a label? (require manual check))
+        # report back to PR (just the comment + maybe add a label? (require manual check))
+        pull_request.create_issue_comment(comment)
 
 
 def build_easystack_from_pr(pr, event_info):
