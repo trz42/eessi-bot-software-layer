@@ -152,7 +152,7 @@ def build_easystack_from_pr(pr, event_info):
         git_clone_cmd = ' '.join([
             'git clone',
             'https://github.com/' + repo_name,
-            ' ' + arch_job_dir,
+            arch_job_dir,
         ])
         log("Clone repo by running '%s' in directory '%s'" % (git_clone_cmd,arch_job_dir))
         cloned_repo = subprocess.run(git_clone_cmd,
