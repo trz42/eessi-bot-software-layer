@@ -20,8 +20,11 @@ def process_job_result(pr, event_info, jobid, pr_dir):
     #   jobs_base_dir/YYYY.MM/pr_<id>/<jobid> - being a link to the job dir
     #   jobs_base_dir/YYYY.MM/pr_<id>/<jobid>/slurm-<jobid>.out
     gh = github.get_instance()
-    repo_name = pr.head.repo.full_name
+    # seems we have to use `base` here (instead of `head`)
+    repo_name = pr.base.repo.full_name
+    log("process_job_result: repo_name %s" % repo_name)
     repo = gh.get_repo(repo_name)
+    log("process_job_result: pr.number %s" % pr.number)
     pull_request = repo.get_pull(pr.number)
 
     job_dir = os.path.join(pr_dir,jobid)
@@ -29,7 +32,7 @@ def process_job_result(pr, event_info, jobid, pr_dir):
     slurm_out = os.path.join(sym_dst,'slurm-%s.out' % (jobid))
 
     # determine all tarballs that are stored in the job directory (only expecting 1)
-    tarball_pattern = 'eessi-.*software-.*.tar.gz'
+    tarball_pattern = 'eessi-*software-*.tar.gz'
     eessi_tarballs = glob.glob(os.path.join(sym_dst,tarball_pattern))
 
     # set some initial values
@@ -41,7 +44,7 @@ def process_job_result(pr, event_info, jobid, pr_dir):
     #     ^eessi-2021.12-software-linux-x86_64-intel-haswell-1654294643.tar.gz created!$ --> tarball successfully created
     if os.path.exists(slurm_out):
         re_missing_modules = re.compile('^No missing modules!$')
-        re_targz_created = re.compile('^eessi-.*-software-.*.tar.gz created!$')
+        re_targz_created = re.compile('^/eessi_bot_job/eessi-.*-software-.*.tar.gz created!$')
         outfile = open(slurm_out, "r")
         for line in outfile:
             if re_missing_modules.match(line):
@@ -56,8 +59,8 @@ def process_job_result(pr, event_info, jobid, pr_dir):
         # Prepare a message with information such as (installation status, tarball name, tarball size)
         comment = 'SUCCESS The build job (directory %s -> %s) went fine:\n' % (job_dir,sym_dst)
         comment += ' - No missing modules!\n'
-        comment += ' - Tarball with size %.2f GiB available at %s.\n' % (os.path.getsize(eessi_tarballs[0])/2**30,eessi_tarballs[0])
-        comment += 'Awaiting approval to ingest this into the repository.\n'
+        comment += ' - Tarball with size %.3f GiB available at %s.\n' % (os.path.getsize(eessi_tarballs[0])/2**30,eessi_tarballs[0])
+        comment += '\nAwaiting approval to ingest this into the repository.\n'
         # report back to PR (just the comment + maybe add a label? (require manual check))
         pull_request.create_issue_comment(comment)
     else:
@@ -83,7 +86,7 @@ def process_job_result(pr, event_info, jobid, pr_dir):
         if len(eessi_tarballs) > 1:
             # something's fishy, we only expected a single tar.gz file
             comment += ' - Found %d tarballs in %s - only 1 expected.\n' % (len(eessi_tarballs),sym_dst)
-        comment += 'If a tarball has been created, it might still be ok to approve the pull request (e.g., after receiving additional information from the build host).'
+        comment += '\nIf a tarball has been created, it might still be ok to approve the pull request (e.g., after receiving additional information from the build host).'
         # report back to PR (just the comment + maybe add a label? (require manual check))
         pull_request.create_issue_comment(comment)
 
@@ -122,10 +125,10 @@ def build_easystack_from_pr(pr, event_info):
         os.makedirs(run_dir)
 
     gh = github.get_instance()
-    repo_name = pr.head.repo.full_name
-    log("pr.head.repo.full_name '%s'" % (pr.head.repo.full_name))
-    branch_name = pr.head.ref
-    log("pr.head.ref '%s'" % (pr.head.ref))
+    # adopting approach outlined in https://github.com/EESSI/eessi-bot-software-layer/issues/17
+    # need to use `base` instead of `head` ... don't need to know the branch name
+    repo_name = pr.base.repo.full_name
+    log("build_easystack_from_pr: pr.base.repo.full_name '%s'" % pr.base.repo.full_name)
 
     jobs = []
     for arch_target,slurm_opt in arch_target_map.items():
@@ -136,12 +139,39 @@ def build_easystack_from_pr(pr, event_info):
 
         # download pull request to arch_job_dir
         #  - PyGitHub doesn't seem capable of doing that (easily);
-        #  - for now, keep it simple and just use 'git clone ...'
-        #    eg, use 'git clone https://github.com/<repo_name> --branch <branch_name> --single-branch <arch_job_dir>'
-        git_clone = 'git clone https://github.com/%s --branch %s --single-branch %s' % (repo_name, branch_name, arch_job_dir)
-        log("Clone repo with '%s'" % git_clone)
-        cloned_repo = subprocess.run(git_clone, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        #  - for now, keep it simple and just execute the commands (anywhere) (note 'git clone' requires that destination is an empty directory)
+        #      git clone https://github.com/REPO_NAME arch_job_dir
+        #      curl -L https://github.com/REPO_NAME/pull/PR_NUMBER.patch > arch_job_dir/PR_NUMBER.patch
+        #    (execute the next one in arch_job_dir
+        #      git am PR_NUMBER.patch
+        #  - REPO_NAME is repo_name
+        #  - PR_NUMBER is pr.number
+        cmd = 'git clone https://github.com/%s %s' % (repo_name,arch_job_dir)
+        log("Clone repo by running '%s' in directory '%s'" % (cmd,arch_job_dir))
+        cloned_repo = subprocess.run(cmd,
+                                     cwd=arch_job_dir,
+                                     shell=True,
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE)
         log("Cloned repo!\nStdout %s\nStderr: %s" % (cloned_repo.stdout,cloned_repo.stderr))
+
+        cmd = 'curl -L https://github.com/%s/pull/%s.patch > %s.patch' % (repo_name,pr.number,pr.number)
+        log("Obtain patch by running '%s' in directory '%s'" % (cmd,arch_job_dir))
+        got_patch = subprocess.run(cmd,
+                                   cwd=arch_job_dir,
+                                   shell=True,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+        log("Got patch!\nStdout %s\nStderr: %s" % (got_patch.stdout,got_patch.stderr))
+
+        cmd = 'git am %s.patch' % pr.number
+        log("Apply patch by running '%s' in directory '%s'" % (cmd,arch_job_dir))
+        patched = subprocess.run(cmd,
+                                 cwd=arch_job_dir,
+                                 shell=True,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
+        log("Applied patch!\nStdout %s\nStderr: %s" % (patched.stdout,patched.stderr))
 
         # enlist jobs to proceed
         jobs.append([arch_job_dir,arch_target,slurm_opt])
@@ -159,13 +189,14 @@ def build_easystack_from_pr(pr, event_info):
         command_line = submit_command + ' ' + job[2] + ' ' + build_job_script + ' ' + local_tmp;
         submitted = subprocess.run(command_line, shell=True, cwd=job[0], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # parse job id & add it to array of submitted jobs PLUS create a symlink from main pr_<ID> dir to job dir (job[0])
-        job_id = submitted.stdout.split()[3]
+        job_id = submitted.stdout.split()[3].decode("UTF-8")
         submitted_jobs.append(job_id)
+        log("jobs_base_dir: %s, ym: %s, pr_id: %s, job_id: %s" % (jobs_base_dir,ym,pr_id,job_id))
         os.symlink(job[0], os.path.join(jobs_base_dir, ym, pr_id, job_id))
         log("Submit command executed!\nStdout: %s\nStderr: %s" % (submitted.stdout, submitted.stderr))
 
     # check status for submitted_jobs every N seconds
-    poll_interval = config.get_section('buildenv').get('poll_interval')
+    poll_interval = int(config.get_section('buildenv').get('poll_interval') or 0)
     if poll_interval <= 0:
         poll_interval = 60
     poll_command = config.get_section('buildenv').get('poll_command')
@@ -177,13 +208,16 @@ def build_easystack_from_pr(pr, event_info):
         #   - handle finished jobs
         #   - update jobs_to_be_checked if any job finished
         job_list_str = ','.join(jobs_to_be_checked)
-        squeue_cmd = poll_command + ' --long' + ' --jobs=' + job_list_str
+        squeue_cmd = '%s --long --jobs=%s' % (poll_command,job_list_str)
+        log("run squeue command: %s" % (squeue_cmd))
         squeue = subprocess.run(squeue_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # cases
         # (1) no job returned -> all finished -> check result for each, update jobs_to_be_checked
         # (2) some/not all jobs returned -> may check status (to detect potential issues), check result for jobs not returned & update jobs_to_be_checked for them
         # (3) all jobs returned -> may check status (to detect potential issues)
-        job_table = pd.read_csv(StringIO(squeue.stdout),delim_whitespace=True,skiprows=1)
+        log("squeue output: +++%s+++" % squeue.stdout)
+        # TODO sanity check if any output from command
+        job_table = pd.read_csv(StringIO(squeue.stdout.decode("UTF-8")),delim_whitespace=True,skiprows=1)
         if len(job_table) == 0:
             # case (1)
             log("All jobs seem finished.")
