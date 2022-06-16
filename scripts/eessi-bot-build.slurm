@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
-# GitHub App for the EESSI project: slurm batch script
+# Slurm job script to install additional software into EESSI via build container
 #
+# This is part of the GitHub App for the EESSI project:
 # A bot to help with requests to add software installations to the EESSI software layer,
 # see https://github.com/EESSI/software-layer
 #
@@ -30,17 +31,16 @@ if [ $# -ne 1 ]; then
 fi
 eessi_tmpdir=$1
 
-# map the current directory (job environment which contains checkout
-#   of the branch of the pull request) to a specific path inside the container
-#export SINGULARITY_BIND="$(pwd):/eessi_bot_job"
-
-# run standard EESSI software-layer build script via compat layer
-#   inside build container
+# bind current working directory to /eessi_bot_job in build container,
+# and also use it as home directory in build container
 export SINGULARITY_HOME="$(pwd):/eessi_bot_job"
+
+# run standard EESSI software-layer install script
+#   in compat layer environment inside build container
 ./build_container.sh run ${eessi_tmpdir} ./install_software_layer.sh
 
 # create tarball for the above build and place it in some specific
-#   directory on shared disc (just in main directory of job)
+#   directory on shared disk (just in main directory of job)
 #   see https://github.com/EESSI/eessi-bot-software-layer/issues/7
 EESSI_SILENT=1 source init/eessi_environment_variables
 software_subdir=$(echo ${EESSI_SOFTWARE_SUBDIR} | tr '/' '-')

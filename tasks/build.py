@@ -91,21 +91,27 @@ def process_job_result(pr, event_info, jobid, pr_dir):
         pull_request.create_issue_comment(comment)
 
 
+def mkdir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+
 def build_easystack_from_pr(pr, event_info):
     # retrieving some settings from 'app.cfg' in bot directory
     # [buildenv]
-    jobs_base_dir = config.get_section('buildenv').get('jobs_base_dir')
-    log("jobs_base_dir '%s'" % (jobs_base_dir))
-    local_tmp = config.get_section('buildenv').get('local_tmp')
-    log("local_tmp '%s'" % (local_tmp))
-    build_job_script = config.get_section('buildenv').get('build_job_script')
-    log("build_job_script '%s'" % (build_job_script))
-    submit_command = config.get_section('buildenv').get('submit_command')
-    log("submit_command '%s'" % (submit_command))
+    buildenv = config.get_section('buildenv')
+    jobs_base_dir = buildenv.get('jobs_base_dir')
+    log("jobs_base_dir '%s'" % jobs_base_dir)
+    local_tmp = buildenv.get('local_tmp')
+    log("local_tmp '%s'" % local_tmp)
+    build_job_script = buildenv.get('build_job_script')
+    log("build_job_script '%s'" % build_job_script)
+    submit_command = buildenv.get('submit_command')
+    log("submit_command '%s'" % submit_command)
 
     # [architecturetargets]
     arch_target_map = json.loads(config.get_section('architecturetargets').get('arch_target_map'))
-    log("arch target map '%s'" % (json.dumps(arch_target_map)))
+    log("arch target map '%s'" % json.dumps(arch_target_map))
 
     # create directory structure according to alternative described in
     #   https://github.com/EESSI/eessi-bot-software-layer/issues/7
@@ -114,15 +120,13 @@ def build_easystack_from_pr(pr, event_info):
     pr_id = 'pr_%s' % pr.number
     event_id = 'event_%s' % event_info['id']
     event_dir = os.path.join(jobs_base_dir, ym, pr_id, event_id)
-    if not os.path.exists(event_dir):
-        os.makedirs(event_dir)
+    mkdir(event_dir)
 
     run = 0
-    while os.path.exists(os.path.join(event_dir, 'run_%s' % run)):
+    while os.path.exists(os.path.join(event_dir, 'run_%03d' % run)):
         run += 1
-    run_dir = os.path.join(event_dir, 'run_%s' % run)
-    if not os.path.exists(run_dir):
-        os.makedirs(run_dir)
+    run_dir = os.path.join(event_dir, 'run_%03d' % run)
+    mkdir(run_dir)
 
     gh = github.get_instance()
     # adopting approach outlined in https://github.com/EESSI/eessi-bot-software-layer/issues/17
@@ -132,23 +136,26 @@ def build_easystack_from_pr(pr, event_info):
 
     jobs = []
     for arch_target,slurm_opt in arch_target_map.items():
-        arch_job_dir = os.path.join(run_dir, arch_target.replace("/","_"))
-        if not os.path.exists(arch_job_dir):
-            os.makedirs(arch_job_dir)
-        log("arch_job_dir '%s'" % (arch_job_dir))
+        arch_job_dir = os.path.join(run_dir, arch_target.replace('/', '_'))
+        mkdir(arch_job_dir)
+        log("arch_job_dir '%s'" % arch_job_dir)
 
         # download pull request to arch_job_dir
         #  - PyGitHub doesn't seem capable of doing that (easily);
         #  - for now, keep it simple and just execute the commands (anywhere) (note 'git clone' requires that destination is an empty directory)
         #      git clone https://github.com/REPO_NAME arch_job_dir
         #      curl -L https://github.com/REPO_NAME/pull/PR_NUMBER.patch > arch_job_dir/PR_NUMBER.patch
-        #    (execute the next one in arch_job_dir
+        #    (execute the next one in arch_job_dir)
         #      git am PR_NUMBER.patch
         #  - REPO_NAME is repo_name
         #  - PR_NUMBER is pr.number
-        cmd = 'git clone https://github.com/%s %s' % (repo_name,arch_job_dir)
-        log("Clone repo by running '%s' in directory '%s'" % (cmd,arch_job_dir))
-        cloned_repo = subprocess.run(cmd,
+        git_clone_cmd = ' '.join([
+            'git clone',
+            'https://github.com/' + repo_name,
+            ' ' + arch_job_dir,
+        ])
+        log("Clone repo by running '%s' in directory '%s'" % (git_clone_cmd,arch_job_dir))
+        cloned_repo = subprocess.run(git_clone_cmd,
                                      cwd=arch_job_dir,
                                      shell=True,
                                      stdout=subprocess.PIPE,
@@ -244,4 +251,3 @@ def build_easystack_from_pr(pr, event_info):
             # case (3)
             #   not yet finished jobs -> may check status (to detect potential issues)
             log("No job finished yet.")
-
