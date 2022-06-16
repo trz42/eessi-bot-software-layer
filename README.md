@@ -152,16 +152,11 @@ Note, depending on the characters used in the string you will likely have to use
 ### Step 4.3: Create a private key and store it on the Linux machine
 The private key is needed to let the app authenticate when updating information at the repository such as commenting on PRs, adding labels, etc. You can create the key at the page of the GitHub App you have registered in Step 1.
 
-Open the page https://github.com/settings/apps and then click on the icon left to the name of the GitHub App for the EESSI bot or the "Edit" button for the app. Near the end of the page you will find a section "Private keys" where you can create a private key by clicking on the button "Generate a private key". The private key should be automatically downloaded to your local computer. Copy it to the Linux machine and set the environment variable as follows
-```
-export GITHUB_PRIVATE_KEY="$(cat PATH_TO_PRIVATE_KEY_FILE)"
-```
+Open the page https://github.com/settings/apps and then click on the icon left to the name of the GitHub App for the EESSI bot or the "Edit" button for the app. Near the end of the page you will find a section "Private keys" where you can create a private key by clicking on the button "Generate a private key". The private key should be automatically downloaded to your local computer. Copy it to the Linux machine and note the full path to it.
 
-### Step 4.4: Create a directory containing all necessary scripts
+### Step 4.4: Obtain bot repository
 
-#### After [PR#10](https://github.com/EESSI/eessi-bot-software-layer/pull/10) has been merged
-
-The bot just needs one script `eessi-bot-build.slurm` available from the `scripts` directory in the repository [EESSI/eessi-bot-software-layer](https://github.com/EESSI/eessi-bot-software-layer) (or your fork of it) and an `app.cfg` that points to the location of that script on your system.
+The bot needs a few scripts. These and an example configuration file are provided by the repository [EESSI/eessi-bot-software-layer](https://github.com/EESSI/eessi-bot-software-layer) (or your fork of it).
 
 First, clone the EESSI/eessi-bot-software-layer repository (or your fork of it) by running
 
@@ -169,54 +164,33 @@ First, clone the EESSI/eessi-bot-software-layer repository (or your fork of it) 
 git clone https://github.com/EESSI/eessi-bot-software-layer.git
 ```
 
-Change directory with `cd eessi-bot-software-layer` and note the full path of the directory (`pwd`).
+### Step 4.5: Create the configuration file `app.cfg`
 
-Add a configuration file (if it doesn't exist yet) by running
+After cloning the bot's repository, change directory with `cd eessi-bot-software-layer` and note the full path of the directory (`pwd`).
+
+If there is no `app.cfg` in the directory, create an initial version from `app.cfg.example`.
 
 ```
 cp -i app.cfg.example app.cfg
 ```
 
-Inside `app.cfg` change the value of `build_job_script` to `FULL_PATH/scripts/eessi-bot-build.slurm`
-
-#### Before [PR#10](https://github.com/EESSI/eessi-bot-software-layer/pull/10) has been merged
-
-At the moment the bot requires scripts from the repositories [EESSI/software-layer](https://github.com/EESSI/software-layer) and [EESSI/eessi-bot-software-layer](https://github.com/EESSI/eessi-bot-software-layer) stored under a common directory (tree). Let's assume the main directory for such a directory tree would be `$USER/bot_scripts` then follow the procedure below to prepare the directory and let the bot know its location. 
+Now set some values as follows:
 
 ```
-mkdir -p $USER/bot_scripts
-mkdir -p $USER/bot_scripts/gh
-cd $USER/bot_scripts/gh
-git clone https://github.com/EESSI/software-layer
-cp software-layer/{*.sh,*.py,configure_easybuild} ..
-mkdir -p ../init
-cp software-layer/init/{eessi_environment_variables,minimal_eessi_env,eessi_software_subdir_for_host.py} ../init
-git clone https://github.com/EESSI/eessi-bot-software-layer
-cp eessi-bot-software-layer/scripts/{*.slurm,*.sh} ..
+private_key = FULL_PATH_TO_PRIVATE_KEY
+build_job_script = PATH_TO_BOT_REPO/scripts/eessi-bot-build.slurm
 ```
 
-Inside the directory that contains the bot's python script (`eessi_bot_software_layer.py`) add the configuration file `app.cfg` and update the location of the scripts directory. That is for the above example procedure there need to be a line
+### Step 4.6: Run the EESSI bot
 
-```
-scripts_dir = $USER/bot_scripts
-```
-
-You can obtain an example `app.cfg` from the bot's repository, e.g., assuming the above clone you could do
-
-```
-cp $USER/bot_scripts/gh/eessi-bot-software-layer/app.cfg.example PATH_TO_BOTS_PYTHON_SCRIPT/app.cfg
-```
-
-### Step 4.5: Run the EESSI bot
-
-Change directory to `eessi-bot-software-layer` (which was created by cloning the repository in Step 3 - either the original one from EESSI or your fork). Then, simply run the bot by executing
+Change directory to `eessi-bot-software-layer` (which was created by cloning the repository in Step 4.4 - either the original one from EESSI or your fork). Then, simply run the bot by executing
 ```
 ./run.sh
 ```
 
 Note, if you run the bot on a frontend of a cluster with multiple frontends make sure that both the Smee client and the bot run on the same machine.
 
-The bot will log events into the console.
+The bot will log events into the file `pyghee.log`.
 
 ## Step 5: Installing GitHub App (might trigger first event to EESSI bot)
 
