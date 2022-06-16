@@ -6,68 +6,79 @@
 # see https://github.com/EESSI/software-layer
 #
 # author: Kenneth Hoste (@boegel)
+# author: Bob Droege (@bedroge)
+# author: Thomas Roeblitz (@trz42)
 #
 # license: GPLv2
 #
-import datetime
-import flask
-import github
-import json
-import os
-import pprint
-import sys
-from collections import namedtuple
-from requests.structures import CaseInsensitiveDict
 
-import handlers
+import waitress
+import json
+
 from connections import github
 from tools import args, config
-from tools.logging import log, log_event
+from tasks.build import build_easystack_from_pr
+
+from pyghee.lib import PyGHee, create_app, read_event_from_json
+from pyghee.utils import log
+
+class EESSIBotSoftwareLayer(PyGHee):
+    def handle_issue_comment_event(self, event_info, log_file=None):
+        """
+        Handle adding/removing of comment in issue or PR.
+        """
+        request_body = event_info['raw_request_body']
+        issue_url = request_body['issue']['url']
+        comment_author = request_body['comment']['user']['login']
+        comment_txt = request_body['comment']['body']
+        log("Comment posted in %s by @%s: %s" % (issue_url, comment_author, comment_txt))
+        log("issue_comment event handled!", log_file=log_file)
 
 
-def read_event_from_json(jsonfile):
-    """
-    Read event data from a json file.
-    """
-    req = namedtuple('Request', ['headers', 'json'])
-    with open(jsonfile, 'r') as jf:
-        event_data = json.load(jf)
-        req.headers = CaseInsensitiveDict(event_data['headers'])
-        req.json = event_data['json']
-    return req
+    def handle_installation_event(self, event_info, log_file=None):
+        """
+        Handle installation of app.
+        """
+        request_body = event_info['raw_request_body']
+        user = request_body['sender']['login']
+        action = request_body['action']
+        # repo_name = request_body['repositories'][0]['full_name'] # not every action has that attribute
+        log("App installation event by user %s with action '%s'" % (user,action))
+        log("installation event handled!", log_file=log_file)
 
 
-def handle_event(request):
-    """
-    Handle event
-    """
-    event_type = request.headers["X-GitHub-Event"]
-
-    event_handler = handlers.event_handlers.get(event_type)
-    if event_handler:
-        event_handler(request)
-    else:
-        log("Unsupported event type: %s" % event_type)
-        response_data = {'Unsupported event type': event_type}
-        response_object = json.dumps(response_data, default=lambda obj: obj.__dict__)
-        return flask.Response(response_object, status=400, mimetype='application/json')
+    def handle_pull_request_label_event(self, event_info, pr):
+        """
+        Handle adding of a label to a pull request.
+        """
+        log("PR labeled")
 
 
-def create_app():
-    """
-    Create Flask app.
-    """
+    def handle_pull_request_opened_event(self, event_info, pr):
+        """
+        Handle opening of a pull request.
+        """
+        log("PR opened")
+        build_easystack_from_pr(pr, event_info)
 
-    app = flask.Flask(__name__)
 
-    @app.route('/', methods=['POST'])
-    def main():
-        # verify_request(flask.request)
-        log_event(flask.request)
-        # handle_event(flask.request)
-        return ''
+    def handle_pull_request_event(self, event_info, log_file=None):
+        """
+        Handle 'pull_request' event
+        """
+        action = event_info['action']
+        gh = github.get_instance()
+        log("repository: '%s'" % event_info['raw_request_body']['repository']['full_name'] )
+        pr = gh.get_repo(event_info['raw_request_body']['repository']['full_name']).get_pull(event_info['raw_request_body']['pull_request']['number'])
+        log("PR data: %s" % pr)
 
-    return app
+        handler_name = 'handle_pull_request_%s_event' % action
+        if hasattr(self, handler_name):
+            handler = getattr(self, handler_name)
+            log("Handling PR action '%s' for PR #%d..." % (action, pr.number))
+            handler(event_info, pr)
+        else:
+            log("No handler for PR action '%s'" % action)
 
 
 def main():
@@ -78,15 +89,15 @@ def main():
 
     if opts.file:
         event = read_event_from_json(opts.file)
-        log_event(event)
-        handle_event(event)
+        event_info = get_event_info(event)
+        handle_event(event_info)
     elif opts.cron:
         log("Running in cron mode")
     else:
         # Run as web app
-        app = create_app()
-        app.run()
-
+        app = create_app(klass=EESSIBotSoftwareLayer)
+        log("EESSI bot for software layer started!")
+        waitress.serve(app, listen='*:3000')
 
 if __name__ == '__main__':
     main()
