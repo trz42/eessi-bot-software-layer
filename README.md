@@ -93,7 +93,13 @@ At the [app settings page](https://github.com/settings/apps) click "New GitHub A
 
 Click on "Create GitHub App"
 
-## Step 3: Installing the EESSI bot on Linux machine
+## Step 3: Installing GitHub App (might trigger first event to EESSI bot)
+
+You need to install the GitHub App -- essentially telling GitHub to link the app to an account and one, several or all repositories on whose events the app then should act upon.
+
+Go to the page https://github.com/settings/apps and select the app you want to install by clicking on the icon left to the apps name or on the "Edit" button right to the name of the app. On the next page you should see the menu item "Install App" on the left-hand side. When you click on this you should see a page with a list of accounts you can install the app on. Choose one and click on the "Install" button next to it. This leads to a page where you can select the repositories on whose the app should react to. Select one, multiple or all and click on the "Install" button.
+
+## Step 4: Installing the EESSI bot on Linux machine
 
 The EESSI bot for the software layer is available from https://github.com/EESSI/eessi-bot-software-layer
 
@@ -118,7 +124,7 @@ pip3 install --user PyNaCl==1.4.0
 pip3 install --user -r requirements.txt
 ```
 
-### Step 3.1 Using the development version of PyGHee
+### Step 4.1 Using the development version of PyGHee
 
 The above command `pip3 install --user -r requirements.txt` installs the latest release of the PyGHee library. If you want to use the development version, i.e., what is available from GitHub or your own local copy, you have to set `PYTHONPATH` correctly. Assume the library's main directory is `SOME_PATH/PyGHee` then do the following in the terminal/shell/script where you run the bot:
 
@@ -126,11 +132,11 @@ The above command `pip3 install --user -r requirements.txt` installs the latest 
 export PYTHONPATH=SOME_PATH/PyGHee
 ```
 
-## Step 4: Configuring and running EESSI bot on Linux machine
+## Step 5: Configuring and running EESSI bot on Linux machine
 
 You need to set up three environment variables: `GITHUB_TOKEN`, `GITHUB_APP_SECRET_TOKEN` and `GITHUB_PRIVATE_KEY`.
 
-### Step 4.1: GitHub Personal Access Token (PAT)
+### Step 5.1: GitHub Personal Access Token (PAT)
 
 Create a Personal Access Token (PAT) for your GitHub account via the page https://github.com/settings/tokens where you find a button "Generate new token".
 Give it meaningful name (field titled "Note") and set the expiration date. Then select the scopes this PAT will be used for. Then click "Generate token". On the result page, take note/copy the resulting token string -- it will only be shown once.
@@ -140,7 +146,7 @@ On the Linux machine set the environment variable `GITHUB_TOKEN`, e.g.
 export GITHUB_TOKEN='THE_TOKEN_STRING'
 ```
 
-### Step 4.2: GitHub App Secret Token
+### Step 5.2: GitHub App Secret Token
 The GitHub App Secret Token is used to verify the webhook sender. You should have created one already when registering a new GitHub App in Step 1.
 
 On the Linux machine set the environment variable `GITHUB_APP_SECTRET_TOKEN`, e.g.
@@ -149,12 +155,12 @@ export GITHUB_APP_SECRET_TOKEN='THE_SECRET_TOKEN_STRING'
 ```
 Note, depending on the characters used in the string you will likely have to use single quotes when setting the value of the environment variable.
 
-### Step 4.3: Create a private key and store it on the Linux machine
+### Step 5.3: Create a private key and store it on the Linux machine
 The private key is needed to let the app authenticate when updating information at the repository such as commenting on PRs, adding labels, etc. You can create the key at the page of the GitHub App you have registered in Step 1.
 
 Open the page https://github.com/settings/apps and then click on the icon left to the name of the GitHub App for the EESSI bot or the "Edit" button for the app. Near the end of the page you will find a section "Private keys" where you can create a private key by clicking on the button "Generate a private key". The private key should be automatically downloaded to your local computer. Copy it to the Linux machine and note the full path to it.
 
-### Step 4.4: Obtain bot repository
+### Step 5.4: Obtain bot repository
 
 The bot needs a few scripts. These and an example configuration file are provided by the repository [EESSI/eessi-bot-software-layer](https://github.com/EESSI/eessi-bot-software-layer) (or your fork of it).
 
@@ -164,7 +170,7 @@ First, clone the EESSI/eessi-bot-software-layer repository (or your fork of it) 
 git clone https://github.com/EESSI/eessi-bot-software-layer.git
 ```
 
-### Step 4.5: Create the configuration file `app.cfg`
+### Step 5.5: Create the configuration file `app.cfg`
 
 After cloning the bot's repository, change directory with `cd eessi-bot-software-layer` and note the full path of the directory (`pwd`).
 
@@ -181,9 +187,9 @@ private_key = FULL_PATH_TO_PRIVATE_KEY
 build_job_script = PATH_TO_BOT_REPO/scripts/eessi-bot-build.slurm
 ```
 
-### Step 4.6: Run the EESSI bot
+### Step 5.6: Run the EESSI bot
 
-Change directory to `eessi-bot-software-layer` (which was created by cloning the repository in Step 4.4 - either the original one from EESSI or your fork). Then, simply run the bot by executing
+Change directory to `eessi-bot-software-layer` (which was created by cloning the repository in Step 5.4 - either the original one from EESSI or your fork). Then, simply run the bot by executing
 ```
 ./run.sh
 ```
@@ -192,12 +198,6 @@ Note, if you run the bot on a frontend of a cluster with multiple frontends make
 
 The bot will log events into the file `pyghee.log`.
 
-## Step 5: Installing GitHub App (might trigger first event to EESSI bot)
-
-You need to install the GitHub App -- essentially telling GitHub to link the app to an account and one, several or all repositories on whose events the app then should act upon.
-
-Go to the page https://github.com/settings/apps and select the app you want to install by clicking on the icon left to the apps name or on the "Edit" button right to the name of the app. On the next page you should see the menu item "Install App" on the left-hand side. When you click on this you should see a page with a list of accounts you can install the app on. Choose one and click on the "Install" button next to it. This leads to a page where you can select the repositories on whose the app should react to. Select one, multiple or all and click on the "Install" button.
-
 ## Testing EESSI bot
 
-Easiest test maybe a change -- creating a branch, committing a change, creating a pull request, etc -- to one of the repositories you have selected when installing the app in Step 5. Which events may be forwarded depends on to which events you have subscribed the app when you registered the app in Step 2.
+Easiest test maybe a change -- creating a branch, committing a change, creating a pull request, etc -- to one of the repositories you have selected when installing the app in Step 3. Which events may be forwarded depends on to which events you have subscribed the app when you registered the app in Step 2.
