@@ -110,7 +110,7 @@ git clone https://github.com/EESSI/eessi-bot-software-layer.git
 
 If you want to develop the EESSI bot, it is recommended that you fork the repository and use the fork on the Linux machine.
 
-The EESSI bot requires some Python packages to be installed. See https://github.com/EESSI/eessi-bot-software-layer#readme or simply run (the `requirements.txt` file is provided by the EESSI bot repository)
+The EESSI bot requires some Python packages to be installed. See the top of this page, or simply run (the `requirements.txt` file is provided by the EESSI bot repository)
 ```
 pip3 install --user -r requirements.txt
 ```
