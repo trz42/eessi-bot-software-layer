@@ -79,14 +79,14 @@ singularity run smee-client_latest.sif --url https://smee.io/CHANNEL_ID
 
 ## Step 2: Registering GitHub App
 
-We first need to register an GitHub App, link it to the Smee.io channel, set a secret token to verify the webhook sender, set some permissions for the app, subscribe it to selected events and define that this app should only be installed in your account.
+We first need to register a GitHub App, link it to the Smee.io channel, set a secret token to verify the webhook sender, set some permissions for the app, subscribe it to selected events and define that this app should only be installed in your account.
 
 At the [app settings page](https://github.com/settings/apps) click "New GitHub App" and fill in the page, particular the following fields
 - GitHub App name: give the app a name of you choice
 - Homepage URL: use the Smee.io channel (https://smee.io/CHANNEL_ID) created in Step 1
 - Webhook URL: use the Smee.io channel (https://smee.io/CHANNEL_ID) created in Step 1
 - Webhook secret: create a secret token which is used to verify the webhook sender
-- Permissions: assign permissions to the app it needs (e.g., read access to commits, issues, pull requests); those can be changed later on; some permissions (e.g., metadata will be selected automatically because of others you have chosen)
+- Permissions: assign permissions to the app it needs (e.g., read access to commits, issues, pull requests); those can be changed later on; some permissions (e.g., metadata) will be selected automatically because of others you have chosen
 - Events: subscribe the app to events it shall react on (e.g., related to pull requests)
 - Select that the app can only be installed by this (your) GitHub account
 
@@ -199,4 +199,4 @@ The bot will log events into the file `pyghee.log`.
 
 ## Testing EESSI bot
 
-Easiest test maybe a change -- creating a branch, committing a change, creating a pull request, etc -- to one of the repositories you have selected when installing the app in Step 3. Which events may be forwarded depends on to which events you have subscribed the app when you registered the app in Step 2.
+The easiest test may be a change -- creating a branch, committing a change, creating a pull request, etc -- to one of the repositories you have selected when installing the app in Step 3. Which events may be forwarded depends on which events you have subscribed the app to when you registered the app in Step 2.
