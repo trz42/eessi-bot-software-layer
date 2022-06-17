@@ -133,7 +133,7 @@ export PYTHONPATH=SOME_PATH/PyGHee
 
 ## Step 5: Configuring and running EESSI bot on Linux machine
 
-You need to set up three environment variables: `GITHUB_TOKEN`, `GITHUB_APP_SECRET_TOKEN` and `GITHUB_PRIVATE_KEY`.
+You need to set up two environment variables: `GITHUB_TOKEN` and `GITHUB_APP_SECRET_TOKEN`.
 
 ### Step 5.1: GitHub Personal Access Token (PAT)
 
