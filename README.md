@@ -77,7 +77,7 @@ singularity pull docker://deltaprojects/smee-client
 singularity run smee-client_latest.sif --url https://smee.io/CHANNEL_ID
 ```
 
-## Step 2: Registering GitHub App
+## <a name="step2"></a>Step 2: Registering GitHub App
 
 We first need to register a GitHub App, link it to the Smee.io channel, set a secret token to verify the webhook sender, set some permissions for the app, subscribe it to selected events and define that this app should only be installed in your account.
 
@@ -185,6 +185,10 @@ Now set some values as follows:
 private_key = FULL_PATH_TO_PRIVATE_KEY
 build_job_script = PATH_TO_BOT_REPO/scripts/eessi-bot-build.slurm
 ```
+
+You will also need to set the `app_id` and the `installation_id`. You find the id of your GitHub App via the page [GitHub Apps](https://github.com/settings/apps). On this page, select the app you have registered in [Step 2](#step2). On page of the app you will find the `app_id` listed as 'App ID'. For the `installation_id` select 'Install App' in the menu on the left-hand side. Then click on the gearwheel button of the installation (to the right of the 'Installed' label). The URL of the resulting page contains the `installation_id` -- the number after the last '/'.
+
+Replace default values for `app_id` and `installation_id` in `app.cfg` with the values you have obtained as described above.
 
 ### Step 5.6: Run the EESSI bot
 
