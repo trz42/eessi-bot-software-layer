@@ -42,10 +42,17 @@ export SINGULARITY_HOME="$(pwd):/eessi_bot_job"
 # create tarball for the above build and place it in some specific
 #   directory on shared disk (just in main directory of job)
 #   see https://github.com/EESSI/eessi-bot-software-layer/issues/7
-EESSI_SILENT=1 source init/eessi_environment_variables
-software_subdir=$(echo ${EESSI_SOFTWARE_SUBDIR} | tr '/' '-')
-timestamp=$(date +%s)
-export TGZ=$(printf "eessi-%s-software-%s-%s-%d.tar.gz" ${EESSI_PILOT_VERSION} ${EESSI_OS_TYPE} ${software_subdir} ${timestamp})
+#pwd
+#ls -lisa init/eessi_environment_variables
+# the next line only works as intended if the intended repo is mounted on the host
+#   when building for a repo that is only available via the container and a
+#   custom setup, it is not working
+#EESSI_SILENT=0 source init/eessi_environment_variables
+#echo "eessi-bot-build.slurm: EESSI_SOFTWARE_SUBDIR=${EESSI_SOFTWARE_SUBDIR}="
+#software_subdir=$(echo ${EESSI_SOFTWARE_SUBDIR} | tr '/' '-')
+#echo "eessi-bot-build.slurm: software_subdir=${software_subdir}="
+#timestamp=$(date +%s)
+#export TGZ=$(printf "eessi-%s-software-%s-%s-%d.tar.gz" ${EESSI_PILOT_VERSION} ${EESSI_OS_TYPE} ${software_subdir} ${timestamp})
 ./build_container.sh run ${eessi_tmpdir} \
-    ./create_tarball.sh ${eessi_tmpdir} ${EESSI_PILOT_VERSION} \
-    ${EESSI_SOFTWARE_SUBDIR} /eessi_bot_job/${TGZ}
+    ./create_tarball.sh ${eessi_tmpdir} software /eessi_bot_job
+#    ${EESSI_SOFTWARE_SUBDIR} /eessi_bot_job/${TGZ}
