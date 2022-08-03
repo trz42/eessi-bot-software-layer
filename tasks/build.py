@@ -140,7 +140,7 @@ def build_easystack_from_pr(pr, event_info):
         log("Submit command executed!\nStdout: %s\nStderr: %s" % (submitted.stdout, submitted.stderr))
 
     # TODO: report submitted jobs (incl architecture, ...)
-    comment = 'Submitted %d job(s) on %s (%s)\n' % len(submitted_jobs,app_name)
+    comment = 'Submitted %d job(s) on "%s"\n' % len(submitted_jobs,app_name)
     # repo_name = pr.base.repo.full_name # already set above
     repo = gh.get_repo(repo_name)
     pull_request = repo.get_pull(pr.number)
