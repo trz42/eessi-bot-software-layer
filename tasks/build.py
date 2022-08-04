@@ -134,13 +134,16 @@ def build_easystack_from_pr(pr, event_info):
         #   parse job id & add it to array of submitted jobs PLUS create a symlink from main pr_<ID> dir to job dir (job[0])
         job_id = submitted.stdout.split()[3].decode("UTF-8")
         submitted_jobs.append(job_id)
-        job_comment += '* OS/ARCH=%s\n* JOBID=%s\n* JOBDIR=%s\n' % (arch_target,job_id,job[0])
+        job_comment += '|%s|submitted|%s|%s|\n' % (job_id,arch_target,job[0])
         log("jobs_base_dir: %s, ym: %s, pr_id: %s, job_id: %s" % (jobs_base_dir,ym,pr_id,job_id))
         os.symlink(job[0], os.path.join(jobs_base_dir, ym, pr_id, job_id))
         log("Submit command executed!\nStdout: %s\nStderr: %s" % (submitted.stdout, submitted.stderr))
 
     # report submitted jobs (incl architecture, ...)
     comment = 'Submitted %d job(s) on %s\n' % (len(submitted_jobs),app_name)
+    if len(submitted_jobs) > 0:
+        comment += '|job id|job status|os/architecture|job directory|\n'
+        comment += '|------|----------|----------------|------------------------------|\n'
     # repo_name = pr.base.repo.full_name # already set above
     repo = gh.get_repo(repo_name)
     pull_request = repo.get_pull(pr.number)
