@@ -1,9 +1,13 @@
 [github]
-# replace with ID of your GitHub App
+# replace '199740' with the ID of your GitHub App
 app_id = 199740
-# replace with ID of the installation of your GitHub App (can be derived by
-#   creating an event and then checking for the list of sent events and
-#   its extensive log of attributes; if not by any other easier means)
+# a name for your app instance that can be used for example when adding/updating
+#   a comment to a PR
+app_name = "MY EESSI bot instance on SYSTEM"
+# replace '25669742' with the ID of the installation of your GitHub App
+#   (can be derived by creating an event and then checking for the list
+#   of sent events and its extensive log of attributes; if not by any
+#   other easier means)
 installation_id = 25669742
 private_key = PATH_TO_PRIVATE_KEY_FOR_YOUR_GITHUB_APP
 
@@ -23,7 +27,22 @@ poll_command = /usr/bin/squeue
 # polling interval in seconds
 poll_interval = 10
 
+[common_job_params]
+# parameters to be added to all job submissions
+slurm_params = "--hold"
+
 [architecturetargets]
 # defines both for which architectures the bot will build
 #   and what submission parameters shall be used
 arch_target_map = { "linux/x86_64/intel/haswell": "--constraint shape=c4.2xlarge", "linux/x86_64/amd/zen2": "--constraint shape=c5a.2xlarge" }
+
+[job_monitor]
+# directory where job monitor stores information about jobs to be tracked
+#   e.g. as symbolic link JOBID -> directory to job
+job_ids_dir = PATH_TO_DIRECTORY_STORING_JOB_IDS
+# default value for command line parameter max_monitor_iterations
+# max_monitor_iterations values and how the loop behaves
+#   < 0: run loop indefinitely
+#  == 0: don't run loop
+#   > 0: run loop max_monitor_iterations times
+max_monitor_iterations_default = -1
