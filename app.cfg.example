@@ -45,4 +45,5 @@ job_ids_dir = PATH_TO_DIRECTORY_STORING_JOB_IDS
 #   < 0: run loop indefinitely
 #  == 0: don't run loop
 #   > 0: run loop max_monitor_iterations times
-max_monitor_iterations_default = -1
+# default hardcoded as -1
+# max_monitor_iterations_default = -1

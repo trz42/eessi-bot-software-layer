@@ -28,4 +28,10 @@ def parse():
         "-p", "--port", default=3000,
         help="listen on a specific port for events (default 3000)",
     )
+
+    parser.add_argument(
+        "-i", "--max-monitor-iterations", default=-1,
+        help="loop behaviour: i<0 - indefinite, i==0 - don't run, i>0: run i iterations (default -1)",
+    )
+
     return parser.parse_args()
