@@ -62,6 +62,8 @@ class EESSIBotSoftwareLayerJobMonitor:
         if os.path.isdir(jobdir):
             regex = re.compile('(\d)+')
             known_jobs = [ { 'jobid' : fname } for fname in os.listdir(jobdir) if regex.match(fname) and os.path.islink(fname) ]
+        else:
+            print("directory '%s' does not exist -> assuming no jobs known previously" % jobdir)
 
         return known_jobs
 
