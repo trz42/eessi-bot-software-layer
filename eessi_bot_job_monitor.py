@@ -73,14 +73,36 @@ class EESSIBotSoftwareLayerJobMonitor:
 
     #new_jobs = job.monitor.determine_new_jobs(known_jobs, current_jobs)
     def determine_new_jobs(self, known_jobs, current_jobs):
+        # known_jobs is a dictionary: jobid -> {'jobid':jobid}
+        # current_jobs is a dictionary: jobid -> {'jobid':jobid,'state':val,'reason':val}
         new_jobs = []
+        for ckey in current_jobs:
+            if not ckey in known_jobs:
+                new_jobs.append(ckey)
+
         return new_jobs
 
 
     #finished_jobs = job.monitor.determine_finished_jobs(known_jobs, current_jobs)
     def determine_finished_jobs(self, known_jobs, current_jobs):
+        # known_jobs is a dictionary: jobid -> {'jobid':jobid}
+        # current_jobs is a dictionary: jobid -> {'jobid':jobid,'state':val,'reason':val}
         finished_jobs = []
+        for kkey in known_jobs:
+            if not kkey in current_jobs:
+                current_jobs.append(kkey)
+
         return finished_jobs
+
+
+    #job_monitor.process_new_job(current_jobs[nj])
+    def process_new_job(self, new_job):
+        return
+
+
+    #job_monitor.process_finished_job(known_jobs[fj])
+    def process_finished_job(self, finished_job):
+        return
 
 
 def main():
@@ -130,18 +152,27 @@ def main():
     # TODO should we also have the ability to only process one new job? to ease debugging?
     i = 0
     known_jobs = job_monitor.get_known_jobs(jobdir)
-    print("known_jobs='%s'" % known_jobs)
     while max_iter < 0 or i < max_iter:
+        print("\njob monitor main loop: iteration %d" % i)
+        print("known_jobs='%s'" % known_jobs)
         current_jobs = job_monitor.get_current_jobs(poll_command,username)
         print("current_jobs='%s'" % current_jobs)
-        new_jobs = job.monitor.determine_new_jobs(known_jobs, current_jobs)
+        new_jobs = job_monitor.determine_new_jobs(known_jobs, current_jobs)
+        print("new_jobs='%s'" % new_jobs)
         # TODO process new jobs
-        finished_jobs = job.monitor.determine_finished_jobs(known_jobs, current_jobs)
+        for nj in new_jobs:
+            job_monitor.process_new_job(current_jobs[nj])
+        finished_jobs = job_monitor.determine_finished_jobs(known_jobs, current_jobs)
+        print("finished_jobs='%s'" % finished_jobs)
         # TODO process finished jobs
+        for fj in finished_jobs:
+            job_monitor.process_finished_job(known_jobs[fj])
 
         known_jobs = current_jobs
+
         # sleep poll_interval seconds (only if at least one more iteration)
         if max_iter < 0 or i+1 < max_iter:
+            print("sleep %d seconds" % poll_interval)
             time.sleep(poll_interval)
         i = i + 1
 
