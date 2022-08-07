@@ -55,17 +55,33 @@ class EESSIBotSoftwareLayerJobMonitor:
 
         return current_jobs
 
+
     #known_jobs = job_monitor.get_known_jobs(jobdir)
     def get_known_jobs(self, jobdir):
         # find all symlinks resembling job ids (digits only) in jobdir
         known_jobs = {}
         if os.path.isdir(jobdir):
             regex = re.compile('(\d)+')
-            known_jobs = [ { 'jobid' : fname } for fname in os.listdir(jobdir) if regex.match(fname) and os.path.islink(fname) ]
+            for fname in os.listdir(jobdir):
+                if regex.match(fname) and os.path.islink(fname):
+                    known_jobs[fname] = { 'jobid' : fname }
         else:
             print("directory '%s' does not exist -> assuming no jobs known previously" % jobdir)
 
         return known_jobs
+
+
+    #new_jobs = job.monitor.determine_new_jobs(known_jobs, current_jobs)
+    def determine_new_jobs(self, known_jobs, current_jobs):
+        new_jobs = []
+        return new_jobs
+
+
+    #finished_jobs = job.monitor.determine_finished_jobs(known_jobs, current_jobs)
+    def determine_finished_jobs(self, known_jobs, current_jobs):
+        finished_jobs = []
+        return finished_jobs
+
 
 def main():
     """Main function."""
@@ -118,9 +134,9 @@ def main():
     while max_iter < 0 or i < max_iter:
         current_jobs = job_monitor.get_current_jobs(poll_command,username)
         print("current_jobs='%s'" % current_jobs)
-        #new_jobs = job.monitor.determine_new_jobs(known_jobs, current_jobs)
+        new_jobs = job.monitor.determine_new_jobs(known_jobs, current_jobs)
         # TODO process new jobs
-        #finished_jobs = job.monitor.determine_finished_jobs(known_jobs, current_jobs)
+        finished_jobs = job.monitor.determine_finished_jobs(known_jobs, current_jobs)
         # TODO process finished jobs
 
         known_jobs = current_jobs
