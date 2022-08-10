@@ -34,4 +34,9 @@ def parse():
         help="loop behaviour: i<0 - indefinite, i==0 - don't run, i>0: run i iterations (default -1)",
     )
 
+    parser.add_argument(
+        "-j", "--jobs",
+        help="limits the processing to a specific job id or list of comma-separated list of job ids",
+    )
+
     return parser.parse_args()

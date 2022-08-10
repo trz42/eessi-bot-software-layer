@@ -238,6 +238,9 @@ def main():
 
     job_monitor = EESSIBotSoftwareLayerJobMonitor()
     job_monitor.logfile = os.path.join(os.getcwd(), 'eessi_bot_job_monitor.log')
+    job_monitor.job_filter = {}
+    if not opts.jobs is None:
+        job_monitor.job_filter = { jobid : None for jobid in opts.jobs.split(',') }
 
     # main loop (first sketch)
     #  get status of jobs (user_held,pending,running,"finished")
@@ -276,7 +279,7 @@ def main():
     #   < 0: run loop indefinitely
     #  == 0: don't run loop
     #   > 0: run loop max_iter times
-    # TODO should we also have the ability to only process one new job? to ease debugging?
+    # processing may be limited to a list of job ids (see parameter -j --jobs)
     i = 0
     known_jobs = job_monitor.get_known_jobs(jobdir)
     while max_iter < 0 or i < max_iter:
@@ -288,15 +291,21 @@ def main():
 
         new_jobs = job_monitor.determine_new_jobs(known_jobs, current_jobs)
         print("new_jobs='%s'" % new_jobs)
-        # TODO process new jobs
+        # process new jobs
         for nj in new_jobs:
-            job_monitor.process_new_job(current_jobs[nj], scontrol_command, jobdir)
+            if nj in job_monitor.job_filter: 
+                job_monitor.process_new_job(current_jobs[nj], scontrol_command, jobdir)
+            else:
+                print("skipping job %s due to parameter '--jobs %s'" % (nj,opts.jobs))
 
         finished_jobs = job_monitor.determine_finished_jobs(known_jobs, current_jobs)
         print("finished_jobs='%s'" % finished_jobs)
-        # TODO process finished jobs
+        # process finished jobs
         for fj in finished_jobs:
-            job_monitor.process_finished_job(known_jobs[fj])
+            if fj in job_monitor.job_filter: 
+                job_monitor.process_finished_job(known_jobs[fj])
+            else:
+                print("skipping job %s due to parameter '--jobs %s'" % (fj,opts.jobs))
 
         known_jobs = current_jobs
 
