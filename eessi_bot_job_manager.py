@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 #
-# (Slurm) job monitor for the GitHub App for the EESSI project
+# (Slurm) job manager for the GitHub App for the EESSI project
 #
-# This tool monitors jobs and reports back to the corresponding GitHub
-# pull request to a software-layer repo (origin or fork).
+# This tool monitors EESSI build jobs and acts on state changes of
+# these jobs. It releases jobs initially held, it processes finished
+# jobs and for both reports status changes/results back to the
+# corresponding GitHub pull request to a software-layer repo (origin
+# or fork).
 #
-# It essentially monitors the job queue for EESSI (build) jobs and
-# acts on state changes of these jobs.
-# 
-# EESSI (build) jobs are recognised by
-#  - being submitted in USER_HELD status (sbatch parameter --hold)
+# EESSI build jobs are recognised by
+#  - being submitted in JobUserHeld status (sbatch parameter --hold)
 #  - job ids listed in a specific directory (ids being symlinks to job
 #    directories created by EESSI bot)
 #
@@ -39,8 +39,8 @@ def mkdir(path):
         os.makedirs(path)
 
 
-class EESSIBotSoftwareLayerJobMonitor:
-    'main class for (Slurm) job monitor of EESSI bot (separate process)'
+class EESSIBotSoftwareLayerJobManager:
+    'main class for (Slurm) job manager of EESSI bot (separate process)'
 
     def get_current_jobs(self, poll_command, username):
         squeue_cmd = '%s --long --user=%s' % (poll_command,username)
@@ -63,7 +63,7 @@ class EESSIBotSoftwareLayerJobMonitor:
         return current_jobs
 
 
-    #known_jobs = job_monitor.get_known_jobs(jobdir)
+    #known_jobs = job_manager.get_known_jobs(jobdir)
     def get_known_jobs(self, jobdir):
         # find all symlinks resembling job ids (digits only) in jobdir
         known_jobs = {}
@@ -84,7 +84,7 @@ class EESSIBotSoftwareLayerJobMonitor:
         return known_jobs
 
 
-    #new_jobs = job.monitor.determine_new_jobs(known_jobs, current_jobs)
+    #new_jobs = job.manager.determine_new_jobs(known_jobs, current_jobs)
     def determine_new_jobs(self, known_jobs, current_jobs):
         # known_jobs is a dictionary: jobid -> {'jobid':jobid}
         # current_jobs is a dictionary: jobid -> {'jobid':jobid,'state':val,'reason':val}
@@ -96,7 +96,7 @@ class EESSIBotSoftwareLayerJobMonitor:
         return new_jobs
 
 
-    #finished_jobs = job.monitor.determine_finished_jobs(known_jobs, current_jobs)
+    #finished_jobs = job.manager.determine_finished_jobs(known_jobs, current_jobs)
     def determine_finished_jobs(self, known_jobs, current_jobs):
         # known_jobs is a dictionary: jobid -> {'jobid':jobid}
         # current_jobs is a dictionary: jobid -> {'jobid':jobid,'state':val,'reason':val}
@@ -108,7 +108,7 @@ class EESSIBotSoftwareLayerJobMonitor:
         return finished_jobs
 
 
-    #job_monitor.process_new_job(current_jobs[nj])
+    #job_manager.process_new_job(current_jobs[nj])
     def process_new_job(self, new_job, scontrol_command, jobdir):
         # create symlink in jobdir (destination is the working
         #   dir of the job derived via scontrol)
@@ -222,7 +222,7 @@ class EESSIBotSoftwareLayerJobMonitor:
         return
 
 
-    #job_monitor.process_finished_job(known_jobs[fj])
+    #job_manager.process_finished_job(known_jobs[fj])
     def process_finished_job(self, finished_job):
         # check result (no missing packages, tgz)
         # remove symlink from jobdir
@@ -236,11 +236,11 @@ def main():
     config.read_file("app.cfg")
     github.connect()
 
-    job_monitor = EESSIBotSoftwareLayerJobMonitor()
-    job_monitor.logfile = os.path.join(os.getcwd(), 'eessi_bot_job_monitor.log')
-    job_monitor.job_filter = {}
+    job_manager = EESSIBotSoftwareLayerJobManager()
+    job_manager.logfile = os.path.join(os.getcwd(), 'eessi_bot_job_manager.log')
+    job_manager.job_filter = {}
     if not opts.jobs is None:
-        job_monitor.job_filter = { jobid : None for jobid in opts.jobs.split(',') }
+        job_manager.job_filter = { jobid : None for jobid in opts.jobs.split(',') }
 
     # main loop (first sketch)
     #  get status of jobs (user_held,pending,running,"finished")
@@ -257,7 +257,7 @@ def main():
     #    pending -> running: update status (start time, end time)
     #    running -> finished: update status & provide result summary
 
-    max_iter = int(opts.max_monitor_iterations)
+    max_iter = int(opts.max_manager_iterations)
     # retrieve some settings from app.cfg
     poll_interval = 0
     poll_command  = 'false'
@@ -269,7 +269,7 @@ def main():
             poll_interval = 60
         poll_command = buildenv.get('poll_command') or false
         scontrol_command = buildenv.get('scontrol_command') or false
-        jobdir = config.get_section('job_monitor').get('job_ids_dir')
+        jobdir = config.get_section('job_manager').get('job_ids_dir')
         mkdir(jobdir)
 
     # who am i
@@ -281,29 +281,29 @@ def main():
     #   > 0: run loop max_iter times
     # processing may be limited to a list of job ids (see parameter -j --jobs)
     i = 0
-    known_jobs = job_monitor.get_known_jobs(jobdir)
+    known_jobs = job_manager.get_known_jobs(jobdir)
     while max_iter < 0 or i < max_iter:
-        print("\njob monitor main loop: iteration %d" % i)
+        print("\njob manager main loop: iteration %d" % i)
         print("known_jobs='%s'" % known_jobs)
 
-        current_jobs = job_monitor.get_current_jobs(poll_command,username)
+        current_jobs = job_manager.get_current_jobs(poll_command,username)
         print("current_jobs='%s'" % current_jobs)
 
-        new_jobs = job_monitor.determine_new_jobs(known_jobs, current_jobs)
+        new_jobs = job_manager.determine_new_jobs(known_jobs, current_jobs)
         print("new_jobs='%s'" % new_jobs)
         # process new jobs
         for nj in new_jobs:
-            if nj in job_monitor.job_filter: 
-                job_monitor.process_new_job(current_jobs[nj], scontrol_command, jobdir)
+            if nj in job_manager.job_filter: 
+                job_manager.process_new_job(current_jobs[nj], scontrol_command, jobdir)
             else:
                 print("skipping job %s due to parameter '--jobs %s'" % (nj,opts.jobs))
 
-        finished_jobs = job_monitor.determine_finished_jobs(known_jobs, current_jobs)
+        finished_jobs = job_manager.determine_finished_jobs(known_jobs, current_jobs)
         print("finished_jobs='%s'" % finished_jobs)
         # process finished jobs
         for fj in finished_jobs:
-            if fj in job_monitor.job_filter: 
-                job_monitor.process_finished_job(known_jobs[fj])
+            if fj in job_manager.job_filter: 
+                job_manager.process_finished_job(known_jobs[fj])
             else:
                 print("skipping job %s due to parameter '--jobs %s'" % (fj,opts.jobs))
 

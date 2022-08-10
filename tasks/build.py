@@ -161,7 +161,7 @@ def build_easystack_from_pr(pr, event_info):
         job_comment += '|----------|----------|--------|------------------------|\n'
 
         dt = datetime.now(timezone.utc)
-        job_comment += '|%s|submitted|Unknown|job waits for release by job monitor|' % (dt.strftime("%b %d %X %Z %Y"))
+        job_comment += '|%s|submitted|Unknown|job waits for release by job manager|' % (dt.strftime("%b %d %X %Z %Y"))
 
         # repo_name = pr.base.repo.full_name # already set above
         repo = gh.get_repo(repo_name)

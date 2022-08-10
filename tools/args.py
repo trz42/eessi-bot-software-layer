@@ -30,7 +30,7 @@ def parse():
     )
 
     parser.add_argument(
-        "-i", "--max-monitor-iterations", default=-1,
+        "-i", "--max-manager-iterations", default=-1,
         help="loop behaviour: i<0 - indefinite, i==0 - don't run, i>0: run i iterations (default -1)",
     )
 
