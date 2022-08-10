@@ -1,3 +1,4 @@
+import configparser
 import json
 import os
 import subprocess
@@ -8,7 +9,7 @@ import re
 from connections import github
 from tools import config
 from pyghee.utils import log
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def mkdir(path):
@@ -128,24 +129,42 @@ def build_easystack_from_pr(pr, event_info):
             build_job_script,
             local_tmp,
         ])
-        submitted = subprocess.run(command_line, shell=True, cwd=job[0], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        submitted = subprocess.run(
+                command_line,
+                shell=True,
+                cwd=job[0],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
 
         # sbatch output is 'Submitted batch job JOBID'
         #   parse job id & add it to array of submitted jobs PLUS create a symlink from main pr_<ID> dir to job dir (job[0])
         job_id = submitted.stdout.split()[3].decode("UTF-8")
         submitted_jobs.append(job_id)
         symlink = os.path.join(jobs_base_dir, ym, pr_id, job_id)
-        job_comment += '|%s|submitted|n/a|%s|%s|\n' % (job_id,arch_target,symlink)
         log("jobs_base_dir: %s, ym: %s, pr_id: %s, job_id: %s" % (jobs_base_dir,ym,pr_id,job_id))
         os.symlink(job[0], symlink)
         log("Submit command executed!\nStdout: %s\nStderr: %s" % (submitted.stdout, submitted.stderr))
+        # TODO create _bot_job<jobid>.metadata file in submission directory
+        bot_jobfile = configparser.ConfigParser()
+        bot_jobfile['PR'] = { 'repo' : repo_name, 'pr_number' : pr.number }
+        bot_jobfile_path = os.path.join(job[0], '_bot_job%s.metadata' % job_id)
+        with open(bot_jobfile_path, 'w') as bjf:
+            bot_jobfile.write(bjf)
 
-    # report submitted jobs (incl architecture, ...)
-    comment = 'Submitted %d job(s) on %s\n' % (len(submitted_jobs),app_name)
-    if len(submitted_jobs) > 0:
-        comment += '|job id|job status|end time|os/architecture|job directory|\n'
-        comment += '|------|----------|--------|----------------|------------------------------|\n'
-    # repo_name = pr.base.repo.full_name # already set above
-    repo = gh.get_repo(repo_name)
-    pull_request = repo.get_pull(pr.number)
-    pull_request.create_issue_comment(comment+job_comment)
+        # report submitted jobs (incl architecture, ...)
+        job_comment = 'Job `%s` on `%s`' % (job_id, app_name)
+        # obtain arch from job[1] which has the format OS/ARCH
+        arch_name = '-'.join(job[1].split('/')[1:])
+        job_comment += ' for `%s`' % arch_name
+        job_comment += ' in `%s`\n' % symlink
+        job_comment += '|date|job status|end time|comment|\n'
+        job_comment += '|----------|----------|--------|------------------------|\n'
+
+        dt = datetime.now(timezone.utc)
+        job_comment += '|%s|submitted|Unknown|job waits for release by job monitor|' % (dt.strftime("%b %d %X %Z %Y"))
+
+        # repo_name = pr.base.repo.full_name # already set above
+        repo = gh.get_repo(repo_name)
+        pull_request = repo.get_pull(pr.number)
+        pull_request.create_issue_comment(job_comment)
+

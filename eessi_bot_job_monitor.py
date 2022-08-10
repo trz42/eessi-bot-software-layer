@@ -20,16 +20,23 @@
 # license: GPLv2
 #
 
+import configparser
 import json
 import os
 import re
 import subprocess
 import time
 
+from datetime import datetime, timezone
 from connections import github
 from tools import args, config
 
 from pyghee.utils import create_file, log
+
+
+def mkdir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 
 class EESSIBotSoftwareLayerJobMonitor:
@@ -63,8 +70,14 @@ class EESSIBotSoftwareLayerJobMonitor:
         if os.path.isdir(jobdir):
             regex = re.compile('(\d)+')
             for fname in os.listdir(jobdir):
-                if regex.match(fname) and os.path.islink(fname):
-                    known_jobs[fname] = { 'jobid' : fname }
+                if regex.match(fname):
+                    full_path = os.path.join(jobdir,fname)
+                    if os.path.islink(full_path):
+                        known_jobs[fname] = { 'jobid' : fname }
+                    else:
+                        print("entry %s in %s is not recognised as a symlink" % (full_path,jobdir))
+                else:
+                    print("entry %s in %s doesn't match regex" % (fname,jobdir))
         else:
             print("directory '%s' does not exist -> assuming no jobs known previously" % jobdir)
 
@@ -96,12 +109,124 @@ class EESSIBotSoftwareLayerJobMonitor:
 
 
     #job_monitor.process_new_job(current_jobs[nj])
-    def process_new_job(self, new_job):
+    def process_new_job(self, new_job, scontrol_command, jobdir):
+        # create symlink in jobdir (destination is the working
+        #   dir of the job derived via scontrol)
+        # release job
+        # update PR comment with new status (released)
+
+        # TODO obtain scontrol_command and jobdir from config
+        scontrol_cmd = '%s --oneliner show jobid %s' % (
+                scontrol_command,
+                new_job['jobid'])
+        log("run scontrol command: %s" % scontrol_cmd, self.logfile)
+
+        scontrol = subprocess.run(
+                scontrol_cmd,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+
+        # parse output, look for WorkDir=dir
+        match = re.search('.* WorkDir=(\S+) .*',
+                          str(scontrol.stdout,"UTF-8"))
+        if match:
+            print("work dir of job %s: '%s'" % (
+                new_job['jobid'], match.group(1)))
+
+            symlink_source = os.path.join(jobdir, new_job['jobid'])
+            log("create a symlink: %s -> %s" % (
+                symlink_source, match.group(1)), self.logfile)
+            print("create a symlink: %s -> %s" % (
+                symlink_source, match.group(1)))
+            os.symlink(match.group(1), symlink_source)
+
+            release_cmd = '%s release jobid %s' % (
+                    scontrol_command, new_job['jobid'])
+            log("run scontrol command: %s" % release_cmd, self.logfile)
+            # TODO uncomment: release = subprocess.run(scontrol_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            # update PR
+            # (a) get repo name and PR number from file _bot_job<JOBID>.metadata
+            # (b) find & get comment for this job
+            # (c) add a row to the table
+
+            # (a) get repo name and PR number from file _bot_job<JOBID>.metadata
+            #   the file should be written by the event handler to the working dir of the job
+            job_metadata_path = '%s/_bot_job%s.metadata' % (
+                    match.group(1),
+                    new_job['jobid'])
+            metadata = configparser.ConfigParser()
+            try:
+                metadata.read(job_metadata_path)
+            except Exception as e:
+                print(e)
+                error(f'Unable to read job metadata file {job_metadata_path}!')
+            # get section
+            if 'PR' in metadata:
+                metadata_pr = metadata['PR']
+            else:
+                metadata_pr = {}
+            # get repo name
+            repo_name = metadata_pr['repo'] or ''
+            # get pr number
+            pr_number = metadata_pr['pr_number'] or None
+            print("pr_number: '%s'" % pr_number)
+
+            print("GH token: expires at '%s'" % github.token().expires_at)
+
+            gh = github.get_instance()
+
+            print("get repo obj for '%s'" % repo_name)
+            repo = gh.get_repo(repo_name)
+            pr = repo.get_pull(int(pr_number))
+
+            # (b) find & get comment for this job
+            # only get comment if we don't know its id yet
+            if not 'comment_id' in new_job:
+                comments = pr.get_issue_comments()
+                for comment in comments:
+                    #print("Comment: created at '%s', user '%s', body '%s'" % (
+                    #    comment.created_at, comment.user.login, comment.body))
+
+                    # TODO adjust search string to format with more details.
+                    cms = '^Job `%s` on `%s`.*' % (
+                            new_job['jobid'],
+                            config.get_section('github').get('app_name'))
+
+                    comment_match = re.search(cms, comment.body)
+
+                    if comment_match:
+                        print("found comment with id %s" % comment.id)
+                        new_job['comment_id'] = comment.id
+                        break
+
+            # (c) add a row to the table
+            # add row to status table if we found a comment
+            if 'comment_id' in new_job:
+                issue_comment = pr.get_issue_comment(int(new_job['comment_id']))
+                original_body = issue_comment.body
+                dt = datetime.now(timezone.utc)
+                update = '\n|%s|released|Unknown|new symlink `%s`|' % (
+                        dt.strftime("%b %d %X %Z %Y"),
+                        symlink_source)
+                issue_comment.edit(original_body + update)
+            else:
+                print("did not obtain/find a comment for the job")
+                # TODO just create one?
+        else:
+            # TODO can we run this tool on a job directory? the path to
+            #      the directory might be obtained from a comment to the PR
+            print("didn't find work dir for job %s" % new_job['jobid'])
+
         return
 
 
     #job_monitor.process_finished_job(known_jobs[fj])
     def process_finished_job(self, finished_job):
+        # check result (no missing packages, tgz)
+        # remove symlink from jobdir
+        # update PR comment with new status (finished)
         return
 
 
@@ -140,7 +265,9 @@ def main():
         if poll_interval <= 0:
             poll_interval = 60
         poll_command = buildenv.get('poll_command') or false
+        scontrol_command = buildenv.get('scontrol_command') or false
         jobdir = config.get_section('job_monitor').get('job_ids_dir')
+        mkdir(jobdir)
 
     # who am i
     username = os.getlogin()
@@ -155,13 +282,16 @@ def main():
     while max_iter < 0 or i < max_iter:
         print("\njob monitor main loop: iteration %d" % i)
         print("known_jobs='%s'" % known_jobs)
+
         current_jobs = job_monitor.get_current_jobs(poll_command,username)
         print("current_jobs='%s'" % current_jobs)
+
         new_jobs = job_monitor.determine_new_jobs(known_jobs, current_jobs)
         print("new_jobs='%s'" % new_jobs)
         # TODO process new jobs
         for nj in new_jobs:
-            job_monitor.process_new_job(current_jobs[nj])
+            job_monitor.process_new_job(current_jobs[nj], scontrol_command, jobdir)
+
         finished_jobs = job_monitor.determine_finished_jobs(known_jobs, current_jobs)
         print("finished_jobs='%s'" % finished_jobs)
         # TODO process finished jobs
