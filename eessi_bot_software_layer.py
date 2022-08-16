@@ -47,11 +47,20 @@ class EESSIBotSoftwareLayer(PyGHee):
         log("installation event handled!", log_file=log_file)
 
 
-    def handle_pull_request_label_event(self, event_info, pr):
+    def handle_pull_request_labeled_event(self, event_info, pr):
         """
         Handle adding of a label to a pull request.
         """
-        log("PR labeled")
+
+        # determine label
+        label = event_info['raw_request_body']['label']['name']
+        log("Process PR labeled event: PR#%s, label '%s'" % (pr.number,label))
+
+        if label == "bot:build":
+            # run function to build software stack
+            build_easystack_from_pr(pr, event_info)
+        else:
+            log("handle_pull_request_labeled_event: no handler for label '%s'" % label)
 
 
     def handle_pull_request_opened_event(self, event_info, pr):
