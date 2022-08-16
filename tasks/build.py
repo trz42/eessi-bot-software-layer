@@ -59,6 +59,7 @@ def build_easystack_from_pr(pr, event_info):
     gh = github.get_instance()
     # adopting approach outlined in https://github.com/EESSI/eessi-bot-software-layer/issues/17
     # need to use `base` instead of `head` ... don't need to know the branch name
+    # TODO rename to base_repo_name?
     repo_name = pr.base.repo.full_name
     log("build_easystack_from_pr: pr.base.repo.full_name '%s'" % pr.base.repo.full_name)
 
@@ -144,7 +145,8 @@ def build_easystack_from_pr(pr, event_info):
         log("jobs_base_dir: %s, ym: %s, pr_id: %s, job_id: %s" % (jobs_base_dir,ym,pr_id,job_id))
         os.symlink(job[0], symlink)
         log("Submit command executed!\nStdout: %s\nStderr: %s" % (submitted.stdout, submitted.stderr))
-        # TODO create _bot_job<jobid>.metadata file in submission directory
+
+        # create _bot_job<jobid>.metadata file in submission directory
         bot_jobfile = configparser.ConfigParser()
         bot_jobfile['PR'] = { 'repo' : repo_name, 'pr_number' : pr.number }
         bot_jobfile_path = os.path.join(job[0], '_bot_job%s.metadata' % job_id)
@@ -156,12 +158,12 @@ def build_easystack_from_pr(pr, event_info):
         # obtain arch from job[1] which has the format OS/ARCH
         arch_name = '-'.join(job[1].split('/')[1:])
         job_comment += ' for `%s`' % arch_name
-        job_comment += ' in `%s`\n' % symlink
-        job_comment += '|date|job status|end time|comment|\n'
-        job_comment += '|----------|----------|--------|------------------------|\n'
+        job_comment += ' in job dir `%s`\n' % symlink
+        job_comment += '|date|job status|comment|\n'
+        job_comment += '|----------|----------|------------------------|\n'
 
         dt = datetime.now(timezone.utc)
-        job_comment += '|%s|submitted|Unknown|job waits for release by job manager|' % (dt.strftime("%b %d %X %Z %Y"))
+        job_comment += '|%s|submitted|job waits for release by job manager|' % (dt.strftime("%b %d %X %Z %Y"))
 
         # repo_name = pr.base.repo.full_name # already set above
         repo = gh.get_repo(repo_name)
