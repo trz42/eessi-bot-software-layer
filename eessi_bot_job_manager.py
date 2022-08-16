@@ -22,13 +22,14 @@
 
 import configparser
 import json
+import glob
 import os
 import re
 import subprocess
 import time
 
-from datetime import datetime, timezone
 from connections import github
+from datetime import datetime, timezone
 from tools import args, config
 
 from pyghee.utils import create_file, log
@@ -57,29 +58,28 @@ class EESSIBotSoftwareLayerJobManager:
             # assume lines 2 to len(lines) contain jobs
             job = lines[i].rstrip().split()
             if len(job) == 9:
-                #print("id %s state %s reason %s" % (job[0], job[4], job[8]))
                 current_jobs[job[0]] = { 'jobid' : job[0], 'state' : job[4], 'reason' : job[8] }
 
         return current_jobs
 
 
-    #known_jobs = job_manager.get_known_jobs(jobdir)
-    def get_known_jobs(self, jobdir):
+    #known_jobs = job_manager.get_known_jobs(submitted_jobs_dir)
+    def get_known_jobs(self, submitted_jobs_dir):
         # find all symlinks resembling job ids (digits only) in jobdir
         known_jobs = {}
-        if os.path.isdir(jobdir):
+        if os.path.isdir(submitted_jobs_dir):
             regex = re.compile('(\d)+')
-            for fname in os.listdir(jobdir):
+            for fname in os.listdir(submitted_jobs_dir):
                 if regex.match(fname):
-                    full_path = os.path.join(jobdir,fname)
+                    full_path = os.path.join(submitted_jobs_dir,fname)
                     if os.path.islink(full_path):
                         known_jobs[fname] = { 'jobid' : fname }
                     else:
-                        print("entry %s in %s is not recognised as a symlink" % (full_path,jobdir))
+                        print("entry %s in %s is not recognised as a symlink" % (full_path,submitted_jobs_dir))
                 else:
-                    print("entry %s in %s doesn't match regex" % (fname,jobdir))
+                    print("entry %s in %s doesn't match regex" % (fname,submitted_jobs_dir))
         else:
-            print("directory '%s' does not exist -> assuming no jobs known previously" % jobdir)
+            print("directory '%s' does not exist -> assuming no jobs known previously" % submitted_jobs_dir)
 
         return known_jobs
 
@@ -103,14 +103,14 @@ class EESSIBotSoftwareLayerJobManager:
         finished_jobs = []
         for kkey in known_jobs:
             if not kkey in current_jobs:
-                current_jobs.append(kkey)
+                finished_jobs.append(kkey)
 
         return finished_jobs
 
 
     #job_manager.process_new_job(current_jobs[nj])
-    def process_new_job(self, new_job, scontrol_command, jobdir):
-        # create symlink in jobdir (destination is the working
+    def process_new_job(self, new_job, scontrol_command, submitted_jobs_dir):
+        # create symlink in submitted_jobs_dir (destination is the working
         #   dir of the job derived via scontrol)
         # release job
         # update PR comment with new status (released)
@@ -134,17 +134,20 @@ class EESSIBotSoftwareLayerJobManager:
             print("work dir of job %s: '%s'" % (
                 new_job['jobid'], match.group(1)))
 
-            symlink_source = os.path.join(jobdir, new_job['jobid'])
+            symlink_source = os.path.join(submitted_jobs_dir, new_job['jobid'])
             log("create a symlink: %s -> %s" % (
                 symlink_source, match.group(1)), self.logfile)
             print("create a symlink: %s -> %s" % (
                 symlink_source, match.group(1)))
             os.symlink(match.group(1), symlink_source)
 
-            release_cmd = '%s release jobid %s' % (
+            release_cmd = '%s release %s' % (
                     scontrol_command, new_job['jobid'])
             log("run scontrol command: %s" % release_cmd, self.logfile)
-            # TODO uncomment: release = subprocess.run(scontrol_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            print("run scontrol command: %s" % release_cmd)
+            release = subprocess.run(release_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            print("scontrol out: %s" % release.stdout.decode("UTF-8"))
+            print("scontrol err: %s" % release.stderr.decode("UTF-8"))
 
             # update PR
             # (a) get repo name and PR number from file _bot_job<JOBID>.metadata
@@ -186,10 +189,9 @@ class EESSIBotSoftwareLayerJobManager:
             if not 'comment_id' in new_job:
                 comments = pr.get_issue_comments()
                 for comment in comments:
-                    #print("Comment: created at '%s', user '%s', body '%s'" % (
-                    #    comment.created_at, comment.user.login, comment.body))
-
-                    # TODO adjust search string to format with more details.
+                    # NOTE adjust search string if format changed by event
+                    #        handler (separate process running
+                    #        eessi_bot_software_layer.py)
                     cms = '^Job `%s` on `%s`.*' % (
                             new_job['jobid'],
                             config.get_section('github').get('app_name'))
@@ -207,7 +209,7 @@ class EESSIBotSoftwareLayerJobManager:
                 issue_comment = pr.get_issue_comment(int(new_job['comment_id']))
                 original_body = issue_comment.body
                 dt = datetime.now(timezone.utc)
-                update = '\n|%s|released|Unknown|new symlink `%s`|' % (
+                update = '\n|%s|released|symlk `%s`|' % (
                         dt.strftime("%b %d %X %Z %Y"),
                         symlink_source)
                 issue_comment.edit(original_body + update)
@@ -224,9 +226,167 @@ class EESSIBotSoftwareLayerJobManager:
 
     #job_manager.process_finished_job(known_jobs[fj])
     def process_finished_job(self, finished_job):
-        # check result (no missing packages, tgz)
-        # remove symlink from jobdir
+        # check result
+        #   ("No missing packages!", "eessi-.*.tar.gz")
+        #   TODO as is, this requires knowledge about the build process.
+        #          maybe better to somehow capture job "result" (process
+        #          exit value) by build script?
         # update PR comment with new status (finished)
+        # move symlink from job_ids_dir/submitted to jobs_ids_dir/finished
+
+        # 'submitted_jobs_dir'/jobid is symlink to working dir of job
+        #  working dir contains _bot_job<jobid>.metadata
+        #    file contains (pr number and base repo name)
+
+        # establish contact to pull request on github
+        gh = github.get_instance()
+
+        # set some variables for accessing work dir of job
+        job_ids_dir = config.get_section('job_manager').get('job_ids_dir')
+        submitted_jobs_dir = os.path.join(job_ids_dir,'submitted')
+        job_dir = os.path.join(submitted_jobs_dir, finished_job['jobid'])
+        sym_dst = os.readlink(job_dir)
+
+        # TODO create function for obtaining values from metadata file
+        #        might be based on allowing multiple configuration files
+        #        in tools/config.py
+        metadata_file = '_bot_job%s.metadata' % finished_job['jobid']
+        job_metadata_path = os.path.join(job_dir,metadata_file)
+
+        metadata = configparser.ConfigParser()
+        try:
+            metadata.read(job_metadata_path)
+        except Exception as e:
+            print(e)
+            error(f'Unable to read job metadata file {job_metadata_path}!')
+
+        # get section
+        if 'PR' in metadata:
+            metadata_pr = metadata['PR']
+        else:
+            metadata_pr = {}
+        # get repo name
+        repo_name = metadata_pr['repo'] or ''
+        # get pr number
+        pr_number = metadata_pr['pr_number'] or None
+        print("pr_number: '%s'" % pr_number)
+
+        repo = gh.get_repo(repo_name)
+        pull_request = repo.get_pull(int(pr_number))
+
+        # determine comment to be updated
+        if not 'comment_id' in finished_job:
+            comments = pull_request.get_issue_comments()
+            for comment in comments:
+                # NOTE adjust search string if format changed by event
+                #        handler (separate process running
+                #        eessi_bot_software_layer.py)
+                cms = '^Job `%s` on `%s`.*' % (
+                        finished_job['jobid'],
+                        config.get_section('github').get('app_name'))
+
+                comment_match = re.search(cms, comment.body)
+
+                if comment_match:
+                    print("found comment with id %s" % comment.id)
+                    finished_job['comment_id'] = comment.id
+                    break
+
+        # analyse job result
+        slurm_out = os.path.join(sym_dst,'slurm-%s.out' % finished_job['jobid'])
+
+        # determine all tarballs that are stored in the job directory (only expecting 1)
+        tarball_pattern = 'eessi-*software-*.tar.gz'
+        glob_str = os.path.join(sym_dst,tarball_pattern)
+        eessi_tarballs = glob.glob(glob_str)
+
+        # set some initial values
+        no_missing_modules = False
+        targz_created = False
+
+        # check slurm out for the below strings
+        #   ^No missing modules!$ --> software successfully installed
+        #   ^/eessi_bot_job/eessi-.*-software-.*.tar.gz created!$ --> tarball successfully created
+        if os.path.exists(slurm_out):
+            re_missing_modules = re.compile('^No missing modules!$')
+            re_targz_created = re.compile('^/eessi_bot_job/eessi-.*-software-.*.tar.gz created!$')
+            outfile = open(slurm_out, "r")
+            for line in outfile:
+                if re_missing_modules.match(line):
+                    # no missing modules
+                    no_missing_modules = True
+                if re_targz_created.match(line):
+                    # tarball created
+                    targz_created = True
+
+        dt = datetime.now(timezone.utc)
+
+        if no_missing_modules and targz_created and len(eessi_tarballs) == 1:
+            # We've got one tarball and slurm out messages are ok
+            # Prepare a message with information such as
+            #   (installation status, tarball name, tarball size)
+            comment_update = '\n|%s|finished|:grin: SUCCESS ' % dt.strftime("%b %d %X %Z %Y")
+            tarball_size = os.path.getsize(eessi_tarballs[0])/2**30
+            comment_update += 'tarball <code>%s</code> (%.3f GiB) ' % (os.path.basename(eessi_tarballs[0]), tarball_size)
+            comment_update += 'in job dir|'
+            # NOTE explicitly name repo in build job comment?
+            # comment_update += '\nAwaiting approval to ingest tarball into the repository.'
+        else:
+            # something is not allright:
+            #  - no slurm out or
+            #  - did not find the messages we expect or
+            #  - no tarball or
+            #  - more than one tarball
+            # prepare a message with details about the above conditions and
+            # update PR with a comment
+
+            comment_update = '\n|%s|finished|:cry: FAILURE <ul>' % dt.strftime("%b %d %X %Z %Y")
+            found_slurm_out = os.path.exists(slurm_out)
+
+            if not found_slurm_out:
+                # no slurm out ... something went wrong with the job
+                comment_update += '<li>No slurm output <code>%s</code> in job dir</li>' % os.path.basename(slurm_out)
+            else:
+                comment_update += '<li>Found slurm output <code>%s</code> in job dir</li>' % os.path.basename(slurm_out)
+
+            if found_slurm_out and not no_missing_modules:
+                # Found slurm out, but doesn't contain message 'No missing modules!'
+                comment_update += '<li>Slurm output lacks message "No missing modules!".</li>'
+
+            if found_slurm_out and not targz_created:
+                # Found slurm out, but doesn't contain message
+                #   'eessi-.*-software-.*.tar.gz created!'
+                comment_update += '<li>Slurm output lacks message about created tarball.</li>'
+
+            if len(eessi_tarballs) == 0:
+                # no luck, job just seemed to have failed ...
+                comment_update += '<li>No tarball matching <code>%s</code> found in job dir.</li>' % tarball_pattern.replace("*","\*")
+
+            if len(eessi_tarballs) > 1:
+                # something's fishy, we only expected a single tar.gz file
+                comment_update += '<li>Found %d tarballs in job dir - only 1 matching <code>%s</code> expected.</li>' % (len(eessi_tarballs),tarball_pattern.replace("*","\*"))
+            comment_update += '</ul>|'
+            #comment_update += '\nAn admin may investigate what went wrong. (TODO implement procedure to ask for details by adding a command to this comment.)'
+
+        # (c) add a row to the table
+        # add row to status table if we found a comment
+        if 'comment_id' in finished_job:
+            issue_comment = pull_request.get_issue_comment(int(finished_job['comment_id']))
+            original_body = issue_comment.body
+            dt = datetime.now(timezone.utc)
+            issue_comment.edit(original_body + comment_update)
+        else:
+            print("did not obtain/find a comment for the job")
+            # TODO just create one?
+
+        # move symlink from job_ids_dir/submitted to jobs_ids_dir/finished
+        old_symlink = os.path.join(submitted_jobs_dir, finished_job['jobid'])
+        finished_jobs_dir = os.path.join(job_ids_dir,'finished')
+        mkdir(finished_jobs_dir)
+        new_symlink = os.path.join(finished_jobs_dir, finished_job['jobid'])
+        print(f'os.rename({old_symlink},{new_symlink})')
+        os.rename(old_symlink, new_symlink)
+
         return
 
 
@@ -242,20 +402,15 @@ def main():
     if not opts.jobs is None:
         job_manager.job_filter = { jobid : None for jobid in opts.jobs.split(',') }
 
-    # main loop (first sketch)
-    #  get status of jobs (user_held,pending,running,"finished")
-    #    get list of current jobs (squeue -u ...)
-    #    (for now just assume there are non) remove non-bot jobs
-    #    compare with known list of known jobs
-    #      flag non-existing bot jobs (assumed to have finished) for processing results
-    #    (for now assume all new jobs are bot jobs) determine if "new" jobs belong to the bot
-    #      flag "new" bot jobs for releasing
-    #  process status changes of bot jobs (initial list of states)
-    #    unknown -> user_held: release job & update status
-    #  configured?
-    #    user_held -> pending: update status (queue position)
-    #    pending -> running: update status (start time, end time)
-    #    running -> finished: update status & provide result summary
+    # before main loop, get list of known jobs (stored on disk)
+    # main loop
+    #  get current jobs of the bot user (job id, state, reason)
+    #    (assume all are jobs building software)
+    #  determine new jobs (comparing known and current jobs)
+    #    process new jobs (filtered by optional command line option)
+    #  determine finished jobs (comparing known and current jobs)
+    #    process finished jobs (filtered by optional command line option)
+    #  set known jobs to list of current jobs
 
     max_iter = int(opts.max_manager_iterations)
     # retrieve some settings from app.cfg
@@ -269,8 +424,9 @@ def main():
             poll_interval = 60
         poll_command = buildenv.get('poll_command') or false
         scontrol_command = buildenv.get('scontrol_command') or false
-        jobdir = config.get_section('job_manager').get('job_ids_dir')
-        mkdir(jobdir)
+        job_ids_dir = config.get_section('job_manager').get('job_ids_dir')
+        submitted_jobs_dir = os.path.join(job_ids_dir,'submitted')
+        mkdir(submitted_jobs_dir)
 
     # who am i
     username = os.getlogin()
@@ -281,12 +437,12 @@ def main():
     #   > 0: run loop max_iter times
     # processing may be limited to a list of job ids (see parameter -j --jobs)
     i = 0
-    known_jobs = job_manager.get_known_jobs(jobdir)
+    known_jobs = job_manager.get_known_jobs(submitted_jobs_dir)
     while max_iter < 0 or i < max_iter:
         print("\njob manager main loop: iteration %d" % i)
         print("known_jobs='%s'" % known_jobs)
 
-        current_jobs = job_manager.get_current_jobs(poll_command,username)
+        current_jobs = job_manager.get_current_jobs(poll_command, username)
         print("current_jobs='%s'" % current_jobs)
 
         new_jobs = job_manager.determine_new_jobs(known_jobs, current_jobs)
@@ -294,7 +450,7 @@ def main():
         # process new jobs
         for nj in new_jobs:
             if nj in job_manager.job_filter: 
-                job_manager.process_new_job(current_jobs[nj], scontrol_command, jobdir)
+                job_manager.process_new_job(current_jobs[nj], scontrol_command, submitted_jobs_dir)
             else:
                 print("skipping job %s due to parameter '--jobs %s'" % (nj,opts.jobs))
 
