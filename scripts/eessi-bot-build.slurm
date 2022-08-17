@@ -25,11 +25,14 @@
 #  - arguments: 
 #    - eessi_tmpdir: hand over as argument to script
 
-if [ $# -ne 1 ]; then
-    echo "ERROR: Usage: $0 <EESSI tmp dir (example: /tmp/$USER/EESSI)>" >&2
+if [ $# -lt 1 ]; then
+    echo "ERROR: Usage: $0 <EESSI tmp dir (example: /tmp/$USER/EESSI)> <any additional options (example: --generic)>" >&2
     exit 1
 fi
 eessi_tmpdir=$1
+shift
+
+echo "Starting eessi-bot-build-slurm.sh"
 
 # bind current working directory to /eessi_bot_job in build container,
 # and also use it as home directory in build container
@@ -37,7 +40,7 @@ export SINGULARITY_HOME="$(pwd):/eessi_bot_job"
 
 # run standard EESSI software-layer install script
 #   in compat layer environment inside build container
-./build_container.sh run ${eessi_tmpdir} ./install_software_layer.sh
+./build_container.sh run ${eessi_tmpdir} ./install_software_layer.sh "$@"
 
 # create tarball for the above build and place it in some specific
 #   directory on shared disk (just in main directory of job)
@@ -54,5 +57,5 @@ export SINGULARITY_HOME="$(pwd):/eessi_bot_job"
 #timestamp=$(date +%s)
 #export TGZ=$(printf "eessi-%s-software-%s-%s-%d.tar.gz" ${EESSI_PILOT_VERSION} ${EESSI_OS_TYPE} ${software_subdir} ${timestamp})
 ./build_container.sh run ${eessi_tmpdir} \
-    ./create_tarball.sh ${eessi_tmpdir} software /eessi_bot_job
+    ./create_tarball.sh ${eessi_tmpdir} software /eessi_bot_job "$@"
 #    ${EESSI_SOFTWARE_SUBDIR} /eessi_bot_job/${TGZ}
