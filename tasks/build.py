@@ -121,7 +121,7 @@ def build_easystack_from_pr(pr, event_info):
     submitted_jobs = []
     job_comment = ''
     for job in jobs:
-        log("Submit job with '%s %s %s %s %s' from directory '%s'" % (submit_command, slurm_params, job[2], build_job_script, local_tmp, job[0]))
+        log("Submit job for target %s with '%s %s %s %s %s' from directory '%s'" % (job[1], submit_command, slurm_params, job[2], build_job_script, local_tmp, job[0]))
         # TODO make local_tmp specific to job? to isolate jobs if multiple ones can run on a single node
         command_line = ' '.join([
             submit_command,
@@ -130,6 +130,13 @@ def build_easystack_from_pr(pr, event_info):
             build_job_script,
             local_tmp,
         ])
+        # TODO the handling of generic targets requires a bit knowledge about
+        #      the internals of building the software layer, maybe ok for now,
+        #      but it might be good to think about an alternative
+        # if target contains generic, add ' --generic' to command line
+        if "generic" in job[1]:
+            command_line += ' --generic'
+
         submitted = subprocess.run(
                 command_line,
                 shell=True,
