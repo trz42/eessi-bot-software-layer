@@ -415,18 +415,20 @@ def main():
 
     max_iter = int(opts.max_manager_iterations)
     # retrieve some settings from app.cfg
-    poll_interval = 0
-    poll_command  = 'false'
     job_ids_dir = ''
+    submitted_jobs_dir = ''
+    poll_command  = 'false'
+    poll_interval = 0
+    scontrol_command = ''
     if max_iter != 0:
-        job_manager = config.get_section('job_manager')
-        job_ids_dir = job_manager.get('job_ids_dir')
+        job_mgr = config.get_section('job_manager')
+        job_ids_dir = job_mgr.get('job_ids_dir')
         submitted_jobs_dir = os.path.join(job_ids_dir,'submitted')
-        poll_command = job_manager.get('poll_command') or false
-        poll_interval = int(job_manager.get('poll_interval') or 0)
+        poll_command = job_mgr.get('poll_command') or false
+        poll_interval = int(job_mgr.get('poll_interval') or 0)
         if poll_interval <= 0:
             poll_interval = 60
-        scontrol_command = job_manager.get('scontrol_command') or false
+        scontrol_command = job_mgr.get('scontrol_command') or false
         mkdir(submitted_jobs_dir)
 
     # who am i
@@ -438,7 +440,8 @@ def main():
     #   > 0: run loop max_iter times
     # processing may be limited to a list of job ids (see parameter -j --jobs)
     i = 0
-    known_jobs = job_manager.get_known_jobs(submitted_jobs_dir)
+    if max_iter != 0:
+        known_jobs = job_manager.get_known_jobs(submitted_jobs_dir)
     while max_iter < 0 or i < max_iter:
         print("\njob manager main loop: iteration %d" % i)
         print("known_jobs='%s'" % known_jobs)
