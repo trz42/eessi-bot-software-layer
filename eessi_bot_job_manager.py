@@ -48,9 +48,10 @@ class EESSIBotSoftwareLayerJobManager:
         username = os.getlogin()
 
         squeue_cmd = '%s --long --user=%s' % (self.poll_command,username)
-        log("run squeue command: %s" % squeue_cmd, self.logfile)
+        log("get_current_jobs(): run squeue command: %s" % squeue_cmd, self.logfile)
+
         squeue = subprocess.run(squeue_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        log("squeue output\n%s" % squeue.stdout, self.logfile)
+        log("get_current_jobs(): squeue output\n%s" % squeue.stdout, self.logfile)
         # create dictionary of jobs if any with the following information per job:
         #  jobid, state, nodelist_reason
         # skip first two lines of output ("range(2,...)")
@@ -78,11 +79,11 @@ class EESSIBotSoftwareLayerJobManager:
                     if os.path.islink(full_path):
                         known_jobs[fname] = { 'jobid' : fname }
                     else:
-                        print("entry %s in %s is not recognised as a symlink" % (full_path,self.submitted_jobs_dir))
+                        log("get_known_jobs(): entry %s in %s is not recognised as a symlink" % (full_path,self.submitted_jobs_dir), self.logfile)
                 else:
-                    print("entry %s in %s doesn't match regex" % (fname,self.submitted_jobs_dir))
+                    log("get_known_jobs(): entry %s in %s doesn't match regex" % (fname,self.submitted_jobs_dir), self.logfile)
         else:
-            print("directory '%s' does not exist -> assuming no jobs known previously" % self.submitted_jobs_dir)
+            log("get_known_jobs(): directory '%s' does not exist -> assuming no jobs known previously" % self.submitted_jobs_dir, self.logfile)
 
         return known_jobs
 
@@ -121,7 +122,7 @@ class EESSIBotSoftwareLayerJobManager:
         scontrol_cmd = '%s --oneliner show jobid %s' % (
                 self.scontrol_command,
                 new_job['jobid'])
-        log("run scontrol command: %s" % scontrol_cmd, self.logfile)
+        log("process_new_job(): run scontrol command: %s" % scontrol_cmd, self.logfile)
 
         scontrol = subprocess.run(
                 scontrol_cmd,
@@ -133,23 +134,20 @@ class EESSIBotSoftwareLayerJobManager:
         match = re.search('.* WorkDir=(\S+) .*',
                           str(scontrol.stdout,"UTF-8"))
         if match:
-            print("work dir of job %s: '%s'" % (
-                new_job['jobid'], match.group(1)))
+            log("process_new_job(): work dir of job %s: '%s'" % (
+                new_job['jobid'], match.group(1)), self.logfile)
 
             symlink_source = os.path.join(self.submitted_jobs_dir, new_job['jobid'])
-            log("create a symlink: %s -> %s" % (
+            log("process_new_job(): create a symlink: %s -> %s" % (
                 symlink_source, match.group(1)), self.logfile)
-            print("create a symlink: %s -> %s" % (
-                symlink_source, match.group(1)))
             os.symlink(match.group(1), symlink_source)
 
             release_cmd = '%s release %s' % (
                     self.scontrol_command, new_job['jobid'])
-            log("run scontrol command: %s" % release_cmd, self.logfile)
-            print("run scontrol command: %s" % release_cmd)
+            log("process_new_job(): run scontrol command: %s" % release_cmd, self.logfile)
             release = subprocess.run(release_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            print("scontrol out: %s" % release.stdout.decode("UTF-8"))
-            print("scontrol err: %s" % release.stderr.decode("UTF-8"))
+            log("process_new_job(): scontrol out: %s" % release.stdout.decode("UTF-8"), self.logfile)
+            log("process_new_job(): scontrol err: %s" % release.stderr.decode("UTF-8"), self.logfile)
 
             # update PR
             # (a) get repo name and PR number from file _bot_job<JOBID>.metadata
@@ -176,13 +174,9 @@ class EESSIBotSoftwareLayerJobManager:
             repo_name = metadata_pr['repo'] or ''
             # get pr number
             pr_number = metadata_pr['pr_number'] or None
-            print("pr_number: '%s'" % pr_number)
-
-            print("GH token: expires at '%s'" % github.token().expires_at)
 
             gh = github.get_instance()
 
-            print("get repo obj for '%s'" % repo_name)
             repo = gh.get_repo(repo_name)
             pr = repo.get_pull(int(pr_number))
 
@@ -201,7 +195,7 @@ class EESSIBotSoftwareLayerJobManager:
                     comment_match = re.search(cms, comment.body)
 
                     if comment_match:
-                        print("found comment with id %s" % comment.id)
+                        log("process_new_job(): found comment with id %s" % comment.id, self.logfile)
                         new_job['comment_id'] = comment.id
                         break
 
@@ -216,12 +210,12 @@ class EESSIBotSoftwareLayerJobManager:
                         symlink_source)
                 issue_comment.edit(original_body + update)
             else:
-                print("did not obtain/find a comment for the job")
+                log("process_new_job(): did not obtain/find a comment for job '%s'" % new_job['jobid'], self.logfile)
                 # TODO just create one?
         else:
             # TODO can we run this tool on a job directory? the path to
             #      the directory might be obtained from a comment to the PR
-            print("didn't find work dir for job %s" % new_job['jobid'])
+            log("process_new_job(): did not find work dir for job '%s'" % new_job['jobid'], self.logfile)
 
         return
 
@@ -269,7 +263,6 @@ class EESSIBotSoftwareLayerJobManager:
         repo_name = metadata_pr['repo'] or ''
         # get pr number
         pr_number = metadata_pr['pr_number'] or None
-        print("pr_number: '%s'" % pr_number)
 
         repo = gh.get_repo(repo_name)
         pull_request = repo.get_pull(int(pr_number))
@@ -288,7 +281,7 @@ class EESSIBotSoftwareLayerJobManager:
                 comment_match = re.search(cms, comment.body)
 
                 if comment_match:
-                    print("found comment with id %s" % comment.id)
+                    log("process_finished_job(): found comment with id %s" % comment.id, self.logfile)
                     finished_job['comment_id'] = comment.id
                     break
 
@@ -376,7 +369,7 @@ class EESSIBotSoftwareLayerJobManager:
             dt = datetime.now(timezone.utc)
             issue_comment.edit(original_body + comment_update)
         else:
-            print("did not obtain/find a comment for the job")
+            log("process_finished_job(): did not obtain/find a comment for job '%s'" % finished_job['jobid'], self.logfile)
             # TODO just create one?
 
         # move symlink from job_ids_dir/submitted to jobs_ids_dir/finished
@@ -384,7 +377,7 @@ class EESSIBotSoftwareLayerJobManager:
         finished_jobs_dir = os.path.join(self.job_ids_dir,'finished')
         mkdir(finished_jobs_dir)
         new_symlink = os.path.join(finished_jobs_dir, finished_job['jobid'])
-        print(f'os.rename({old_symlink},{new_symlink})')
+        log(f'process_finished_job(): os.rename({old_symlink},{new_symlink})', self.logfile)
         os.rename(old_symlink, new_symlink)
 
         return
@@ -401,6 +394,11 @@ def main():
     job_manager.job_filter = {}
     if not opts.jobs is None:
         job_manager.job_filter = { jobid : None for jobid in opts.jobs.split(',') }
+
+    log("job manager just started, logging to '%s', processing job ids '%s'" % (
+        job_manager.logfile, ','.join(job_manager.job_filter.keys())), job_manager.logfile)
+    print("job manager just started, logging to '%s', processing job ids '%s'" % (
+        job_manager.logfile, ','.join(job_manager.job_filter.keys())))
 
     # before main loop, get list of known jobs (stored on disk)
     # main loop
@@ -439,35 +437,35 @@ def main():
     if max_iter != 0:
         known_jobs = job_manager.get_known_jobs()
     while max_iter < 0 or i < max_iter:
-        print("\njob manager main loop: iteration %d" % i)
-        print("known_jobs='%s'" % known_jobs)
+        log("job manager main loop: iteration %d" % i, job_manager.logfile)
+        log("job manager main loop: known_jobs='%s'" % ','.join(known_jobs.keys()), job_manager.logfile)
 
         current_jobs = job_manager.get_current_jobs()
-        print("current_jobs='%s'" % current_jobs)
+        log("job manager main loop: current_jobs='%s'" % ','.join(current_jobs.keys()), job_manager.logfile)
 
         new_jobs = job_manager.determine_new_jobs(known_jobs, current_jobs)
-        print("new_jobs='%s'" % new_jobs)
+        log("job manager main loop: new_jobs='%s'" % ','.join(new_jobs), job_manager.logfile)
         # process new jobs
         for nj in new_jobs:
             if nj in job_manager.job_filter: 
                 job_manager.process_new_job(current_jobs[nj])
-            else:
-                print("skipping job %s due to parameter '--jobs %s'" % (nj,opts.jobs))
+            #else:
+            #    log("job manager main loop: skipping new job %s due to parameter '--jobs %s'" % (nj,opts.jobs), job_manager.logfile)
 
         finished_jobs = job_manager.determine_finished_jobs(known_jobs, current_jobs)
-        print("finished_jobs='%s'" % finished_jobs)
+        log("job manager main loop: finished_jobs='%s'" % ','.join(finished_jobs), job_manager.logfile)
         # process finished jobs
         for fj in finished_jobs:
             if fj in job_manager.job_filter: 
                 job_manager.process_finished_job(known_jobs[fj])
-            else:
-                print("skipping job %s due to parameter '--jobs %s'" % (fj,opts.jobs))
+            #else:
+            #    log("job manager main loop: skipping finished job %s due to parameter '--jobs %s'" % (fj,opts.jobs), job_manager.logfile)
 
         known_jobs = current_jobs
 
         # sleep poll_interval seconds (only if at least one more iteration)
         if max_iter < 0 or i+1 < max_iter:
-            print("sleep %d seconds" % poll_interval)
+            log("job manager main loop: sleep %d seconds" % poll_interval, job_manager.logfile)
             time.sleep(poll_interval)
         i = i + 1
 
