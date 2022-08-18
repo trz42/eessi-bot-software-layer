@@ -19,21 +19,27 @@ Requires:
 pip3 install --user -r requirements.txt
 ```
 
-# Detailed instructions to set up development environment
+# Instructions to set up the EESSI bot components
 
-The following sections describe and illustrate the steps necessary to set up the development environment for the EESSI bot.
+The following sections describe and illustrate the steps necessary
+to set up the EESSI bot for the software layer. The bot consists of
+two main components provided in this repository:
 
-## Prerequisites
+- An event handler `eessi_bot_software_layer.py` which receives events from a GitHub repository and acts on them.
+- A job manager `eessi_bot_job_manager.py` which monitors a Slurm job queue and acts on state changes of jobs submitted by the event handler.
 
-- GitHub account
-- GitHub repository on whose events the bot shall react to
-- Linux machine where the EESSI bot shall run (some steps may require sudo access)
+## <a name="prerequisites"></a>Prerequisites
 
-## Step 1: Smee.io channel and smee client
+- GitHub account(s) (two needed for a development scenario), referring to them as `YOU_1` and `YOU_2` below
+- A fork, say `YOU_1/software-layer`, of [EESSI/software-layer](https://github.com/EESSI/software-layer) and a fork, say `YOU_2/software-layer` of your first fork if you want to emulate the bot's behaviour but not change EESSI's repository. The EESSI bot will act on events triggered for the first fork (`YOU_1/software-layer`).
+- Access to a frontend/login node/service node of a Slurm cluster where the EESSI bot components shall run. For the sake of brevity, we call this node simply `bot machine`.
+- The EESSI bot components and the (build) jobs will frequently access the Internet. Hence, worker nodes and `bot machine` of the Slurm cluster need access to the Internet.
 
-We use smee.io as a service to relay events from GitHub to the EESSI bot. To do so, create a new channel on the page https://smee.io and note the URL, e.g., https://smee.io/CHANNEL_ID
+## <a name="step1"></a>Step 1: Smee.io channel and smee client
 
-On the Linux machine which runs the EESSI bot we need a tool which receives events relayed from https://smee.io/CHANNEL_ID and forwards it to the EESSI bot. We use the Smee client for this. The Smee client can be installed globally with
+We use smee.io as a service to relay events from GitHub to the EESSI bot. To do so, create a new channel on the page https://smee.io and note the URL, e.g., https://smee.io/CHANNEL-ID
+
+On the `bot machine` we need a tool which receives events relayed from https://smee.io/CHANNEL-ID and forwards it to the EESSI bot. We use the Smee client for this. The Smee client can be installed globally with
 
 ```
 npm install -g smee-client
@@ -67,24 +73,39 @@ export PATH=$PATH:$PWD
 Finally, run the Smee client as follows
 
 ```
-smee --url https://smee.io/CHANNEL_ID
+smee --url https://smee.io/CHANNEL-ID
+```
+
+If the event handler (see [Step 6.1](#step6.1)) receives events on a port different than the default (3000), you need to specify the port via the parameter `--port PORTNUMBER`, for example,
+
+```
+smee --url https://smee.io/CHANNEL-ID --port 3030
 ```
 
 Alternatively, you may use a container providing the smee client. For example,
 
 ```
 singularity pull docker://deltaprojects/smee-client
-singularity run smee-client_latest.sif --url https://smee.io/CHANNEL_ID
+singularity run smee-client_latest.sif --url https://smee.io/CHANNEL-ID
 ```
+
+or
+
+```
+singularity pull docker://deltaprojects/smee-client
+singularity run smee-client_latest.sif --url https://smee.io/CHANNEL-ID --port 3030
+```
+
+for specifying a different port than the default (3000).
 
 ## <a name="step2"></a>Step 2: Registering GitHub App
 
-We first need to register a GitHub App, link it to the Smee.io channel, set a secret token to verify the webhook sender, set some permissions for the app, subscribe it to selected events and define that this app should only be installed in your account.
+We need to register a GitHub App, link it to the Smee.io channel, set a secret token to verify the webhook sender, set some permissions for the app, subscribe it to selected events and define that this app should only be installed in your account.
 
 At the [app settings page](https://github.com/settings/apps) click "New GitHub App" and fill in the page, particular the following fields
 - GitHub App name: give the app a name of you choice
-- Homepage URL: use the Smee.io channel (https://smee.io/CHANNEL_ID) created in Step 1
-- Webhook URL: use the Smee.io channel (https://smee.io/CHANNEL_ID) created in Step 1
+- Homepage URL: use the Smee.io channel (https://smee.io/CHANNEL-ID) created in [Step 1](#step1)
+- Webhook URL: use the Smee.io channel (https://smee.io/CHANNEL-ID) created in [Step 1](#step1)
 - Webhook secret: create a secret token which is used to verify the webhook sender
 - Permissions: assign permissions to the app it needs (e.g., read access to commits, issues, pull requests); those can be changed later on; some permissions (e.g., metadata) will be selected automatically because of others you have chosen
 - Events: subscribe the app to events it shall react on (e.g., related to pull requests)
@@ -92,23 +113,25 @@ At the [app settings page](https://github.com/settings/apps) click "New GitHub A
 
 Click on "Create GitHub App"
 
-## Step 3: Installing GitHub App (might trigger first event to EESSI bot)
+## <a name="step3"></a>Step 3: Installing GitHub App
+
+_Note, this will trigger the first event (`installation`). While the EESSI bot is not running yet, you can inspect this via the webpage for your Smee channel. Just open https://smee.io/CHANNEL-ID in a browser and browse through the information included in the event. Naturally, some of the information will be different for other types of events._
 
 You need to install the GitHub App -- essentially telling GitHub to link the app to an account and one, several or all repositories on whose events the app then should act upon.
+  
+Go to the page https://github.com/settings/apps and select the app you want to install by clicking on the icon left to the app's name or on the "Edit" button right to the name of the app. On the next page you should see the menu item "Install App" on the left-hand side. When you click on this you should see a page with a list of accounts you can install the app on. Choose one and click on the "Install" button next to it. This leads to a page where you can select the repositories on whose the app should react to. Here, for the sake of simplicity, choose just `YOU_1/software-layer` as described in [Prerequisites](#prerequisites). Select one, multiple or all and click on the "Install" button.
 
-Go to the page https://github.com/settings/apps and select the app you want to install by clicking on the icon left to the apps name or on the "Edit" button right to the name of the app. On the next page you should see the menu item "Install App" on the left-hand side. When you click on this you should see a page with a list of accounts you can install the app on. Choose one and click on the "Install" button next to it. This leads to a page where you can select the repositories on whose the app should react to. Select one, multiple or all and click on the "Install" button.
-
-## Step 4: Installing the EESSI bot on Linux machine
+## <a name="step4"></a>Step 4: Installing the EESSI bot on a `bot machine`
 
 The EESSI bot for the software layer is available from https://github.com/EESSI/eessi-bot-software-layer
 
-Get the EESSI bot onto the Linux machine by running something like
+Get the EESSI bot _installed_ onto the `bot machine` by running something like
 
 ```
 git clone https://github.com/EESSI/eessi-bot-software-layer.git
 ```
 
-If you want to develop the EESSI bot, it is recommended that you fork the repository and use the fork on the Linux machine.
+If you want to develop the EESSI bot, it is recommended that you fork the repository and use the fork on the `bot machine`.
 
 The EESSI bot requires some Python packages to be installed. See the top of this page, or simply run (the `requirements.txt` file is provided by the EESSI bot repository)
 ```
@@ -123,43 +146,53 @@ pip3 install --user PyNaCl==1.4.0
 pip3 install --user -r requirements.txt
 ```
 
-### Step 4.1 Using the development version of PyGHee
+### <a name="step4.1"></a>Step 4.1 Using a development version/branch of PyGHee
 
-The above command `pip3 install --user -r requirements.txt` installs the latest release of the PyGHee library. If you want to use the development version, i.e., what is available from GitHub or your own local copy, you have to set `PYTHONPATH` correctly. Assume the library's main directory is `SOME_PATH/PyGHee` then do the following in the terminal/shell/script where you run the bot:
-
+The above command `pip3 install --user -r requirements.txt` installs the latest release of the PyGHee library. If you want to use a development version/branch, i.e., what is available from GitHub or your own local copy, you have to set `PYTHONPATH` correctly. Assuming the library's main directory is `SOME_PATH/PyGHee` do the following in the terminal/shell/script where you run the bot:
+  
 ```
 export PYTHONPATH=SOME_PATH/PyGHee
 ```
 
-## Step 5: Configuring and running EESSI bot on Linux machine
+As of today, [PR#3 of PyGHee](https://github.com/boegel/PyGHee/pull/3) is not being merged yet. Hence, you need to do the following to use it for running the EESSI bot.
 
-You need to set up two environment variables: `GITHUB_TOKEN` and `GITHUB_APP_SECRET_TOKEN`.
+```
+cd SOME_PATH
+git clone https://github.com/boegel/PyGHee.git
+cd PyGHee
+git fetch origin pull/3/main:PR3
+git checkout PR3
+```
+and set PYTHONPATH as described above before you run the event handler. The job manager might use the version installed with `pip`. The only change of PR#3 is the added function `read_event_from_json`. However, for better reproducibility it could be useful to run both components with the same version of PyGHee.
 
-### Step 5.1: GitHub Personal Access Token (PAT)
+## <a name="step5"></a>Step 5: Configuring the EESSI bot on the `bot machine`
 
+For the event handler, you need to set up two environment variables: `GITHUB_TOKEN` ([Step 5.1](#step5.1)) and `GITHUB_APP_SECRET_TOKEN` ([Step 5.2](#step5.2)). For both the event handler and the job manager you need a private key ([Step 5.3](#step5.3)).
+
+### <a name="step5.1"></a>Step 5.1: GitHub Personal Access Token (PAT)
 Create a Personal Access Token (PAT) for your GitHub account via the page https://github.com/settings/tokens where you find a button "Generate new token".
 Give it meaningful name (field titled "Note") and set the expiration date. Then select the scopes this PAT will be used for. Then click "Generate token". On the result page, take note/copy the resulting token string -- it will only be shown once.
 
-On the Linux machine set the environment variable `GITHUB_TOKEN`, e.g.
+On the `bot machine` set the environment variable `GITHUB_TOKEN`, e.g.
 ```
 export GITHUB_TOKEN='THE_TOKEN_STRING'
 ```
 
-### Step 5.2: GitHub App Secret Token
-The GitHub App Secret Token is used to verify the webhook sender. You should have created one already when registering a new GitHub App in Step 1.
+### <a name="step5.2"></a>Step 5.2: GitHub App Secret Token
+The GitHub App Secret Token is used to verify the webhook sender. You should have created one already when registering a new GitHub App in [Step 2](#step2).
 
-On the Linux machine set the environment variable `GITHUB_APP_SECTRET_TOKEN`, e.g.
+On the `bot machine` set the environment variable `GITHUB_APP_SECTRET_TOKEN`, e.g.
 ```
 export GITHUB_APP_SECRET_TOKEN='THE_SECRET_TOKEN_STRING'
 ```
 Note, depending on the characters used in the string you will likely have to use single quotes when setting the value of the environment variable.
 
-### Step 5.3: Create a private key and store it on the Linux machine
-The private key is needed to let the app authenticate when updating information at the repository such as commenting on PRs, adding labels, etc. You can create the key at the page of the GitHub App you have registered in Step 1.
+### <a name="step5.3"></a>Step 5.3: Create a private key and store it on the `bot machine`
+The private key is needed to let the app authenticate when updating information at the repository such as commenting on PRs, adding labels, etc. You can create the key at the page of the GitHub App you have registered in [Step 2](#step2).
 
-Open the page https://github.com/settings/apps and then click on the icon left to the name of the GitHub App for the EESSI bot or the "Edit" button for the app. Near the end of the page you will find a section "Private keys" where you can create a private key by clicking on the button "Generate a private key". The private key should be automatically downloaded to your local computer. Copy it to the Linux machine and note the full path to it.
+Open the page https://github.com/settings/apps and then click on the icon left to the name of the GitHub App for the EESSI bot or the "Edit" button for the app. Near the end of the page you will find a section "Private keys" where you can create a private key by clicking on the button "Generate a private key". The private key should be automatically downloaded to your local computer. Copy it to the `bot machine` and note the full path to it (`PATH_TO_PRIVATE_KEY`).
 
-### Step 5.4: Obtain bot repository
+### <a name="step5.4"></a>Step 5.4: Obtain EESSI bot repository
 
 The bot needs a few scripts. These and an example configuration file are provided by the repository [EESSI/eessi-bot-software-layer](https://github.com/EESSI/eessi-bot-software-layer) (or your fork of it).
 
@@ -169,38 +202,195 @@ First, clone the EESSI/eessi-bot-software-layer repository (or your fork of it) 
 git clone https://github.com/EESSI/eessi-bot-software-layer.git
 ```
 
-### Step 5.5: Create the configuration file `app.cfg`
+After cloning the bot's repository, change directory with `cd eessi-bot-software-layer` and note the full path of the directory (`PATH_TO_EESSI_BOT`).
 
-After cloning the bot's repository, change directory with `cd eessi-bot-software-layer` and note the full path of the directory (`pwd`).
+### <a name="step5.5"></a>Step 5.5: Create the configuration file `app.cfg`
 
-If there is no `app.cfg` in the directory, create an initial version from `app.cfg.example`.
+If there is no `app.cfg` in the directory `PATH_TO_EESSI_BOT` yet, create an initial version from `app.cfg.example`.
 
 ```
 cp -i app.cfg.example app.cfg
 ```
 
-Now set some values as follows:
+The example file (`app.cfg.example`) includes notes on what you have to adjust to run the bot in your environment.
 
+### Section `[github]`
+The section `[github]` contains information for connecting to GitHub:
 ```
-private_key = FULL_PATH_TO_PRIVATE_KEY
-build_job_script = PATH_TO_BOT_REPO/scripts/eessi-bot-build.slurm
+app_id = 199740
 ```
+Replace '199740' with the id of your GitHub App. You find the id of your GitHub App via the page [GitHub Apps](https://github.com/settings/apps). On this page, select the app you have registered in [Step 2](#step2). On the opened page you will find the `app_id` in the section headed "About" listed as 'App ID'.
+```
+app_name = 'MY-bot'
+```
+Is a short name representing your bot. It will be used for adding comments to a pull request. For example, it could include the name of the cluster where the bot runs and the username that runs the bot: `CitC-trz42`.
+```
+installation_id = 25669742
+```
+Replace '256669742' with the id of the installation of your GitHub App (installed in [Step 3](#step3)). You find the id of your GitHub App via the page [GitHub Apps](https://github.com/settings/apps). On this page, select the app you have registered in [Step 2](#step2). For determining the `installation_id` select "Install App" in the menu on the left-hand side. Then click on the gearwheel button of the installation (to the right of the "Installed" label). The URL of the resulting page contains the `installation_id` -- the number after the last "/". The `installation_id` is also provided in the payload of every event within the top-level record named "installation". You can see the events and their payload on the webpage of your Smee.io channel (https://smee.io/CHANNEL-ID). Alternatively, you can see the events in the "Advanced" section of your GitHub App: Open the page [GitHub Apps](https://github.com/settings/apps), then select the app you have registered in [Step 2](#step2), and choose "Advanced" in the menu on the left-hand side.
+```
+private_key = PATH_TO_PRIVATE_KEY
+```
+Replace `PATH_TO_PRIVATE_KEY` with the path you have noted in [Step 5.3](#step5.3).
 
-You will also need to set the `app_id` and the `installation_id`. You find the id of your GitHub App via the page [GitHub Apps](https://github.com/settings/apps). On this page, select the app you have registered in [Step 2](#step2). On page of the app you will find the `app_id` listed as 'App ID'. For the `installation_id` select 'Install App' in the menu on the left-hand side. Then click on the gearwheel button of the installation (to the right of the 'Installed' label). The URL of the resulting page contains the `installation_id` -- the number after the last '/'.
+### Section `[buildenv]`
+The section `[buildenv]` contains information about the build environment.
+```
+jobs_base_dir = $HOME/jobs
+```
+Replace `$HOME/jobs` with a path under which information about jobs will be stored. Per job the directory structure under `jobs_base_dir` is `YYYY.MM/pr_PR_NUMBER/event_EVENT_ID/run_RUN_NUMBER/OS+SUBDIR`. The base directory will contain symlinks using the job ids pointing to the job's working directory `YYYY.MM/...`.
+```
+local_tmp = /tmp/$USER/EESSI
+```
+This is the path to a temporary directory on the node building the stack, i.e., on a compute/worker node. You may have to change this if temporary storage under '/tmp' does not exist or is too small. This setting will be used for the environment variable `EESSI_TMPDIR`.
+```
+build_job_script = PATH_TO_EESSI_BOT/scripts/eessi-bot-build.slurm
+```
+This points to the job script which will be submitted by the event handler.
+```
+submit_command = /usr/bin/sbatch
+```
+This is the full path to the Slurm command used for submitting batch jobs. You may want to verify if `sbatch` is provided at that path or determine its actual location (`which sbatch`).
+```
+slurm_params = "--hold"
+```
+This defines additional parameters for submitting batch jobs. "--hold" should be kept or the bot might not work as intended (the release step would be circumvented). Additional parameters, for example, to specify an account, a partition or any other parameters supported by `sbatch`, may be added to customize the submission to your environment.
 
-Replace default values for `app_id` and `installation_id` in `app.cfg` with the values you have obtained as described above.
+### Section `[architecturetargets]`
+The section `[architecturetargets]` defines for which targets (OS/SUBDIR), e.g., `linux/amd/zen2` the EESSI bot should submit jobs and what additional `sbatch` parameters will be used for requesting a compute node with the CPU microarchitecture needed to build the software stack.
+```
+arch_target_map = { "linux/x86_64/generic" : "--constraint shape=c4.2xlarge", "linux/x86_64/amd/zen2" : "--constraint shape=c5a.2xlarge" }
+```
+The map has one to many entries of the format `OS/SUBDIR : ADDITIONAL_SBATCH_PARAMETERS`. For your cluster, you will have to figure out which microarchitectures (`SUBDIR`) are available (as `OS` only `linux` is currently supported) and how to instruct Slurm to request them (`ADDITIONAL_SBATCH_PARAMETERS`).
 
-### Step 5.6: Run the EESSI bot
+### Section `[job_manager]`
+The section `[job_manager]` contains information needed by the job manager.
+```
+job_ids_dir = $HOME/jobs/ids
+```
+Path to where the job manager stores information about jobs to be tracked. Under this directory it will store information about submitted/running jobs under `submitted` and about finished jobs under `finished`.
+```
+poll_command = /usr/bin/squeue
+```
+This is the full path to the Slurm command used for checking which jobs exist. You may want to verify if `squeue` is provided at that path or determine its actual location (`which squeue`).
+```
+poll_interval = 60
+```
+This defines how often the job manager checks the status of the jobs. The unit of the value is seconds.
+```
+scontrol_command = /usr/bin/scontrol
+```
+This is the full path to the Slurm command used for manipulating existing jobs. You may want to verify if `scontrol` is provided at that path or determine its actual location (`which scontrol`).
 
-Change directory to `eessi-bot-software-layer` (which was created by cloning the repository in Step 5.4 - either the original one from EESSI or your fork). Then, simply run the bot by executing
+# Instructions to run the bot components
+
+The bot consists of three components, the Smee client, the event handler and the job manager. Running the Smee client was explained in [Step 1](#step1).
+
+## <a name="step6.1"></a>Step 6.1: Running the event handler
+As the event handler may run for a long time, it is adviced to run it in a `screen` or `tmux` session.
+
+The event handler is provided by the Python script `eessi_bot_software_layer.py`.
+Change directory to `eessi-bot-software-layer` (which was created by cloning the
+repository in [Step 5.4](#step5.4) - either the original one from EESSI or your fork).
+Then, simply run the event handler by executing
 ```
 ./run.sh
 ```
+If multiple instances on the `bot machine` are being executed, you may need to run the event handler and the Smee client with a different port (default is 3000). The event handler can receive events on a different port by adding the parameter `--port PORTNUMBER`, for example,
+```
+./run.sh --port 3030
+```
+See [Step 1](#step1) for telling the Smee client on which port the event handler receives events.
 
-Note, if you run the bot on a frontend of a cluster with multiple frontends make sure that both the Smee client and the bot run on the same machine.
+The event handler writes log information to the file `pyghee.log`.
 
-The bot will log events into the file `pyghee.log`.
+Note, if you run the bot on a frontend of a cluster with multiple frontends make sure that both the Smee client and the event handler run on the same machine.
 
-## Testing EESSI bot
+## <a name="step6.2"></a>Step 6.2: Running the job manager
+As the job manager may run for a long time, it is adviced to run it in a `screen` or `tmux` session.
 
-The easiest test may be a change -- creating a branch, committing a change, creating a pull request, etc -- to one of the repositories you have selected when installing the app in Step 3. Which events may be forwarded depends on which events you have subscribed the app to when you registered the app in Step 2.
+The job manager is provided by the Python script `eessi_bot_job_manager_layer.py`. You can run the job manager from the directory `eessi-bot-software-layer` simply by
+
+```
+./job_manager.sh
+```
+
+It will run in an infinite loop monitoring jobs and acting on their state changes.
+
+If you want to control how the job manager works, you can add two parameters:
+|Option|Argument|
+|------|--------|
+|`-i` / `--max-manager-iterations`|Any number _z_: _z_ < 0 - run the main loop indefinitely, _z_ == 0 - don't run the main loop, _z_ > 0 - run the main loop _z_ times|
+|`-j` / `--jobs`|Comma-separated list of job ids the job manager shall process. All other jobs will be ignored.|
+
+An example command would be
+
+```
+./job_manager.sh -i 1 -j 2222
+```
+to run the main loop exactly once for job `2222`.
+
+The job manager writes log information to the file `eessi_bot_job_manager.log`.
+
+The job manager can run on a different machine than the event handler as long as both have access to the same shared filesystem.
+
+# Example pull request on software-layer
+
+Now that the bot is running on your cluster, we want to provide a little demo about how to use it to add a new package to the software layer. We assume that you have forked [EESSI/software-layer](https://github.com/EESSI/software-layer) to `YOU_1/software-layer`, and then forked `YOU_1/software-layer` to `YOU_2/software-layer`.
+
+Clone into the second fork and create a new branch:
+
+```
+git clone https://github.com/YOU_2/software-layer
+cd software-layer
+git branch add-CaDiCaL-9.3.0
+git checkout add-CaDiCaL-9.3.0
+```
+
+Open `EESSI-pilot-install-software.sh` and add the section
+
+```
+export CaDiCaL_EC="CaDiCaL-1.3.0-GCC-9.3.0.eb"
+echo ">> Installing ${CaDiCaL_EC}..."
+ok_msg="${CaDiCaL_EC} installed, let's solve some problems!"
+fail_msg="Installation of ${CaDiCaL_EC} failed, that's a pity..."
+$EB ${CaDiCaL_EC} --robot
+check_exit_code $? "${ok_msg}" "${fail_msg}"
+```
+
+just before the line
+```
+echo ">> Creating/updating Lmod cache..."
+```
+
+Open `eessi-2021.12.yml` and append the section
+
+```
+  CaDiCaL:
+     toolchains:
+       GCC-9.3.0:
+         versions: ['1.3.0']
+```
+
+Commit the changes and push them to `YOU_1/software-layer`. Create the pull request by opening the link shown by `git push`. Make sure that you request to merge into `YOU_1/software-layer` - your bot receives events for this repository only (and while you experiment you may not wish to create too much noise on EESSI's software-layer repository).
+
+At first, the page for the pull request will look like normal pull request. The event handler will already have received an event, but it will wait until the label `bot:build` is set for the pull request.
+
+Add the label `bot:build`. Now, the event handler will submit jobs - one for each target architecture. For each submitted job it will add a comment such as
+
+IMAGE-SCREENSHOT
+
+The jobs are submitted with the parameter `--hold`. They will not start immediately, but rather are required to be released explicitly by the job manager. This can be very useful to control the processing of jobs, for example, when developing the EESSI bot components. If you want to control the execution, the job manager shall not run in an endless loop.
+
+Next the job manager notes the submitted job(s), releases them and updates the comments corresponding to the released jobs. An example update could look like this
+
+IMAGE-SCREENSHOT
+
+When the job has finished, the job manager analyses the result of job (checking if no missing modules were found and if a tarball was generated) and updates the job's comment in the PR. An example update could look like (in case of success)
+
+IMAGE-SCREENSHOT
+
+or in case of failure
+
+IMAGE-SCREENSHOT
+

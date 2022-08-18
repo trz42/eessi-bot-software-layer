@@ -242,7 +242,8 @@ class EESSIBotSoftwareLayerJobManager:
         gh = github.get_instance()
 
         # set some variables for accessing work dir of job
-        job_ids_dir = config.get_section('job_manager').get('job_ids_dir')
+        job_manager = config.get_section('job_manager')
+        job_ids_dir = job_manager.get('job_ids_dir')
         submitted_jobs_dir = os.path.join(job_ids_dir,'submitted')
         job_dir = os.path.join(submitted_jobs_dir, finished_job['jobid'])
         sym_dst = os.readlink(job_dir)
@@ -418,14 +419,14 @@ def main():
     poll_command  = 'false'
     job_ids_dir = ''
     if max_iter != 0:
-        buildenv = config.get_section('buildenv')
-        poll_interval = int(buildenv.get('poll_interval') or 0)
+        job_manager = config.get_section('job_manager')
+        job_ids_dir = job_manager.get('job_ids_dir')
+        submitted_jobs_dir = os.path.join(job_ids_dir,'submitted')
+        poll_command = job_manager.get('poll_command') or false
+        poll_interval = int(job_manager.get('poll_interval') or 0)
         if poll_interval <= 0:
             poll_interval = 60
-        poll_command = buildenv.get('poll_command') or false
-        scontrol_command = buildenv.get('scontrol_command') or false
-        job_ids_dir = config.get_section('job_manager').get('job_ids_dir')
-        submitted_jobs_dir = os.path.join(job_ids_dir,'submitted')
+        scontrol_command = job_manager.get('scontrol_command') or false
         mkdir(submitted_jobs_dir)
 
     # who am i

@@ -32,10 +32,8 @@ def build_easystack_from_pr(pr, event_info):
     log("build_job_script '%s'" % build_job_script)
     submit_command = buildenv.get('submit_command')
     log("submit_command '%s'" % submit_command)
-
-    # [common_job_params]
-    common_job_params = config.get_section('common_job_params')
-    slurm_params = common_job_params.get('slurm_params')
+    slurm_params = buildenv.get('slurm_params')
+    log("slurm_params '%s'" % slurm_params)
 
     # [architecturetargets]
     arch_target_map = json.loads(config.get_section('architecturetargets').get('arch_target_map'))
