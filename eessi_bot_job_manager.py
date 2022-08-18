@@ -43,8 +43,11 @@ def mkdir(path):
 class EESSIBotSoftwareLayerJobManager:
     'main class for (Slurm) job manager of EESSI bot (separate process)'
 
-    def get_current_jobs(self, poll_command, username):
-        squeue_cmd = '%s --long --user=%s' % (poll_command,username)
+    def get_current_jobs(self):
+        # who am i
+        username = os.getlogin()
+
+        squeue_cmd = '%s --long --user=%s' % (self.poll_command,username)
         log("run squeue command: %s" % squeue_cmd, self.logfile)
         squeue = subprocess.run(squeue_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         log("squeue output\n%s" % squeue.stdout, self.logfile)
@@ -63,23 +66,23 @@ class EESSIBotSoftwareLayerJobManager:
         return current_jobs
 
 
-    #known_jobs = job_manager.get_known_jobs(submitted_jobs_dir)
-    def get_known_jobs(self, submitted_jobs_dir):
+    #known_jobs = job_manager.get_known_jobs()
+    def get_known_jobs(self):
         # find all symlinks resembling job ids (digits only) in jobdir
         known_jobs = {}
-        if os.path.isdir(submitted_jobs_dir):
+        if os.path.isdir(self.submitted_jobs_dir):
             regex = re.compile('(\d)+')
-            for fname in os.listdir(submitted_jobs_dir):
+            for fname in os.listdir(self.submitted_jobs_dir):
                 if regex.match(fname):
-                    full_path = os.path.join(submitted_jobs_dir,fname)
+                    full_path = os.path.join(self.submitted_jobs_dir,fname)
                     if os.path.islink(full_path):
                         known_jobs[fname] = { 'jobid' : fname }
                     else:
-                        print("entry %s in %s is not recognised as a symlink" % (full_path,submitted_jobs_dir))
+                        print("entry %s in %s is not recognised as a symlink" % (full_path,self.submitted_jobs_dir))
                 else:
-                    print("entry %s in %s doesn't match regex" % (fname,submitted_jobs_dir))
+                    print("entry %s in %s doesn't match regex" % (fname,self.submitted_jobs_dir))
         else:
-            print("directory '%s' does not exist -> assuming no jobs known previously" % submitted_jobs_dir)
+            print("directory '%s' does not exist -> assuming no jobs known previously" % self.submitted_jobs_dir)
 
         return known_jobs
 
@@ -109,15 +112,14 @@ class EESSIBotSoftwareLayerJobManager:
 
 
     #job_manager.process_new_job(current_jobs[nj])
-    def process_new_job(self, new_job, scontrol_command, submitted_jobs_dir):
+    def process_new_job(self, new_job):
         # create symlink in submitted_jobs_dir (destination is the working
         #   dir of the job derived via scontrol)
         # release job
         # update PR comment with new status (released)
 
-        # TODO obtain scontrol_command and jobdir from config
         scontrol_cmd = '%s --oneliner show jobid %s' % (
-                scontrol_command,
+                self.scontrol_command,
                 new_job['jobid'])
         log("run scontrol command: %s" % scontrol_cmd, self.logfile)
 
@@ -134,7 +136,7 @@ class EESSIBotSoftwareLayerJobManager:
             print("work dir of job %s: '%s'" % (
                 new_job['jobid'], match.group(1)))
 
-            symlink_source = os.path.join(submitted_jobs_dir, new_job['jobid'])
+            symlink_source = os.path.join(self.submitted_jobs_dir, new_job['jobid'])
             log("create a symlink: %s -> %s" % (
                 symlink_source, match.group(1)), self.logfile)
             print("create a symlink: %s -> %s" % (
@@ -142,7 +144,7 @@ class EESSIBotSoftwareLayerJobManager:
             os.symlink(match.group(1), symlink_source)
 
             release_cmd = '%s release %s' % (
-                    scontrol_command, new_job['jobid'])
+                    self.scontrol_command, new_job['jobid'])
             log("run scontrol command: %s" % release_cmd, self.logfile)
             print("run scontrol command: %s" % release_cmd)
             release = subprocess.run(release_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -242,10 +244,7 @@ class EESSIBotSoftwareLayerJobManager:
         gh = github.get_instance()
 
         # set some variables for accessing work dir of job
-        job_manager = config.get_section('job_manager')
-        job_ids_dir = job_manager.get('job_ids_dir')
-        submitted_jobs_dir = os.path.join(job_ids_dir,'submitted')
-        job_dir = os.path.join(submitted_jobs_dir, finished_job['jobid'])
+        job_dir = os.path.join(self.submitted_jobs_dir, finished_job['jobid'])
         sym_dst = os.readlink(job_dir)
 
         # TODO create function for obtaining values from metadata file
@@ -381,8 +380,8 @@ class EESSIBotSoftwareLayerJobManager:
             # TODO just create one?
 
         # move symlink from job_ids_dir/submitted to jobs_ids_dir/finished
-        old_symlink = os.path.join(submitted_jobs_dir, finished_job['jobid'])
-        finished_jobs_dir = os.path.join(job_ids_dir,'finished')
+        old_symlink = os.path.join(self.submitted_jobs_dir, finished_job['jobid'])
+        finished_jobs_dir = os.path.join(self.job_ids_dir,'finished')
         mkdir(finished_jobs_dir)
         new_symlink = os.path.join(finished_jobs_dir, finished_job['jobid'])
         print(f'os.rename({old_symlink},{new_symlink})')
@@ -415,24 +414,21 @@ def main():
 
     max_iter = int(opts.max_manager_iterations)
     # retrieve some settings from app.cfg
-    job_ids_dir = ''
-    submitted_jobs_dir = ''
-    poll_command  = 'false'
+    job_manager.job_ids_dir = ''
+    job_manager.submitted_jobs_dir = ''
+    job_manager.poll_command  = 'false'
     poll_interval = 0
-    scontrol_command = ''
+    job_manager.scontrol_command = ''
     if max_iter != 0:
         job_mgr = config.get_section('job_manager')
-        job_ids_dir = job_mgr.get('job_ids_dir')
-        submitted_jobs_dir = os.path.join(job_ids_dir,'submitted')
-        poll_command = job_mgr.get('poll_command') or false
+        job_manager.job_ids_dir = job_mgr.get('job_ids_dir')
+        job_manager.submitted_jobs_dir = os.path.join(job_manager.job_ids_dir,'submitted')
+        job_manager.poll_command = job_mgr.get('poll_command') or false
         poll_interval = int(job_mgr.get('poll_interval') or 0)
         if poll_interval <= 0:
             poll_interval = 60
-        scontrol_command = job_mgr.get('scontrol_command') or false
-        mkdir(submitted_jobs_dir)
-
-    # who am i
-    username = os.getlogin()
+        job_manager.scontrol_command = job_mgr.get('scontrol_command') or false
+        mkdir(job_manager.submitted_jobs_dir)
 
     # max_iter
     #   < 0: run loop indefinitely
@@ -441,12 +437,12 @@ def main():
     # processing may be limited to a list of job ids (see parameter -j --jobs)
     i = 0
     if max_iter != 0:
-        known_jobs = job_manager.get_known_jobs(submitted_jobs_dir)
+        known_jobs = job_manager.get_known_jobs()
     while max_iter < 0 or i < max_iter:
         print("\njob manager main loop: iteration %d" % i)
         print("known_jobs='%s'" % known_jobs)
 
-        current_jobs = job_manager.get_current_jobs(poll_command, username)
+        current_jobs = job_manager.get_current_jobs()
         print("current_jobs='%s'" % current_jobs)
 
         new_jobs = job_manager.determine_new_jobs(known_jobs, current_jobs)
@@ -454,7 +450,7 @@ def main():
         # process new jobs
         for nj in new_jobs:
             if nj in job_manager.job_filter: 
-                job_manager.process_new_job(current_jobs[nj], scontrol_command, submitted_jobs_dir)
+                job_manager.process_new_job(current_jobs[nj])
             else:
                 print("skipping job %s due to parameter '--jobs %s'" % (nj,opts.jobs))
 
