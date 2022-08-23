@@ -205,9 +205,8 @@ class EESSIBotSoftwareLayerJobManager:
                 issue_comment = pr.get_issue_comment(int(new_job['comment_id']))
                 original_body = issue_comment.body
                 dt = datetime.now(timezone.utc)
-                update = '\n|%s|released|symlk `%s`|' % (
-                        dt.strftime("%b %d %X %Z %Y"),
-                        symlink_source)
+                update = '\n|%s|released|job awaits launch by Slurm scheduler|' % (
+                        dt.strftime("%b %d %X %Z %Y"))
                 issue_comment.edit(original_body + update)
             else:
                 log("process_new_job(): did not obtain/find a comment for job '%s'" % new_job['jobid'], self.logfile)
