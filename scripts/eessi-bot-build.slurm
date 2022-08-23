@@ -12,11 +12,6 @@
 # license: GPLv2
 #
 #
-#SBATCH --time 24:00:00
-#SBATCH --nodes 1
-#SBATCH --exclusive
-# make job script unworkable by default ... requires '--constraint ...' on command line
-#SBATCH --constraint shape=unknown
 
 # ASSUMPTIONs:
 #  - running from a job environment on shared disc
@@ -34,9 +29,32 @@ shift
 
 echo "Starting eessi-bot-build-slurm.sh"
 
+echo -n "updating \$eessi_tmpdir: '$eessi_tmpdir' -> "
+# replace any env variable in $eessi_tmpdir with its
+#   current value (e.g., a value that is local to the job)
+eessi_tmpdir=$(envsubst <<< $eessi_tmpdir)
+echo "'$eessi_tmpdir'"
+
 # bind current working directory to /eessi_bot_job in build container,
 # and also use it as home directory in build container
 export SINGULARITY_HOME="$(pwd):/eessi_bot_job"
+
+# if eessi_tmpdir is not starting with '/tmp' map it to '/tmp'
+# rationale: something else than /tmp is used for eessi_tmpdir
+#            if /tmp has some limitations (e.g., size);
+#            the bot job is then provided with a (job-specific)
+#            alternative via the bot's config key local_tmp;
+#            because many downstream scripts assume temporary
+#            storage under /tmp, the alternative is mapped to
+#            /tmp inside the container;
+#            the mapping is only needed if $eessi_tmpdir not
+#            already points to /tmp
+if [[ $eessi_tmpdir != /tmp* ]] ;
+then
+    export SINGULARITY_BIND="$eessi_tmpdir:/tmp"
+fi
+
+echo "SINGULARITY_BIND=${SINGULARITY_BIND}"
 
 # run standard EESSI software-layer install script
 #   in compat layer environment inside build container
