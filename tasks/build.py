@@ -8,7 +8,7 @@ import re
 
 from connections import github
 from tools import config
-from pyghee.utils import log
+from pyghee.utils import log, error
 from datetime import datetime, timezone
 
 
@@ -34,9 +34,25 @@ def build_easystack_from_pr(pr, event_info):
     log("submit_command '%s'" % submit_command)
     slurm_params = buildenv.get('slurm_params')
     log("slurm_params '%s'" % slurm_params)
+    cvmfs_customizations = {}
+    try:
+        cvmfs_customizations_str = buildenv.get('cvmfs_customizations')
+        log("cvmfs_customizations '%s'" % cvmfs_customizations_str)
+
+        cvmfs_customizations = json.loads(cvmfs_customizations_str)
+        log("cvmfs_customizations '%s'" % json.dumps(cvmfs_customizations))
+    except json.decoder.JSONDecodeError as e:
+        print(e)
+        error(f'Value for cvmfs_customizations ({cvmfs_customizations_str}) could not be decoded.')
+    http_proxy = buildenv.get('http_proxy') or ''
+    log("http_proxy '%s'" % http_proxy)
+    https_proxy = buildenv.get('https_proxy') or ''
+    log("https_proxy '%s'" % https_proxy)
+
 
     # [architecturetargets]
-    arch_target_map = json.loads(config.get_section('architecturetargets').get('arch_target_map'))
+    architecturetargets = config.get_section('architecturetargets')
+    arch_target_map = json.loads(architecturetargets.get('arch_target_map'))
     log("arch target map '%s'" % json.dumps(arch_target_map))
 
     # create directory structure according to alternative described in
@@ -107,6 +123,21 @@ def build_easystack_from_pr(pr, event_info):
                                  stderr=subprocess.PIPE)
         log("Applied patch!\nStdout %s\nStderr: %s" % (patched.stdout,patched.stderr))
 
+        # check if we need to apply local customizations:
+        #   is cvmfs_customizations defined? yes, apply it
+        if len(cvmfs_customizations) > 0:
+            # for each entry/key, append value to file
+            for key in cvmfs_customizations.keys():
+                basename = os.path.basename(key)
+                jobcfgfile = os.path.join(arch_job_dir, basename)
+                with open(jobcfgfile, "a") as file_object:
+                    file_object.write(cvmfs_customizations[key]+'\n')
+
+                # TODO (maybe) create mappings_file to be used by
+                #      eessi-bot-build.slurm to init SINGULARITY_BIND;
+                #      for now, only existing mappings may be customized
+
+
         # enlist jobs to proceed
         jobs.append([arch_job_dir,arch_target,slurm_opt])
 
@@ -119,7 +150,6 @@ def build_easystack_from_pr(pr, event_info):
     submitted_jobs = []
     job_comment = ''
     for job in jobs:
-        log("Submit job for target %s with '%s %s %s %s %s' from directory '%s'" % (job[1], submit_command, slurm_params, job[2], build_job_script, local_tmp, job[0]))
         # TODO make local_tmp specific to job? to isolate jobs if multiple ones can run on a single node
         command_line = ' '.join([
             submit_command,
@@ -128,6 +158,13 @@ def build_easystack_from_pr(pr, event_info):
             build_job_script,
             local_tmp,
         ])
+        if http_proxy:
+            command_line += ' --http-proxy ' + http_proxy
+        if https_proxy:
+            command_line += ' --https-proxy ' + https_proxy
+
+        log("Submit job for target '%s' with '%s' from directory '%s'" % (job[1], command_line, job[0]))
+
         # TODO the handling of generic targets requires a bit knowledge about
         #      the internals of building the software layer, maybe ok for now,
         #      but it might be good to think about an alternative
@@ -144,6 +181,8 @@ def build_easystack_from_pr(pr, event_info):
 
         # sbatch output is 'Submitted batch job JOBID'
         #   parse job id & add it to array of submitted jobs PLUS create a symlink from main pr_<ID> dir to job dir (job[0])
+        log("build_easystack_from_pr(): sbatch out: %s" % submitted.stdout.decode("UTF-8"))
+        log("build_easystack_from_pr(): sbatch err: %s" % submitted.stderr.decode("UTF-8"))
         job_id = submitted.stdout.split()[3].decode("UTF-8")
         submitted_jobs.append(job_id)
         symlink = os.path.join(jobs_base_dir, ym, pr_id, job_id)
