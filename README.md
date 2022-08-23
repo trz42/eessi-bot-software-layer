@@ -223,7 +223,7 @@ Replace '199740' with the id of your GitHub App. You find the id of your GitHub 
 ```
 app_name = 'MY-bot'
 ```
-Is a short name representing your bot. It will be used for adding comments to a pull request. For example, it could include the name of the cluster where the bot runs and the username that runs the bot: `CitC-trz42`.
+Is a short name representing your bot. It will appear in comments to a pull request. For example, it could include the name of the cluster where the bot runs and a label representing the user that runs the bot: `CitC-TR`. *NOTE avoid putting an actual username here as it will be visible on potentially publicly accessible GitHub pages.*
 ```
 installation_id = 25669742
 ```
@@ -236,25 +236,41 @@ Replace `PATH_TO_PRIVATE_KEY` with the path you have noted in [Step 5.3](#step5.
 ### Section `[buildenv]`
 The section `[buildenv]` contains information about the build environment.
 ```
+build_job_script = PATH_TO_EESSI_BOT/scripts/eessi-bot-build.slurm
+```
+This points to the job script which will be submitted by the event handler.
+```
+cvmfs_customizations = { "/etc/cvmfs/default.local": "CVMFS_HTTP_PROXY=\"http://PROXY_DNS_NAME:3128|http://PROXY_IP_ADDRESS:3128\"" }
+It may happen that we need to customize the CVMFS configuration for the build
+job. The value of cvmfs_customizations is a dictionary which maps a file name
+to an entry that needs to be appended to that file. In the example line above, the
+configuration of `CVMFS_HTTP_PROXY` is appended to the file `/etc/cvmfs/default.local`.
+```
+http_proxy = http://PROXY_DNS:3128/
+https_proxy = http://PROXY_DNS:3128/
+```
+If compute nodes have no internet connection, we need to set `http(s)_proxy`
+or commands such as `pip3` and `eb` (EasyBuild) cannot download software from
+package repositories. Typically these settings are set in the prologue of a
+Slurm job. However, when entering the Gentoo Prefix, most environment settings
+are cleared. Hence, they need to be set again at a late stage (done in the
+script `EESSI-pilot-install-software.sh`).
+```
 jobs_base_dir = $HOME/jobs
 ```
 Replace `$HOME/jobs` with a path under which information about jobs will be stored. Per job the directory structure under `jobs_base_dir` is `YYYY.MM/pr_PR_NUMBER/event_EVENT_ID/run_RUN_NUMBER/OS+SUBDIR`. The base directory will contain symlinks using the job ids pointing to the job's working directory `YYYY.MM/...`.
 ```
 local_tmp = /tmp/$USER/EESSI
 ```
-This is the path to a temporary directory on the node building the stack, i.e., on a compute/worker node. You may have to change this if temporary storage under '/tmp' does not exist or is too small. This setting will be used for the environment variable `EESSI_TMPDIR`.
-```
-build_job_script = PATH_TO_EESSI_BOT/scripts/eessi-bot-build.slurm
-```
-This points to the job script which will be submitted by the event handler.
-```
-submit_command = /usr/bin/sbatch
-```
-This is the full path to the Slurm command used for submitting batch jobs. You may want to verify if `sbatch` is provided at that path or determine its actual location (`which sbatch`).
+This is the path to a temporary directory on the node building the stack, i.e., on a compute/worker node. You may have to change this if temporary storage under '/tmp' does not exist or is too small. This setting will be used for the environment variable `EESSI_TMPDIR`. Variables in the value may be esaped with '\' to delay their expansion to the start of the build_job_script. This can be used for referencing environment variables that are only set inside a Slurm job.
 ```
 slurm_params = "--hold"
 ```
 This defines additional parameters for submitting batch jobs. "--hold" should be kept or the bot might not work as intended (the release step would be circumvented). Additional parameters, for example, to specify an account, a partition or any other parameters supported by `sbatch`, may be added to customize the submission to your environment.
+```
+submit_command = /usr/bin/sbatch
+```
+This is the full path to the Slurm command used for submitting batch jobs. You may want to verify if `sbatch` is provided at that path or determine its actual location (`which sbatch`).
 
 ### Section `[architecturetargets]`
 The section `[architecturetargets]` defines for which targets (OS/SUBDIR), e.g., `linux/amd/zen2` the EESSI bot should submit jobs and what additional `sbatch` parameters will be used for requesting a compute node with the CPU microarchitecture needed to build the software stack.
