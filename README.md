@@ -58,7 +58,7 @@ mkdir smee
 cd smee
 singularity pull docker://node
 singularity exec node_latest.sif npm install smee-client
-cat << EOF > smee
+cat << 'EOF' > smee
 #!/usr/bin/env bash
 
 BASEDIR=$(dirname "$0")
@@ -160,7 +160,7 @@ As of today, [PR#3 of PyGHee](https://github.com/boegel/PyGHee/pull/3) is not be
 cd SOME_PATH
 git clone https://github.com/boegel/PyGHee.git
 cd PyGHee
-git fetch origin pull/3/main:PR3
+git fetch origin pull/3/head:PR3
 git checkout PR3
 ```
 and set PYTHONPATH as described above before you run the event handler. The job manager might use the version installed with `pip`. The only change of PR#3 is the added function `read_event_from_json`. However, for better reproducibility it could be useful to run both components with the same version of PyGHee.
