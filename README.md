@@ -255,6 +255,7 @@ build_job_script = PATH_TO_EESSI_BOT/scripts/eessi-bot-build.slurm
 This points to the job script which will be submitted by the event handler.
 ```
 cvmfs_customizations = { "/etc/cvmfs/default.local": "CVMFS_HTTP_PROXY=\"http://PROXY_DNS_NAME:3128|http://PROXY_IP_ADDRESS:3128\"" }
+```
 It may happen that we need to customize the CVMFS configuration for the build
 job. The value of cvmfs_customizations is a dictionary which maps a file name
 to an entry that needs to be appended to that file. In the example line above, the
