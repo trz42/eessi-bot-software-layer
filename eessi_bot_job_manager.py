@@ -446,7 +446,7 @@ def main():
         log("job manager main loop: new_jobs='%s'" % ','.join(new_jobs), job_manager.logfile)
         # process new jobs
         for nj in new_jobs:
-            if nj in job_manager.job_filter: 
+            if not job_manager.job_filter or nj in job_manager.job_filter: 
                 job_manager.process_new_job(current_jobs[nj])
             #else:
             #    log("job manager main loop: skipping new job %s due to parameter '--jobs %s'" % (nj,opts.jobs), job_manager.logfile)
@@ -455,7 +455,7 @@ def main():
         log("job manager main loop: finished_jobs='%s'" % ','.join(finished_jobs), job_manager.logfile)
         # process finished jobs
         for fj in finished_jobs:
-            if fj in job_manager.job_filter: 
+            if not job_manager.job_filter or fj in job_manager.job_filter: 
                 job_manager.process_finished_job(known_jobs[fj])
             #else:
             #    log("job manager main loop: skipping finished job %s due to parameter '--jobs %s'" % (fj,opts.jobs), job_manager.logfile)
