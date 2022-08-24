@@ -33,6 +33,7 @@ two main components provided in this repository:
 - GitHub account(s) (two needed for a development scenario), referring to them as `YOU_1` and `YOU_2` below
 - A fork, say `YOU_1/software-layer`, of [EESSI/software-layer](https://github.com/EESSI/software-layer) and a fork, say `YOU_2/software-layer` of your first fork if you want to emulate the bot's behaviour but not change EESSI's repository. The EESSI bot will act on events triggered for the first fork (`YOU_1/software-layer`).
 - Access to a frontend/login node/service node of a Slurm cluster where the EESSI bot components shall run. For the sake of brevity, we call this node simply `bot machine`.
+- `singularity` with version 3.6 or newer on the compute nodes of the Slurm cluster.
 - The EESSI bot components and the (build) jobs will frequently access the Internet. Hence, worker nodes and `bot machine` of the Slurm cluster need access to the Internet.
 
 ## <a name="step1"></a>Step 1: Smee.io channel and smee client
@@ -123,23 +124,48 @@ Go to the page https://github.com/settings/apps and select the app you want to i
 
 ## <a name="step4"></a>Step 4: Installing the EESSI bot on a `bot machine`
 
-The EESSI bot for the software layer is available from https://github.com/EESSI/eessi-bot-software-layer
+The EESSI bot for the software layer is available from [EESSI/eessi-bot-software-layer](https://github.com/EESSI/eessi-bot-software-layer). This repository (or your fork of it) provides scripts and an example configuration file.
 
 Get the EESSI bot _installed_ onto the `bot machine` by running something like
 
 ```
 git clone https://github.com/EESSI/eessi-bot-software-layer.git
 ```
+Determine full path to bot directory
+```
+cd eessi-bot-software-layer
+pwd
+```
+Note the output of `pwd`. This will be used to replace `PATH_TO_EESSI_BOT` in the configuration file `app.cfg` (see [Step 5.4](#step5.4)).
 
 If you want to develop the EESSI bot, it is recommended that you fork the repository and use the fork on the `bot machine`.
+
+If you want to work with a specific pull request, say number 24, you obtain its contents with the following commands:
+```
+git clone https://github.com/EESSI/eessi-bot-software-layer.git
+cd eessi-bot-software-layer
+pwd
+git fetch origin pull/24/head:PR24
+git checkout PR24
+```
+Note the output of `pwd`. This will be used to replace `PATH_TO_EESSI_BOT` in the configuration file `app.cfg` (see [Step 5.4](#step5.4)).
 
 The EESSI bot requires some Python packages to be installed. See the top of this page, or simply run (the `requirements.txt` file is provided by the EESSI bot repository)
 ```
 pip3 install --user -r requirements.txt
 ```
 
-**Troubles installing some of the requirements?**
-You may try to install some of the dependencies by fixing their version. For example, on the CitC cluster (https://github.com/EESSI/hackathons/tree/main/2021-12/citc) installing PyGithub failed due to some problem installing its dependency PyNaCl. Apparently, PyGithub only required version 1.4.0 of PyNaCl but the most recent version 1.5.0 failed to install. Hence, when installing PyNaCl version 1.4.0 first, then PyGithub could be installed. Example commands
+**Troubles installing some of the requirements or their dependencies?**
+You may try to upgrade `pip` first with
+```
+python3 -m pip install --user --upgrade pip
+```
+Then try to install the requirements with
+```
+pip3 install --user -r requirements.txt
+```
+
+Alternatively, you may try to install some of the dependencies by fixing their version. For example, on the CitC cluster (https://github.com/EESSI/hackathons/tree/main/2021-12/citc) installing PyGithub failed due to some problem installing its dependency PyNaCl. Apparently, PyGithub only required version 1.4.0 of PyNaCl but the most recent version 1.5.0 failed to install. Hence, when installing PyNaCl version 1.4.0 first, then PyGithub could be installed. Example commands
 
 ```
 pip3 install --user PyNaCl==1.4.0
@@ -192,19 +218,7 @@ The private key is needed to let the app authenticate when updating information 
 
 Open the page https://github.com/settings/apps and then click on the icon left to the name of the GitHub App for the EESSI bot or the "Edit" button for the app. Near the end of the page you will find a section "Private keys" where you can create a private key by clicking on the button "Generate a private key". The private key should be automatically downloaded to your local computer. Copy it to the `bot machine` and note the full path to it (`PATH_TO_PRIVATE_KEY`).
 
-### <a name="step5.4"></a>Step 5.4: Obtain EESSI bot repository
-
-The bot needs a few scripts. These and an example configuration file are provided by the repository [EESSI/eessi-bot-software-layer](https://github.com/EESSI/eessi-bot-software-layer) (or your fork of it).
-
-First, clone the EESSI/eessi-bot-software-layer repository (or your fork of it) by running
-
-```
-git clone https://github.com/EESSI/eessi-bot-software-layer.git
-```
-
-After cloning the bot's repository, change directory with `cd eessi-bot-software-layer` and note the full path of the directory (`PATH_TO_EESSI_BOT`).
-
-### <a name="step5.5"></a>Step 5.5: Create the configuration file `app.cfg`
+### <a name="step5.4"></a>Step 5.4: Create the configuration file `app.cfg`
 
 If there is no `app.cfg` in the directory `PATH_TO_EESSI_BOT` yet, create an initial version from `app.cfg.example`.
 
@@ -279,6 +293,11 @@ arch_target_map = { "linux/x86_64/generic" : "--constraint shape=c4.2xlarge", "l
 ```
 The map has one to many entries of the format `OS/SUBDIR : ADDITIONAL_SBATCH_PARAMETERS`. For your cluster, you will have to figure out which microarchitectures (`SUBDIR`) are available (as `OS` only `linux` is currently supported) and how to instruct Slurm to request them (`ADDITIONAL_SBATCH_PARAMETERS`).
 
+Note, if you do not have to specify additional parameters to `sbatch` to request a compute node with a specific microarchitecture, you can just write something like
+```
+arch_target_map = { "linux/x86_64/generic" : "" }
+```
+
 ### Section `[job_manager]`
 The section `[job_manager]` contains information needed by the job manager.
 ```
@@ -307,7 +326,7 @@ As the event handler may run for a long time, it is adviced to run it in a `scre
 
 The event handler is provided by the Python script `eessi_bot_software_layer.py`.
 Change directory to `eessi-bot-software-layer` (which was created by cloning the
-repository in [Step 5.4](#step5.4) - either the original one from EESSI or your fork).
+repository in [Step 4](#step4) - either the original one from EESSI or your fork).
 Then, simply run the event handler by executing
 ```
 ./run.sh
