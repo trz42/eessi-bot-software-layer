@@ -132,7 +132,7 @@ def build_easystack_from_pr(pr, event_info):
         #log("Applied patch!\nStdout %s\nStderr: %s" % (patched.stdout,patched.stderr))
 
         fetch_cmd = 'git fetch origin pull/%s/head:pr%s' % (pr.number,pr.number)
-        log("Fetch pull request %s into local branch %s by running cmd '%s'" % (pr.number,'pr'+pr.number,fetch_cmd)
+        log("Fetch pull request %s into local branch %s by running cmd '%s'" % (pr.number,'pr'+pr.number,fetch_cmd))
         fetched = subprocess.run(fetch_cmd,
                                  cwd=arch_job_dir,
                                  shell=True,
@@ -141,7 +141,7 @@ def build_easystack_from_pr(pr, event_info):
         log("Fetched PR %s!\nStdout %s\nStderr: %s" % (pr.number,fetched.stdout,fetched.stderr))
 
         checkout_cmd = 'git checkout pr%s' % pr.number
-        log("Checkout branch %s that contains pull request %s by running cmd '%s'" % ('pr'+pr.number,pr.number,checkout_cmd)
+        log("Checkout branch %s that contains pull request %s by running cmd '%s'" % ('pr'+pr.number,pr.number,checkout_cmd))
         checkedout = subprocess.run(checkout_cmd,
                                     cwd=arch_job_dir,
                                     shell=True,
