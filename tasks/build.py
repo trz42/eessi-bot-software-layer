@@ -113,41 +113,41 @@ def build_easystack_from_pr(pr, event_info):
                                      stderr=subprocess.PIPE)
         log("Cloned repo!\nStdout %s\nStderr: %s" % (cloned_repo.stdout,cloned_repo.stderr))
 
-        #curl_cmd = 'curl -L https://github.com/%s/pull/%s.patch > %s.patch' % (repo_name,pr.number,pr.number)
-        #log("Obtain patch by running '%s' in directory '%s'" % (curl_cmd,arch_job_dir))
-        #got_patch = subprocess.run(curl_cmd,
-        #                           cwd=arch_job_dir,
-        #                           shell=True,
-        #                           stdout=subprocess.PIPE,
-        #                           stderr=subprocess.PIPE)
-        #log("Got patch!\nStdout %s\nStderr: %s" % (got_patch.stdout,got_patch.stderr))
+        curl_cmd = 'curl -L https://github.com/%s/pull/%s.patch > %s.patch' % (repo_name,pr.number,pr.number)
+        log("Obtain patch by running '%s' in directory '%s'" % (curl_cmd,arch_job_dir))
+        got_patch = subprocess.run(curl_cmd,
+                                   cwd=arch_job_dir,
+                                   shell=True,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+        log("Got patch!\nStdout %s\nStderr: %s" % (got_patch.stdout,got_patch.stderr))
 
-        #git_am_cmd = 'git am %s.patch' % pr.number
-        #log("Apply patch by running '%s' in directory '%s'" % (git_am_cmd,arch_job_dir))
-        #patched = subprocess.run(git_am_cmd,
-        #                         cwd=arch_job_dir,
-        #                         shell=True,
-        #                         stdout=subprocess.PIPE,
-        #                         stderr=subprocess.PIPE)
-        #log("Applied patch!\nStdout %s\nStderr: %s" % (patched.stdout,patched.stderr))
-
-        fetch_cmd = 'git fetch origin pull/%s/head:pr%s' % (pr.number,pr.number)
-        log("Fetch pull request %s into local branch %s by running cmd '%s'" % (pr.number,'pr'+pr.number,fetch_cmd))
-        fetched = subprocess.run(fetch_cmd,
+        git_am_cmd = 'git am %s.patch' % pr.number
+        log("Apply patch by running '%s' in directory '%s'" % (git_am_cmd,arch_job_dir))
+        patched = subprocess.run(git_am_cmd,
                                  cwd=arch_job_dir,
                                  shell=True,
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE)
-        log("Fetched PR %s!\nStdout %s\nStderr: %s" % (pr.number,fetched.stdout,fetched.stderr))
+        log("Applied patch!\nStdout %s\nStderr: %s" % (patched.stdout,patched.stderr))
 
-        checkout_cmd = 'git checkout pr%s' % pr.number
-        log("Checkout branch %s that contains pull request %s by running cmd '%s'" % ('pr'+pr.number,pr.number,checkout_cmd))
-        checkedout = subprocess.run(checkout_cmd,
-                                    cwd=arch_job_dir,
-                                    shell=True,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
-        log("Checked out PR %s!\nStdout %s\nStderr: %s" % (pr.number,checkedout.stdout,checkedout.stderr))
+        #fetch_cmd = 'git fetch origin pull/%s/head:pr%s' % (pr.number,pr.number)
+        #log("Fetch pull request %s into local branch %s by running cmd '%s'" % (pr.number,'pr'+str(pr.number),fetch_cmd))
+        #fetched = subprocess.run(fetch_cmd,
+        #                         cwd=arch_job_dir,
+        #                         shell=True,
+        #                         stdout=subprocess.PIPE,
+        #                         stderr=subprocess.PIPE)
+        #log("Fetched PR %s!\nStdout %s\nStderr: %s" % (pr.number,fetched.stdout,fetched.stderr))
+
+        #checkout_cmd = 'git checkout pr%s' % pr.number
+        #log("Checkout branch %s that contains pull request %s by running cmd '%s'" % ('pr'+str(pr.number),pr.number,checkout_cmd))
+        #checkedout = subprocess.run(checkout_cmd,
+        #                            cwd=arch_job_dir,
+        #                            shell=True,
+        #                            stdout=subprocess.PIPE,
+        #                            stderr=subprocess.PIPE)
+        #log("Checked out PR %s!\nStdout %s\nStderr: %s" % (pr.number,checkedout.stdout,checkedout.stderr))
 
         # check if we need to apply local customizations:
         #   is cvmfs_customizations defined? yes, apply it
