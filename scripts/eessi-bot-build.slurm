@@ -39,6 +39,10 @@ echo "'$eessi_tmpdir'"
 # and also use it as home directory in build container
 export SINGULARITY_HOME="$(pwd):/eessi_bot_job"
 
+# set tmp directory to deal with possibly too small /tmp
+export SINGULARITY_TMPDIR=$eessi_tmpdir/sing_tmp
+mkdir -p $SINGULARITY_TMPDIR
+
 # if eessi_tmpdir is not starting with '/tmp' map it to '/tmp'
 # rationale: something else than /tmp is used for eessi_tmpdir
 #            if /tmp has some limitations (e.g., size);
