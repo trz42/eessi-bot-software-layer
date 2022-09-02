@@ -12,7 +12,7 @@ app_id = 199740
 #   runs on and the username which runs the bot
 # NOTE avoid putting an actual username here as it will be visible on
 #      potentially publicly accessible GitHub pages.
-app_name = "MY-bot"
+app_name = MY-bot
 
 # replace '25669742' with the ID of the installation of your GitHub App
 #   (can be derived by creating an event and then checking for the list
@@ -55,7 +55,7 @@ local_tmp = /tmp/$USER/EESSI
 #      then the whole 'string' is recognised as a single parameter.
 # NOTE 2 '--get-user-env' may be needed on systems where the job's environment needs
 #        to be initialised as if it is for a login shell.
-slurm_params = "--hold"
+slurm_params = --hold
 
 # full path to the job submission command
 submit_command = /usr/bin/sbatch
