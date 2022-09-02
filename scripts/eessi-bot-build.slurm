@@ -20,12 +20,60 @@
 #  - arguments: 
 #    - eessi_tmpdir: hand over as argument to script
 
-if [ $# -lt 1 ]; then
-    echo "ERROR: Usage: $0 <EESSI tmp dir (example: /tmp/$USER/EESSI)> <any additional options (example: --generic)>" >&2
-    exit 1
-fi
-eessi_tmpdir=$1
-shift
+display_help() {
+  echo "usage: $0 [OPTIONS]"
+  echo "  -g | --generic               -  instructs script to build for generic architecture target"
+  echo "  -h | --help                  -  display this usage information"
+  echo "  -t | --tmpdir TMPDIR         -  path to tmp directory used by build container"
+  echo "  -x | --http-proxy URL        -  provides URL for the environment variable http_proxy"
+  echo "  -y | --https-proxy URL       -  provides URL for the environment variable https_proxy"
+}
+
+POSITIONAL_ARGS=()
+
+tmpdir=${tmpdir:=}
+http_proxy=${http_proxy:=}
+https_proxy=${https_proxy:=}
+common_opts=
+install_software_opts=
+create_tarball_opts=
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -g|--generic)
+      common_opts="${common_opts} --generic"
+      shift
+      ;;
+    -h|--help)
+      display_help  # Call your function
+      # no shifting needed here, we're done.
+      exit 0
+      ;;
+    -t|--tmpdir)
+      tmpdir="$2"
+      eessi_tmpdir=$tmpdir
+      shift 2
+      ;;
+    -x|--http-proxy)
+      http_proxy="$2"
+      install_software_opts="$install_software_opts --http-proxy $http_proxy"
+      shift 2
+      ;;
+    -y|--https-proxy)
+      https_proxy="$2"
+      install_software_opts="$install_software_opts --https-proxy $https_proxy"
+      shift 2
+      ;;
+    -*|--*)
+      echo "Error: Unknown option: $1" >&2
+      exit 1
+      ;;
+    *)  # No more options
+      POSITIONAL_ARGS+=("$1") # save positional arg
+      shift
+      ;;
+  esac
+done
 
 echo "Starting eessi-bot-build-slurm.sh"
 
@@ -62,7 +110,8 @@ echo "SINGULARITY_BIND=${SINGULARITY_BIND}"
 
 # run standard EESSI software-layer install script
 #   in compat layer environment inside build container
-./build_container.sh run ${eessi_tmpdir} ./install_software_layer.sh "$@"
+./build_container.sh run ${eessi_tmpdir} \
+    ./install_software_layer.sh $install_software_opts $common_opts "$@"
 
 # create tarball for the above build and place it in some specific
 #   directory on shared disk (just in main directory of job)
@@ -79,5 +128,8 @@ echo "SINGULARITY_BIND=${SINGULARITY_BIND}"
 #timestamp=$(date +%s)
 #export TGZ=$(printf "eessi-%s-software-%s-%s-%d.tar.gz" ${EESSI_PILOT_VERSION} ${EESSI_OS_TYPE} ${software_subdir} ${timestamp})
 ./build_container.sh run ${eessi_tmpdir} \
-    ./create_tarball.sh ${eessi_tmpdir} software /eessi_bot_job "$@"
+    ./create_tarball.sh ${eessi_tmpdir} \
+                        software \
+                        /eessi_bot_job \
+                        $create_tarball_opts $common_opts "$@"
 #    ${EESSI_SOFTWARE_SUBDIR} /eessi_bot_job/${TGZ}

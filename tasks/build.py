@@ -184,7 +184,7 @@ def build_easystack_from_pr(pr, event_info):
             slurm_params,
             job[2],
             build_job_script,
-            local_tmp,
+            '--tmpdir', local_tmp,
         ])
         if http_proxy:
             command_line += ' --http-proxy ' + http_proxy
