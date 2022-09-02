@@ -39,7 +39,9 @@ def build_easystack_from_pr(pr, event_info):
         cvmfs_customizations_str = buildenv.get('cvmfs_customizations')
         log("cvmfs_customizations '%s'" % cvmfs_customizations_str)
 
-        cvmfs_customizations = json.loads(cvmfs_customizations_str)
+        if cvmfs_customizations_str != None:
+            cvmfs_customizations = json.loads(cvmfs_customizations_str)
+
         log("cvmfs_customizations '%s'" % json.dumps(cvmfs_customizations))
     except json.decoder.JSONDecodeError as e:
         print(e)
