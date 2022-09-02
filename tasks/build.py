@@ -191,14 +191,14 @@ def build_easystack_from_pr(pr, event_info):
         if https_proxy:
             command_line += ' --https-proxy ' + https_proxy
 
-        log("Submit job for target '%s' with '%s' from directory '%s'" % (job[1], command_line, job[0]))
-
         # TODO the handling of generic targets requires a bit knowledge about
         #      the internals of building the software layer, maybe ok for now,
         #      but it might be good to think about an alternative
         # if target contains generic, add ' --generic' to command line
         if "generic" in job[1]:
             command_line += ' --generic'
+
+        log("Submit job for target '%s' with '%s' from directory '%s'" % (job[1], command_line, job[0]))
 
         submitted = subprocess.run(
                 command_line,
