@@ -275,6 +275,13 @@ jobs_base_dir = $HOME/jobs
 ```
 Replace `$HOME/jobs` with a path under which information about jobs will be stored. Per job the directory structure under `jobs_base_dir` is `YYYY.MM/pr_PR_NUMBER/event_EVENT_ID/run_RUN_NUMBER/OS+SUBDIR`. The base directory will contain symlinks using the job ids pointing to the job's working directory `YYYY.MM/...`.
 ```
+load_modules = MODULE1/VERSION1,MODULE2/VERSION2,...
+```
+This setting provides a means to load modules in the `build_job_script`.
+None to several modules can be provided in a comma-separated list. It is
+read by the bot and handed over to `build_job_script` via the parameter
+`--load-modules`.
+```
 local_tmp = /tmp/$USER/EESSI
 ```
 This is the path to a temporary directory on the node building the stack, i.e., on a compute/worker node. You may have to change this if temporary storage under '/tmp' does not exist or is too small. This setting will be used for the environment variable `EESSI_TMPDIR`. Variables in the value may be esaped with '\' to delay their expansion to the start of the build_job_script. This can be used for referencing environment variables that are only set inside a Slurm job.

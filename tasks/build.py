@@ -50,6 +50,8 @@ def build_easystack_from_pr(pr, event_info):
     log("http_proxy '%s'" % http_proxy)
     https_proxy = buildenv.get('https_proxy') or ''
     log("https_proxy '%s'" % https_proxy)
+    load_modules = buildenv.get('load_modules') or ''
+    log("load_modules '%s'" % load_modules)
 
 
     # [architecturetargets]
@@ -190,6 +192,8 @@ def build_easystack_from_pr(pr, event_info):
             command_line += ' --http-proxy ' + http_proxy
         if https_proxy:
             command_line += ' --https-proxy ' + https_proxy
+        if load_modules:
+            command_line += ' --load-modules ' + load_modules
 
         # TODO the handling of generic targets requires a bit knowledge about
         #      the internals of building the software layer, maybe ok for now,

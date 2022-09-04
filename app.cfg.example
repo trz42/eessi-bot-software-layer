@@ -43,6 +43,13 @@ https_proxy = http://PROXY_DNS:3128/
 #   structure created is as follows: YYYY.MM/pr_PR_NUMBER/event_EVENT_ID/run_RUN_NUMBER/OS+SUBDIR
 jobs_base_dir = $HOME/jobs
 
+# configure environment
+#   list of comma-separated modules to be loaded by build_job_script
+#   useful/needed if some tool is not provided as system-wide package
+#   (read by bot and handed over to build_job_script via parameter
+#   --load-modules)
+load_modules =
+
 # PATH to temporary directory on build node ... ends up being used for
 #     for example, EESSI_TMPDIR --> /tmp/$USER/EESSI
 #   escaping variables with '\' delays expansion to the start of the

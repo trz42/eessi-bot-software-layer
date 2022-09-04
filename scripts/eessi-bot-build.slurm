@@ -24,6 +24,7 @@ display_help() {
   echo "usage: $0 [OPTIONS]"
   echo "  -g | --generic               -  instructs script to build for generic architecture target"
   echo "  -h | --help                  -  display this usage information"
+  echo "  -m | --load-modules MODULES  -  load modules before launching build container"
   echo "  -t | --tmpdir TMPDIR         -  path to tmp directory used by build container"
   echo "  -x | --http-proxy URL        -  provides URL for the environment variable http_proxy"
   echo "  -y | --https-proxy URL       -  provides URL for the environment variable https_proxy"
@@ -31,6 +32,7 @@ display_help() {
 
 POSITIONAL_ARGS=()
 
+load_modules=${load_modules:=}
 tmpdir=${tmpdir:=}
 http_proxy=${http_proxy:=}
 https_proxy=${https_proxy:=}
@@ -48,6 +50,10 @@ while [[ $# -gt 0 ]]; do
       display_help  # Call your function
       # no shifting needed here, we're done.
       exit 0
+      ;;
+    -m|--load-modules)
+      load_modules="$2"
+      shift 2
       ;;
     -t|--tmpdir)
       tmpdir="$2"
@@ -107,6 +113,18 @@ then
 fi
 
 echo "SINGULARITY_BIND=${SINGULARITY_BIND}"
+
+# load modules if parameter --load-modules (or environment
+#   variable load_modules) was given
+if [[ ! -z $load_modules ]]; then
+  for m in $(echo $load_modules | tr ',' '\n')
+  do
+    echo "eessi-bot-build.slurm: module load '$m'"
+    module load $m
+  done
+else
+  echo "eessi-bot-build.slurm: no modules to be loaded"
+fi
 
 # run standard EESSI software-layer install script
 #   in compat layer environment inside build container
