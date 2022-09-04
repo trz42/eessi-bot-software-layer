@@ -94,7 +94,7 @@ echo "'$eessi_tmpdir'"
 export SINGULARITY_HOME="$(pwd):/eessi_bot_job"
 
 # set tmp directory to deal with possibly too small /tmp
-export SINGULARITY_TMPDIR=$eessi_tmpdir/sing_tmp
+export SINGULARITY_TMPDIR=$eessi_tmpdir/singularity_tmpdir
 mkdir -p $SINGULARITY_TMPDIR
 
 # if eessi_tmpdir is not starting with '/tmp' map it to '/tmp'
@@ -150,4 +150,7 @@ fi
                         software \
                         /eessi_bot_job \
                         $create_tarball_opts $common_opts "$@"
-#    ${EESSI_SOFTWARE_SUBDIR} /eessi_bot_job/${TGZ}
+
+# clean up eessi_tmpdir
+# TODO add option to keep it for inspection
+cd ${eessi_tmpdir} && rm -rf .
