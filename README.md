@@ -150,10 +150,19 @@ git checkout PR24
 ```
 Note the output of `pwd`. This will be used to replace `PATH_TO_EESSI_BOT` in the configuration file `app.cfg` (see [Step 5.4](#step5.4)).
 
-The EESSI bot requires some Python packages to be installed. See the top of this page, or simply run (the `requirements.txt` file is provided by the EESSI bot repository)
+The EESSI bot requires some Python packages to be installed. It is recommended to install these in a virtual environment based on Python 3.7 or newer. See the below sequence for an example on how to set up the environment, to activate it and to install the requirements for the EESSI bot. The sequence assumes that you are in the directory containing the bot's script:
 ```
-pip3 install --user -r requirements.txt
+cd ..
+python3.7 -m venv venv_bot_p37
+source venv_bot_p37/bin/activate
+python --version                     # output should match 'Python 3.7.*$'
+which python                         # output should match '*/venv_bot_p37/bin/python$'
+python -m pip install --upgrade pip
+cd eessi-bot-software-layer
+pip install -r requirements.txt
 ```
+
+Note, before you can start the bot components (see below), you have to activate the virtual environment with `source venv_bot_p37/bin/activate`. You can deactivate it simply by running `deactivate`.
 
 **Troubles installing some of the requirements or their dependencies?**
 You may try to upgrade `pip` first with
