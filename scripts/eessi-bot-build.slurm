@@ -144,7 +144,7 @@ timestamp=$(date +%s)
 export TGZ=$(printf "eessi-%s-software-%s-%s-%d.tar.gz" ${EESSI_PILOT_VERSION} ${EESSI_OS_TYPE} ${software_subdir//\//-} ${timestamp})
 
 ./build_container.sh run ${eessi_tmpdir} \
-    ./create_tarball.sh ${eessi_tmpdir} ${EESSI_PILOT_VERSION} ${software_subdir} ${TGZ}
+    ./create_tarball.sh ${eessi_tmpdir} ${EESSI_PILOT_VERSION} ${software_subdir} /eessi_bot_job/${TGZ}
 
 # clean up eessi_tmpdir
 # TODO add option to keep it for inspection
