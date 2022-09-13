@@ -44,6 +44,7 @@ while [[ $# -gt 0 ]]; do
   case $1 in
     -g|--generic)
       common_opts="${common_opts} --generic"
+      generic_opt=" --generic"
       shift
       ;;
     -h|--help)
@@ -137,8 +138,8 @@ fi
 
 source init/minimal_eessi_env  # for $EESSI_PILOT_VERSION and $EESSI_OS_TYPE
 
-echo "raw output of eessi_software_subdir.py: '$(./build_container.sh run ${eessi_tmpdir} python3 /eessi_bot_job/eessi_software_subdir.py 2>&1)'"
-software_subdir=$(./build_container.sh run ${eessi_tmpdir} python3 /eessi_bot_job/eessi_software_subdir.py 2>&1 | tail -1 | sed 's/.* //g')
+echo "raw output of eessi_software_subdir.py: '$(./build_container.sh run ${eessi_tmpdir} python3 /eessi_bot_job/eessi_software_subdir.py ${generic_opt} 2>&1)'"
+software_subdir=$(./build_container.sh run ${eessi_tmpdir} python3 /eessi_bot_job/eessi_software_subdir.py ${generic_opt} 2>&1 | tail -1 | sed 's/.* //g')
 echo "software_subdir: '$software_subdir'"
 
 timestamp=$(date +%s)
