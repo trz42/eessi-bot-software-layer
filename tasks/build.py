@@ -80,6 +80,8 @@ def build_easystack_from_pr(pr, event_info):
     # TODO rename to base_repo_name?
     repo_name = pr.base.repo.full_name
     log("build_easystack_from_pr: pr.base.repo.full_name '%s'" % pr.base.repo.full_name)
+    branch_name = pr.base.ref
+    log("build_easystack_from_pr: pr.base.repo.ref '%s'" % pr.base.ref)
 
     jobs = []
     for arch_target,slurm_opt in arch_target_map.items():
@@ -93,6 +95,7 @@ def build_easystack_from_pr(pr, event_info):
         #  NOTE, patching method seems to fail sometimes, using a different method
         #    * patching method
         #      git clone https://github.com/REPO_NAME arch_job_dir
+        #      git checkout BRANCH (is stored as ref for base record in PR)
         #      curl -L https://github.com/REPO_NAME/pull/PR_NUMBER.patch > arch_job_dir/PR_NUMBER.patch
         #    (execute the next one in arch_job_dir)
         #      git am PR_NUMBER.patch
@@ -116,6 +119,18 @@ def build_easystack_from_pr(pr, event_info):
                                      stdout=subprocess.PIPE,
                                      stderr=subprocess.PIPE)
         log("Cloned repo!\nStdout %s\nStderr: %s" % (cloned_repo.stdout,cloned_repo.stderr))
+
+        git_checkout_cmd = ' '.join([
+            'git checkout',
+            branch_name,
+        ])
+        log("Checkout branch '%s' by running '%s' in directory '%s'" % (branc
+        checkout_repo = subprocess.run(git_checkout_cmd,
+                                     cwd=arch_job_dir,
+                                     shell=True,
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE)
+        log("Checked out branch!\nStdout %s\nStderr: %s" % (checkout_repo.std
 
         curl_cmd = 'curl -L https://github.com/%s/pull/%s.patch > %s.patch' % (repo_name,pr.number,pr.number)
         log("Obtain patch by running '%s' in directory '%s'" % (curl_cmd,arch_job_dir))
