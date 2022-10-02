@@ -124,13 +124,13 @@ def build_easystack_from_pr(pr, event_info):
             'git checkout',
             branch_name,
         ])
-        log("Checkout branch '%s' by running '%s' in directory '%s'" % (branc
+        log("Checkout branch '%s' by running '%s' in directory '%s'" % (branch_name,git_checkout_cmd,arch_job_dir))
         checkout_repo = subprocess.run(git_checkout_cmd,
                                      cwd=arch_job_dir,
                                      shell=True,
                                      stdout=subprocess.PIPE,
                                      stderr=subprocess.PIPE)
-        log("Checked out branch!\nStdout %s\nStderr: %s" % (checkout_repo.std
+        log("Checked out branch!\nStdout %s\nStderr: %s" % (checkout_repo.stdout,checkout_repo.stderr))
 
         curl_cmd = 'curl -L https://github.com/%s/pull/%s.patch > %s.patch' % (repo_name,pr.number,pr.number)
         log("Obtain patch by running '%s' in directory '%s'" % (curl_cmd,arch_job_dir))
