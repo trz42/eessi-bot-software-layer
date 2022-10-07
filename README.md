@@ -182,22 +182,11 @@ pip3 install --user -r requirements.txt
 
 ### <a name="step4.1"></a>Step 4.1 Using a development version/branch of PyGHee
 
-The above command `pip3 install --user -r requirements.txt` installs the latest release of the PyGHee library. If you want to use a development version/branch, i.e., what is available from GitHub or your own local copy, you have to set `PYTHONPATH` correctly. Assuming the library's main directory is `SOME_PATH/PyGHee` do the following in the terminal/shell/script where you run the bot:
+The above command `pip3 install --user -r requirements.txt` installs the latest release of the PyGHee library. If you want to use a development version/branch, i.e., what is available from GitHub or your own local copy, you have to set `$PYTHONPATH` correctly. Assuming the library's main directory is `SOME_PATH/PyGHee` do the following in the terminal/shell/script where you run the bot:
   
 ```
-export PYTHONPATH=SOME_PATH/PyGHee
+export PYTHONPATH=SOME_PATH/PyGHee:$PYTHONPATH
 ```
-
-As of today, [PR#3 of PyGHee](https://github.com/boegel/PyGHee/pull/3) is not being merged yet. Hence, you need to do the following to use it for running the EESSI bot.
-
-```
-cd SOME_PATH
-git clone https://github.com/boegel/PyGHee.git
-cd PyGHee
-git fetch origin pull/3/head:PR3
-git checkout PR3
-```
-and set PYTHONPATH as described above before you run the event handler. The job manager might use the version installed with `pip`. The only change of PR#3 is the added function `read_event_from_json`. However, for better reproducibility it could be useful to run both components with the same version of PyGHee.
 
 ## <a name="step5"></a>Step 5: Configuring the EESSI bot on the `bot machine`
 
