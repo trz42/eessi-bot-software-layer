@@ -148,7 +148,6 @@ pwd
 git fetch origin pull/24/head:PR24
 git checkout PR24
 ```
-Note the output of `pwd`. This will be used to replace `PATH_TO_EESSI_BOT` in the configuration file `app.cfg` (see [Step 5.4](#step5.4)).
 
 The EESSI bot requires some Python packages to be installed. It is recommended to install these in a virtual environment based on Python 3.7 or newer. See the below sequence for an example on how to set up the environment, to activate it and to install the requirements for the EESSI bot. The sequence assumes that you are in the directory containing the bot's script:
 ```
