@@ -23,4 +23,20 @@ def parse():
         "-f", "--file",
         help="use event data from a JSON file",
     )
+
+    parser.add_argument(
+        "-p", "--port", default=3000,
+        help="listen on a specific port for events (default 3000)",
+    )
+
+    parser.add_argument(
+        "-i", "--max-manager-iterations", default=-1,
+        help="loop behaviour: i<0 - indefinite, i==0 - don't run, i>0: run i iterations (default -1)",
+    )
+
+    parser.add_argument(
+        "-j", "--jobs",
+        help="limits the processing to a specific job id or list of comma-separated list of job ids",
+    )
+
     return parser.parse_args()

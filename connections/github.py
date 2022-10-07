@@ -33,3 +33,7 @@ def get_instance():
     if not _gh or (_token and datetime.datetime.utcnow() > _token.expires_at):
         _gh = connect()
     return _gh
+
+def token():
+    global _token
+    return _token

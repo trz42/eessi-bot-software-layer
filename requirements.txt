@@ -1,4 +1,4 @@
 PyGithub
 Waitress
 cryptography
-PyGHee>=0.0.2
+PyGHee>=0.0.3
