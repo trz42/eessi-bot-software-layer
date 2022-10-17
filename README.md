@@ -111,7 +111,13 @@ At the [app settings page](https://github.com/settings/apps) click "New GitHub A
   ```shell
   python3 -c 'import secrets; print(secrets.token_hex(64))'
   ```
-- Permissions: assign permissions to the app it needs (e.g., read access to commits, issues, pull requests); Make sure to assign read and write access to the Pull request in Repository permissions section; These  permisions can be changed later on; make sure to accept the new permissions  from the install app section. Select Install App option from the menu on the left hand side. Then select the wheel right next to your installed app or use the link https://github.com/settings/installations/INSTALLATION_ID  Once the page open you’ll be able to accept the new permissions there. Some permissions (e.g., metadata) will be selected automatically because of others you have chosen.
+- Permissions: assign permissions to the app it needs (e.g., read access to commits, issues, pull requests);
+  -  Make sure to assign read and write access to the Pull request in Repository permissions section; These  permisions can be changed later on; 
+  -  Make sure to accept the new permissions  from the install app section. Select Install App option from the menu on the left hand side. 
+  -  Then select the wheel right next to your installed app or use the link https://github.com/settings/installations/INSTALLATION_ID 
+  -  Once the page open you’ll be able to accept the new permissions there. 
+  -  Some permissions (e.g., metadata) will be selected automatically because of others you have chosen.
+
 - Events: subscribe the app to events it shall react on (e.g., related to pull requests)
 - Select that the app can only be installed by this (your) GitHub account
 
@@ -220,9 +226,10 @@ Open the page https://github.com/settings/apps and then click on the icon left t
 
 For example: the private key is in the LOCAL computer. To copy it to the bot machine 
 ```
-scp PATH_TO_PRIVATE_KEY_FILE_LOCAL_COMPUTER REMOTE_USERNAME@target_host:TARGET/PATH
+scp PATH_TO_PRIVATE_KEY_FILE_LOCAL_COMPUTER REMOTE_USERNAME@TARGET_HOST:TARGET/PATH
 ```
 the `TARGET/PATH` of the bot machine should be noted for PATH_TO_PRIVATE_KEY.
+
 ### <a name="step5.4"></a>Step 5.4: Create the configuration file `app.cfg`
 
 If there is no `app.cfg` in the directory `PATH_TO_EESSI_BOT` yet, create an initial version from `app.cfg.example`.
@@ -279,7 +286,7 @@ script `EESSI-pilot-install-software.sh`).
 ```
 jobs_base_dir = $HOME/jobs
 ```
-Replace `$HOME/jobs` with absolute filepath `/mnt/shared/home/USER/jobs`. Per job the directory structure under `jobs_base_dir` is `YYYY.MM/pr_PR_NUMBER/event_EVENT_ID/run_RUN_NUMBER/OS+SUBDIR`. The base directory will contain symlinks using the job ids pointing to the job's working directory `YYYY.MM/...`.
+Replace `$HOME/jobs` with absolute filepath `/home/USER/jobs`. Per job the directory structure under `jobs_base_dir` is `YYYY.MM/pr_PR_NUMBER/event_EVENT_ID/run_RUN_NUMBER/OS+SUBDIR`. The base directory will contain symlinks using the job ids pointing to the job's working directory `YYYY.MM/...`.
 ```
 load_modules = MODULE1/VERSION1,MODULE2/VERSION2,...
 ```
@@ -315,7 +322,7 @@ arch_target_map = { "linux/x86_64/generic" : "" }
 ### Section `[job_manager]`
 The section `[job_manager]` contains information needed by the job manager.
 ```
-job_ids_dir = /mnt/shared/home/USER/jobs/ids
+job_ids_dir = /home/USER/jobs/ids
 ```
 Path to where the job manager stores information about jobs to be tracked. Under this directory it will store information about submitted/running jobs under `submitted` and about finished jobs under `finished`.
 ```
@@ -385,10 +392,10 @@ The job manager can run on a different machine than the event handler as long as
 
 # Example pull request on software-layer
 
-Now that the bot is running on your cluster, we want to provide a little demo about how to use it to add a new package to the software layer. We assume that you have forked [EESSI/software-layer](https://github.com/EESSI/software-layer) to `YOUR_GITHUB_ACCOUNT/software-layer` Following method can be used to test the bot.
+Now that the bot is running on your cluster, we want to provide a little demo about how to use it to add a new package to the software layer. We assume that you have forked [EESSI/software-layer](https://github.com/EESSI/software-layer) to `YOUR_GITHUB_ACCOUNT/software-layer` Following methods can be used to test the bot.
 Method 1:
    - open the link https://github.com/YOUR_GITHUB_ACCOUNT/software-layer/compare/main...EESSI:software-layer:add-CaDiCaL-9.3.0?expand=1
-   - create the label bot:build if its not there.
+   - create the label bot:build if it's not there.
    - Create the pull request.
    - Don’t merge the Pull request. It is important to close the pull request or delete the bot:build label after testing it. It can be added again for the other test. 
 If the above method is followed then there will be no need to create another Github account for the test which is shown in the following Method 2.
