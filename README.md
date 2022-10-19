@@ -1,6 +1,6 @@
 A bot to help with requests to add software installations to the [EESSI software layer](https://github.com/EESSI/software-layer)
 
-GitHub App implemented in ``eessi_bot_software_layer.py``
+GitHub App implemented in ``eessi_bot_event_handler.py``
 
 Script to start app: ``run.sh``
 
@@ -25,7 +25,7 @@ The following sections describe and illustrate the steps necessary
 to set up the EESSI bot for the software layer. The bot consists of
 two main components provided in this repository:
 
-- An event handler `eessi_bot_software_layer.py` which receives events from a GitHub repository and acts on them.
+- An event handler `eessi_bot_event_handler.py` which receives events from a GitHub repository and acts on them.
 - A job manager `eessi_bot_job_manager.py` which monitors a Slurm job queue and acts on state changes of jobs submitted by the event handler.
 
 ## <a name="prerequisites"></a>Prerequisites
@@ -332,7 +332,7 @@ The bot consists of three components, the Smee client, the event handler and the
 ## <a name="step6.1"></a>Step 6.1: Running the event handler
 As the event handler may run for a long time, it is advised to run it in a `screen` or `tmux` session.
 
-The event handler is provided by the Python script `eessi_bot_software_layer.py`.
+The event handler is provided by the Python script `eessi_bot_event_handler.py`.
 Change directory to `eessi-bot-software-layer` (which was created by cloning the
 repository in [Step 4](#step4) - either the original one from EESSI or your fork).
 Then, simply run the event handler by executing
