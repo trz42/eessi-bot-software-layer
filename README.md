@@ -2,7 +2,7 @@ A bot to help with requests to add software installations to the [EESSI software
 
 GitHub App implemented in ``eessi_bot_event_handler.py``
 
-Script to start app: ``eventhandler.sh``
+Script to start app: ``event_handler.sh``
 
 Requires:
 
@@ -337,11 +337,11 @@ Change directory to `eessi-bot-software-layer` (which was created by cloning the
 repository in [Step 4](#step4) - either the original one from EESSI or your fork).
 Then, simply run the event handler by executing
 ```
-./eventhandler.sh
+./event_handler.sh
 ```
 If multiple instances on the `bot machine` are being executed, you may need to run the event handler and the Smee client with a different port (default is 3000). The event handler can receive events on a different port by adding the parameter `--port PORTNUMBER`, for example,
 ```
-./ eventhandler--port 3030
+./event_handler.sh --port 3030
 ```
 See [Step 1](#step1) for telling the Smee client on which port the event handler receives events.
 
