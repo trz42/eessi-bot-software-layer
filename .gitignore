@@ -4,5 +4,5 @@ __pycache__/
 app.cfg
 appbackup.cfg
 venv_bot_p37
-*swo
+*.swo
 events_log/
