@@ -51,6 +51,14 @@ def get_buid_env():
     return jobs_base_dir, local_tmp, build_job_script, submit_command, slurm_params, cvmfs_customizations, http_proxy, https_proxy, load_modules
     
 
+def get_architecturetargets():
+    architecturetargets = config.get_section('architecturetargets')
+    arch_target_map = json.loads(architecturetargets.get('arch_target_map'))
+    log("arch target map '%s'" % json.dumps(arch_target_map))
+    return arch_target_map
+
+
+
 def build_easystack_from_pr(pr, event_info):
     # retrieving some settings from 'app.cfg' in bot directory
     # [github]
@@ -61,9 +69,8 @@ def build_easystack_from_pr(pr, event_info):
 
 
     # [architecturetargets]
-    architecturetargets = config.get_section('architecturetargets')
-    arch_target_map = json.loads(architecturetargets.get('arch_target_map'))
-    log("arch target map '%s'" % json.dumps(arch_target_map))
+    arch_target_map = get_architecturetargets()
+    
 
     # create directory structure according to alternative described in
     #   https://github.com/EESSI/eessi-bot-software-layer/issues/7
