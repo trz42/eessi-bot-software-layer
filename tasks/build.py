@@ -58,6 +58,25 @@ def get_architecturetargets():
     return arch_target_map
 
 
+def create_directory(pr, jobs_base_dir, event_info):
+    # create directory structure according to alternative described in
+    #   https://github.com/EESSI/eessi-bot-software-layer/issues/7
+    #   jobs_base_dir/YYYY.MM/pr<id>/event_<id>/run_<id>/target_<cpuarch>
+    
+    ym = datetime.today().strftime('%Y.%m')
+    pr_id = 'pr_%s' % pr.number
+    event_id = 'event_%s' % event_info['id']
+    event_dir = os.path.join(jobs_base_dir, ym, pr_id, event_id)
+    mkdir(event_dir)
+
+    run = 0
+    while os.path.exists(os.path.join(event_dir, 'run_%03d' % run)):
+        run += 1
+    run_dir = os.path.join(event_dir, 'run_%03d' % run)
+    mkdir(run_dir)
+    return ym, pr_id, run_dir
+    
+
 
 def build_easystack_from_pr(pr, event_info):
     # retrieving some settings from 'app.cfg' in bot directory
@@ -75,19 +94,10 @@ def build_easystack_from_pr(pr, event_info):
     # create directory structure according to alternative described in
     #   https://github.com/EESSI/eessi-bot-software-layer/issues/7
     #   jobs_base_dir/YYYY.MM/pr<id>/event_<id>/run_<id>/target_<cpuarch>
-    ym = datetime.now().strftime('%Y.%m')
-    pr_id = f'pr_{pr.number}'
-    event_id = f"event_{event_info['id']}"
-    event_dir = os.path.join(jobs_base_dir, ym, pr_id, event_id)
-    mkdir(event_dir)
-
-    run = 0
-    while os.path.exists(os.path.join(event_dir, 'run_%03d' % run)):
-        run += 1
-    run_dir = os.path.join(event_dir, 'run_%03d' % run)
-    mkdir(run_dir)
-
+    ym, pr_id, run_dir = create_directory(pr, jobs_base_dir, event_info)
+    
     gh = github.get_instance()
+    
     # adopting approach outlined in https://github.com/EESSI/eessi-bot-software-layer/issues/17
     # need to use `base` instead of `head` ... don't need to know the branch name
     # TODO rename to base_repo_name?
