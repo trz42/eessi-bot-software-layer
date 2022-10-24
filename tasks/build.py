@@ -17,7 +17,7 @@ def mkdir(path):
         os.makedirs(path)
 
 
-def get_buid_env():
+def get_build_env():
     # [buildenv]
     buildenv = config.get_section('buildenv')
     jobs_base_dir = buildenv.get('jobs_base_dir')
@@ -75,29 +75,9 @@ def create_directory(pr, jobs_base_dir, event_info):
     run_dir = os.path.join(event_dir, 'run_%03d' % run)
     mkdir(run_dir)
     return ym, pr_id, run_dir
-    
 
 
-def build_easystack_from_pr(pr, event_info):
-    # retrieving some settings from 'app.cfg' in bot directory
-    # [github]
-    app_name = config.get_section('github').get('app_name')
-
-    # [buildenv]
-    jobs_base_dir, local_tmp, build_job_script, submit_command, slurm_params, cvmfs_customizations, http_proxy, https_proxy, load_modules = get_buid_env()
-
-
-    # [architecturetargets]
-    arch_target_map = get_architecturetargets()
-    
-
-    # create directory structure according to alternative described in
-    #   https://github.com/EESSI/eessi-bot-software-layer/issues/7
-    #   jobs_base_dir/YYYY.MM/pr<id>/event_<id>/run_<id>/target_<cpuarch>
-    ym, pr_id, run_dir = create_directory(pr, jobs_base_dir, event_info)
-    
-    gh = github.get_instance()
-    
+def download_pull_request(pr, arch_target_map, run_dir, cvmfs_customizations):
     # adopting approach outlined in https://github.com/EESSI/eessi-bot-software-layer/issues/17
     # need to use `base` instead of `head` ... don't need to know the branch name
     # TODO rename to base_repo_name?
@@ -105,7 +85,6 @@ def build_easystack_from_pr(pr, event_info):
     log("build_easystack_from_pr: pr.base.repo.full_name '%s'" % pr.base.repo.full_name)
     branch_name = pr.base.ref
     log("build_easystack_from_pr: pr.base.repo.ref '%s'" % pr.base.ref)
-
     jobs = []
     for arch_target,slurm_opt in arch_target_map.items():
         arch_job_dir = os.path.join(run_dir, arch_target.replace('/', '_'))
@@ -182,12 +161,31 @@ def build_easystack_from_pr(pr, event_info):
 
         # enlist jobs to proceed
         jobs.append([arch_job_dir,arch_target,slurm_opt])
-
-
     log("  %d jobs to proceed after applying white list" % len(jobs))
     if jobs:
         log(json.dumps(jobs, indent=4))
+    
+    return repo_name, jobs
 
+
+def build_easystack_from_pr(pr, event_info):
+    # retrieving some settings from 'app.cfg' in bot directory
+    # [github]
+    app_name = config.get_section('github').get('app_name')
+    
+    # [buildenv]
+    jobs_base_dir, local_tmp, build_job_script, submit_command, slurm_params, cvmfs_customizations, http_proxy, https_proxy, load_modules = get_build_env()
+    
+    # [architecturetargets]
+    arch_target_map = get_architecturetargets()   
+    
+    # [directory structure]
+    ym, pr_id, run_dir = create_directory(pr, jobs_base_dir, event_info)
+    gh = github.get_instance()
+    
+    # [download pull request]
+    repo_name, jobs = download_pull_request(pr, arch_target_map, run_dir, cvmfs_customizations)
+    
     # Run jobs with the build job submission script
     submitted_jobs = []
     job_comment = ''
@@ -206,27 +204,22 @@ def build_easystack_from_pr(pr, event_info):
             command_line += f' --https-proxy {https_proxy}'
         if load_modules:
             command_line += f' --load-modules {load_modules}'
-
         # TODO the handling of generic targets requires a bit knowledge about
         #      the internals of building the software layer, maybe ok for now,
         #      but it might be good to think about an alternative
         # if target contains generic, add ' --generic' to command line
         if "generic" in job[1]:
             command_line += ' --generic'
-
         log("Submit job for target '%s' with '%s' from directory '%s'" % (job[1], command_line, job[0]))
-
         submitted = subprocess.run(
                 command_line,
                 shell=True,
                 cwd=job[0],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)
-
         # sbatch output is 'Submitted batch job JOBID'
         #   parse job id & add it to array of submitted jobs PLUS create a symlink from main pr_<ID> dir to job dir (job[0])
         log(f'build_easystack_from_pr(): sbatch out: {submitted.stdout.decode("UTF-8")}')
-
         log(f'build_easystack_from_pr(): sbatch err: {submitted.stderr.decode("UTF-8")}')
 
         job_id = submitted.stdout.split()[3].decode("UTF-8")
@@ -255,7 +248,6 @@ def build_easystack_from_pr(pr, event_info):
 
         dt = datetime.now(timezone.utc)
         job_comment += f'|{dt.strftime("%b %d %X %Z %Y")}|submitted|job waits for release by job manager|'
-
 
         repo = gh.get_repo(repo_name)
         pull_request = repo.get_pull(pr.number)
