@@ -17,11 +17,7 @@ def mkdir(path):
         os.makedirs(path)
 
 
-def build_easystack_from_pr(pr, event_info):
-    # retrieving some settings from 'app.cfg' in bot directory
-    # [github]
-    app_name = config.get_section('github').get('app_name')
-
+def get_buid_env():
     # [buildenv]
     buildenv = config.get_section('buildenv')
     jobs_base_dir = buildenv.get('jobs_base_dir')
@@ -52,6 +48,16 @@ def build_easystack_from_pr(pr, event_info):
     log("https_proxy '%s'" % https_proxy)
     load_modules = buildenv.get('load_modules') or ''
     log("load_modules '%s'" % load_modules)
+    return jobs_base_dir, local_tmp, build_job_script, submit_command, slurm_params, cvmfs_customizations, http_proxy, https_proxy, load_modules
+    
+
+def build_easystack_from_pr(pr, event_info):
+    # retrieving some settings from 'app.cfg' in bot directory
+    # [github]
+    app_name = config.get_section('github').get('app_name')
+
+    # [buildenv]
+    jobs_base_dir, local_tmp, build_job_script, submit_command, slurm_params, cvmfs_customizations, http_proxy, https_proxy, load_modules = get_buid_env()
 
 
     # [architecturetargets]
@@ -62,9 +68,9 @@ def build_easystack_from_pr(pr, event_info):
     # create directory structure according to alternative described in
     #   https://github.com/EESSI/eessi-bot-software-layer/issues/7
     #   jobs_base_dir/YYYY.MM/pr<id>/event_<id>/run_<id>/target_<cpuarch>
-    ym = datetime.today().strftime('%Y.%m')
-    pr_id = 'pr_%s' % pr.number
-    event_id = 'event_%s' % event_info['id']
+    ym = datetime.now().strftime('%Y.%m')
+    pr_id = f'pr_{pr.number}'
+    event_id = f"event_{event_info['id']}"
     event_dir = os.path.join(jobs_base_dir, ym, pr_id, event_id)
     mkdir(event_dir)
 
@@ -101,11 +107,8 @@ def build_easystack_from_pr(pr, event_info):
         #
         #  - REPO_NAME is repo_name
         #  - PR_NUMBER is pr.number
-        git_clone_cmd = ' '.join([
-            'git clone',
-            'https://github.com/' + repo_name,
-            arch_job_dir,
-        ])
+        git_clone_cmd = ' '.join(['git clone', f'https://github.com/{repo_name}', arch_job_dir])
+
         log("Clone repo by running '%s' in directory '%s'" % (git_clone_cmd,arch_job_dir))
         cloned_repo = subprocess.run(git_clone_cmd,
                                      cwd=arch_job_dir,
@@ -126,7 +129,8 @@ def build_easystack_from_pr(pr, event_info):
                                      stderr=subprocess.PIPE)
         log("Checked out branch!\nStdout %s\nStderr: %s" % (checkout_repo.stdout,checkout_repo.stderr))
 
-        curl_cmd = 'curl -L https://github.com/%s/pull/%s.patch > %s.patch' % (repo_name,pr.number,pr.number)
+        curl_cmd = f'curl -L https://github.com/{repo_name}/pull/{pr.number}.patch > {pr.number}.patch'
+
         log("Obtain patch by running '%s' in directory '%s'" % (curl_cmd,arch_job_dir))
         got_patch = subprocess.run(curl_cmd,
                                    cwd=arch_job_dir,
@@ -135,7 +139,7 @@ def build_easystack_from_pr(pr, event_info):
                                    stderr=subprocess.PIPE)
         log("Got patch!\nStdout %s\nStderr: %s" % (got_patch.stdout,got_patch.stderr))
 
-        git_am_cmd = 'git am %s.patch' % pr.number
+        git_am_cmd = f'git am {pr.number}.patch'
         log("Apply patch by running '%s' in directory '%s'" % (git_am_cmd,arch_job_dir))
         patched = subprocess.run(git_am_cmd,
                                  cwd=arch_job_dir,
@@ -164,7 +168,7 @@ def build_easystack_from_pr(pr, event_info):
 
 
     log("  %d jobs to proceed after applying white list" % len(jobs))
-    if len(jobs) > 0:
+    if jobs:
         log(json.dumps(jobs, indent=4))
 
     # Run jobs with the build job submission script
@@ -180,11 +184,11 @@ def build_easystack_from_pr(pr, event_info):
             '--tmpdir', local_tmp,
         ])
         if http_proxy:
-            command_line += ' --http-proxy ' + http_proxy
+            command_line += f' --http-proxy {http_proxy}'
         if https_proxy:
-            command_line += ' --https-proxy ' + https_proxy
+            command_line += f' --https-proxy {https_proxy}'
         if load_modules:
-            command_line += ' --load-modules ' + load_modules
+            command_line += f' --load-modules {load_modules}'
 
         # TODO the handling of generic targets requires a bit knowledge about
         #      the internals of building the software layer, maybe ok for now,
@@ -204,33 +208,37 @@ def build_easystack_from_pr(pr, event_info):
 
         # sbatch output is 'Submitted batch job JOBID'
         #   parse job id & add it to array of submitted jobs PLUS create a symlink from main pr_<ID> dir to job dir (job[0])
-        log("build_easystack_from_pr(): sbatch out: %s" % submitted.stdout.decode("UTF-8"))
-        log("build_easystack_from_pr(): sbatch err: %s" % submitted.stderr.decode("UTF-8"))
+        log(f'build_easystack_from_pr(): sbatch out: {submitted.stdout.decode("UTF-8")}')
+
+        log(f'build_easystack_from_pr(): sbatch err: {submitted.stderr.decode("UTF-8")}')
+
         job_id = submitted.stdout.split()[3].decode("UTF-8")
         submitted_jobs.append(job_id)
         symlink = os.path.join(jobs_base_dir, ym, pr_id, job_id)
-        log("jobs_base_dir: %s, ym: %s, pr_id: %s, job_id: %s" % (jobs_base_dir,ym,pr_id,job_id))
+        log(f"jobs_base_dir: {jobs_base_dir}, ym: {ym}, pr_id: {pr_id}, job_id: {job_id}")
+
         os.symlink(job[0], symlink)
         log("Submit command executed!\nStdout: %s\nStderr: %s" % (submitted.stdout, submitted.stderr))
 
         # create _bot_job<jobid>.metadata file in submission directory
         bot_jobfile = configparser.ConfigParser()
         bot_jobfile['PR'] = { 'repo' : repo_name, 'pr_number' : pr.number }
-        bot_jobfile_path = os.path.join(job[0], '_bot_job%s.metadata' % job_id)
+        bot_jobfile_path = os.path.join(job[0], f'_bot_job{job_id}.metadata')
         with open(bot_jobfile_path, 'w') as bjf:
             bot_jobfile.write(bjf)
 
         # report submitted jobs (incl architecture, ...)
-        job_comment = 'Job `%s` on `%s`' % (job_id, app_name)
+        job_comment = f'Job `{job_id}` on `{app_name}`'
         # obtain arch from job[1] which has the format OS/ARCH
         arch_name = '-'.join(job[1].split('/')[1:])
-        job_comment += ' for `%s`' % arch_name
+        job_comment += f' for `{arch_name}`'
         job_comment += ' in job dir `%s`\n' % symlink
         job_comment += '|date|job status|comment|\n'
         job_comment += '|----------|----------|------------------------|\n'
 
         dt = datetime.now(timezone.utc)
-        job_comment += '|%s|submitted|job waits for release by job manager|' % (dt.strftime("%b %d %X %Z %Y"))
+        job_comment += f'|{dt.strftime("%b %d %X %Z %Y")}|submitted|job waits for release by job manager|'
+
 
         repo = gh.get_repo(repo_name)
         pull_request = repo.get_pull(pr.number)
