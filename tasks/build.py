@@ -11,18 +11,23 @@ from tools import config
 from pyghee.utils import log, error
 from datetime import datetime, timezone
 
-JOBS_BASE_DIR = "jobs_base_dir"
-LOCAL_TMP = "local_tmp"
 BUILD_JOB_SCRIPT = "build_job_script"
-SUBMIT_COMMAND = "submit_command"
-SLURM_PARAMS = "slurm_params"
 CVMFS_CUSTOMIZATIONS = "cvmfs_customizations"
 HTTP_PROXY = "http_proxy"
 HTTPS_PROXY = "https_proxy"
+JOBS_BASE_DIR = "jobs_base_dir"
 LOAD_MODULES = "load_modules"
+LOCAL_TMP = "local_tmp"
+SUBMIT_COMMAND = "submit_command"
+SLURM_PARAMS = "slurm_params"
     
 
 def mkdir(path):
+    """create directory on the path passed to the method
+
+    Args:
+        path (string): location to where the directory is being created
+    """
     if not os.path.exists(path):
         os.makedirs(path)
 
@@ -33,15 +38,11 @@ def get_build_env_cfg():
     Returns:
          dict(str, dict): dictionary of configuration data
     """
-    # [buildenv]
-    config_data = {}
-
     buildenv = config.get_section('buildenv')
 
     jobs_base_dir = buildenv.get(JOBS_BASE_DIR)
     log("jobs_base_dir '%s'" % jobs_base_dir)
-    config_data[JOBS_BASE_DIR] = jobs_base_dir
-    
+    config_data = {JOBS_BASE_DIR: jobs_base_dir}
     local_tmp = buildenv.get(LOCAL_TMP)
     log("local_tmp '%s'" % local_tmp)
     config_data[LOCAL_TMP] = local_tmp
@@ -53,10 +54,11 @@ def get_build_env_cfg():
     submit_command = buildenv.get(SUBMIT_COMMAND)
     log("submit_command '%s'" % submit_command)
     config_data[SUBMIT_COMMAND] = submit_command
-    
 
-    #slurm_params = '--hold'
+
     slurm_params = buildenv.get(SLURM_PARAMS)
+    # always submit jobs with hold set, so job manager can release them
+    slurm_params += ' --hold'
     log("slurm_params '%s'" % slurm_params)
     config_data[SLURM_PARAMS] = slurm_params
 
@@ -72,22 +74,23 @@ def get_build_env_cfg():
     except json.decoder.JSONDecodeError as e:
         print(e)
         error(f'Value for cvmfs_customizations ({cvmfs_customizations_str}) could not be decoded.')
-    
+
     config_data[CVMFS_CUSTOMIZATIONS] = cvmfs_customizations
 
     http_proxy = buildenv.get(HTTP_PROXY) or ''
     log("http_proxy '%s'" % http_proxy)
     config_data[HTTP_PROXY] = http_proxy
-    
+
     https_proxy = buildenv.get(HTTPS_PROXY) or ''
     log("https_proxy '%s'" % https_proxy)
     config_data[HTTPS_PROXY] = https_proxy
-    
+
     load_modules = buildenv.get(LOAD_MODULES) or ''
     log("load_modules '%s'" % load_modules)
     config_data[LOAD_MODULES] = load_modules
-    
+
     return config_data
+
 
 def get_architecturetargets():
     """get architecturetargets and set arch_target_map
@@ -105,7 +108,7 @@ def create_directory(pr, jobs_base_dir, event_info):
     """Create directory for Pull Request
 
     Args:
-        pr (dictionary): pr details
+        pr (object): pr details
         jobs_base_dir (string): location where the bot prepares directories per job
         event_info (string): event received by event_handler 
 
@@ -113,7 +116,7 @@ def create_directory(pr, jobs_base_dir, event_info):
         tuple of 3 elements containing
 
         - ym(string): string with datestamp (<year>.<month>)
-        - pr_id(float): pr number
+        - pr_id(int): pr number
         - run_dir(string): path to run_dir
     """
     # create directory structure according to alternative described in
@@ -133,15 +136,28 @@ def create_directory(pr, jobs_base_dir, event_info):
     mkdir(run_dir)
     return ym, pr_id, run_dir
 
+
 def setup_pr_in_arch_job_dir(repo_name, branch_name, pr, arch_job_dir):
     """Download pull request to arch_job_dir
 
     Args:
         repo_name (string): pr base repo name
         branch_name (string): pr branch name
-        pr (dictionary): pr details
+        pr (object): pr details
         arch_job_dir (string): location of arch_job_dir
     """
+    # download pull request to arch_job_dir
+    #  - PyGitHub doesn't seem capable of doing that (easily);
+    #  - for now, keep it simple and just execute the commands (anywhere) (note 'git clone' requires that destination is an empty directory)
+    #    * patching method
+    #      git clone https://github.com/REPO_NAME arch_job_dir
+    #      git checkout BRANCH (is stored as ref for base record in PR)
+    #      curl -L https://github.com/REPO_NAME/pull/PR_NUMBER.patch > arch_job_dir/PR_NUMBER.patch
+    #    (execute the next one in arch_job_dir)
+    #      git am PR_NUMBER.patch
+    #
+    #  - REPO_NAME is repo_name
+    #  - PR_NUMBER is pr.number
     git_clone_cmd = ' '.join(['git clone', f'https://github.com/{repo_name}', arch_job_dir])
 
     log("Clone repo by running '%s' in directory '%s'" % (git_clone_cmd,arch_job_dir))
@@ -183,7 +199,14 @@ def setup_pr_in_arch_job_dir(repo_name, branch_name, pr, arch_job_dir):
                              stderr=subprocess.PIPE)
     log("Applied patch!\nStdout %s\nStderr: %s" % (patched.stdout,patched.stderr))
 
+
 def apply_cvmfs_customizations(cvmfs_customizations,arch_job_dir):
+    """if cvmfs_customizations are defined then applies it
+
+    Args:
+        cvmfs_customizations (dictionary): maps a file name to an entry that needs to be appended to that file. 
+        arch_job_dir ((string): location of arch_job_dir
+    """
     if len(cvmfs_customizations) > 0:
         # for each entry/key, append value to file
         for key in cvmfs_customizations.keys():
@@ -197,20 +220,19 @@ def apply_cvmfs_customizations(cvmfs_customizations,arch_job_dir):
             #      for now, only existing mappings may be customized
 
 
-
 def download_pull_request(pr, arch_target_map, run_dir, cvmfs_customizations):
     """setup pull request in arch_job_dir and apply cvmfs customizations
 
     Args:
-        pr (dictionary): data of pr
+        pr (object): data of pr
         arch_target_map (dictionary): contains entries of the format OS/SUBDIR : ADDITIONAL_SBATCH_PARAMETERS where the jobs are submitted 
-        run_dir (string): _description_
+        run_dir (string): path to run directory
         cvmfs_customizations (dictionary): CVMFS configuration for the build job
 
     Returns:
         tuple of 2 elements containing
             - repo_name(string):  pr base repository name
-            - jobs(list): list containing all the pending jobs
+            - jobs(list): list containing all the jobs
     """
     # adopting approach outlined in https://github.com/EESSI/eessi-bot-software-layer/issues/17
     # need to use `base` instead of `head` ... don't need to know the branch name
@@ -226,18 +248,6 @@ def download_pull_request(pr, arch_target_map, run_dir, cvmfs_customizations):
         mkdir(arch_job_dir)
         log("arch_job_dir '%s'" % arch_job_dir)
 
-        # download pull request to arch_job_dir
-        #  - PyGitHub doesn't seem capable of doing that (easily);
-        #  - for now, keep it simple and just execute the commands (anywhere) (note 'git clone' requires that destination is an empty directory)
-        #    * patching method
-        #      git clone https://github.com/REPO_NAME arch_job_dir
-        #      git checkout BRANCH (is stored as ref for base record in PR)
-        #      curl -L https://github.com/REPO_NAME/pull/PR_NUMBER.patch > arch_job_dir/PR_NUMBER.patch
-        #    (execute the next one in arch_job_dir)
-        #      git am PR_NUMBER.patch
-        #
-        #  - REPO_NAME is repo_name
-        #  - PR_NUMBER is pr.number
         setup_pr_in_arch_job_dir(repo_name, branch_name, pr, arch_job_dir)
 
         # check if we need to apply local customizations:
@@ -262,7 +272,7 @@ def submit_job(job,submitted_jobs, build_env_cfg, ym, pr_id):
         submitted_jobs (list): jobs submitted
         build_env_cfg (dictionary): build environment data
         ym (string): string with datestamp (<year>.<month>)
-        pr_id(float): pr number
+        pr_id(int): pr number
 
     Returns:
         tuple of 2 elements containing
@@ -311,12 +321,12 @@ def submit_job(job,submitted_jobs, build_env_cfg, ym, pr_id):
 
 
 def create_metadata(job, repo_name, pr, job_id):
-    """create metadata file in submission dir
+    """Create metadata file in submission dir
 
     Args:
         job (list):  jobs to be submitted
         repo_name (string): pr base repository name
-        pr (dictionary): data of pr
+        pr (object): data of pr
         job_id (string): job id after parsing
     """
     # create _bot_job<jobid>.metadata file in submission directory
@@ -334,8 +344,8 @@ def create_pr_comments(job, job_id,app_name,job_comment,pr,repo_name,gh,symlink)
         job (list): jobs to be submitted
         job_id (string): job id after parsing
         app_name (string): name of the app
-        job_comment (string): comments for jobs status and release
-        pr (dictionary): pr data
+        job_comment (string): comments for jobs status and job release
+        pr (object): pr data
         repo_name (string): pr base repo name
         gh (object):github instance
         symlink(string): symlink from main pr_<ID> dir to job dir
@@ -358,6 +368,12 @@ def create_pr_comments(job, job_id,app_name,job_comment,pr,repo_name,gh,symlink)
 
 
 def build_easystack_from_pr(pr, event_info):
+    """Build from the pr by fetching data for build environment cofinguration, downloading pr, running jobs and adding comments
+
+    Args:
+        pr (object): _description_
+        event_info (string): event received by event_handler 
+    """
     # retrieving some settings from 'app.cfg' in bot directory
     # [github]
     app_name = config.get_section('github').get('app_name')
@@ -384,8 +400,7 @@ def build_easystack_from_pr(pr, event_info):
 
         # create _bot_job<jobid>.metadata file in submission directory
         create_metadata(job, repo_name, pr, job_id)
-       
-
+  
         # report submitted jobs (incl architecture, ...)
         create_pr_comments(job, job_id,app_name,job_comment,pr,repo_name,gh,symlink)
        
