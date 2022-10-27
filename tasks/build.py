@@ -3,13 +3,11 @@ import json
 import os
 import subprocess
 import time
-import glob
-import re
 
 from connections import github
-from tools import config
-from pyghee.utils import log, error
 from datetime import datetime, timezone
+from pyghee.utils import log, error
+from tools import config
 
 BUILD_JOB_SCRIPT = "build_job_script"
 CVMFS_CUSTOMIZATIONS = "cvmfs_customizations"
@@ -18,8 +16,8 @@ HTTPS_PROXY = "https_proxy"
 JOBS_BASE_DIR = "jobs_base_dir"
 LOAD_MODULES = "load_modules"
 LOCAL_TMP = "local_tmp"
-SUBMIT_COMMAND = "submit_command"
 SLURM_PARAMS = "slurm_params"
+SUBMIT_COMMAND = "submit_command"
     
 
 def mkdir(path):
@@ -160,47 +158,47 @@ def setup_pr_in_arch_job_dir(repo_name, branch_name, pr, arch_job_dir):
     #  - PR_NUMBER is pr.number
     git_clone_cmd = ' '.join(['git clone', f'https://github.com/{repo_name}', arch_job_dir])
 
-    log("Clone repo by running '%s' in directory '%s'" % (git_clone_cmd,arch_job_dir))
+    log("Clone repo by running '%s' in directory '%s'" % (git_clone_cmd, arch_job_dir))
     cloned_repo = subprocess.run(git_clone_cmd,
                                 cwd=arch_job_dir,
                                 shell=True,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
-    log("Cloned repo!\nStdout %s\nStderr: %s" % (cloned_repo.stdout,cloned_repo.stderr))
+    log("Cloned repo!\nStdout %s\nStderr: %s" % (cloned_repo.stdout, cloned_repo.stderr))
 
     git_checkout_cmd = ' '.join([
         'git checkout',
         branch_name,
     ])
-    log("Checkout branch '%s' by running '%s' in directory '%s'" % (branch_name,git_checkout_cmd,arch_job_dir))
+    log("Checkout branch '%s' by running '%s' in directory '%s'" % (branch_name, git_checkout_cmd, arch_job_dir))
     checkout_repo = subprocess.run(git_checkout_cmd,
                                  cwd=arch_job_dir,
                                  shell=True,
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE)
-    log("Checked out branch!\nStdout %s\nStderr: %s" % (checkout_repo.stdout,checkout_repo.stderr))
+    log("Checked out branch!\nStdout %s\nStderr: %s" % (checkout_repo.stdout, checkout_repo.stderr))
 
     curl_cmd = f'curl -L https://github.com/{repo_name}/pull/{pr.number}.patch > {pr.number}.patch'
 
-    log("Obtain patch by running '%s' in directory '%s'" % (curl_cmd,arch_job_dir))
+    log("Obtain patch by running '%s' in directory '%s'" % (curl_cmd, arch_job_dir))
     got_patch = subprocess.run(curl_cmd,
                                cwd=arch_job_dir,
                                shell=True,
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE)
-    log("Got patch!\nStdout %s\nStderr: %s" % (got_patch.stdout,got_patch.stderr))
+    log("Got patch!\nStdout %s\nStderr: %s" % (got_patch.stdout, got_patch.stderr))
 
     git_am_cmd = f'git am {pr.number}.patch'
-    log("Apply patch by running '%s' in directory '%s'" % (git_am_cmd,arch_job_dir))
+    log("Apply patch by running '%s' in directory '%s'" % (git_am_cmd, arch_job_dir))
     patched = subprocess.run(git_am_cmd,
                              cwd=arch_job_dir,
                              shell=True,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
-    log("Applied patch!\nStdout %s\nStderr: %s" % (patched.stdout,patched.stderr))
+    log("Applied patch!\nStdout %s\nStderr: %s" % (patched.stdout, patched.stderr))
 
 
-def apply_cvmfs_customizations(cvmfs_customizations,arch_job_dir):
+def apply_cvmfs_customizations(cvmfs_customizations, arch_job_dir):
     """if cvmfs_customizations are defined then applies it
 
     Args:
@@ -242,7 +240,7 @@ def download_pull_request(pr, arch_target_map, run_dir, cvmfs_customizations):
     branch_name = pr.base.ref
     log("build_easystack_from_pr: pr.base.repo.ref '%s'" % pr.base.ref)
     jobs = []
-    for arch_target,slurm_opt in arch_target_map.items():
+    for arch_target, slurm_opt in arch_target_map.items():
         arch_job_dir = os.path.join(run_dir, arch_target.replace('/', '_'))
         
         mkdir(arch_job_dir)
@@ -252,11 +250,11 @@ def download_pull_request(pr, arch_target_map, run_dir, cvmfs_customizations):
 
         # check if we need to apply local customizations:
         #   is cvmfs_customizations defined? yes, apply it
-        apply_cvmfs_customizations(cvmfs_customizations,arch_job_dir)
+        apply_cvmfs_customizations(cvmfs_customizations, arch_job_dir)
 
 
         # enlist jobs to proceed
-        jobs.append([arch_job_dir,arch_target,slurm_opt])
+        jobs.append([arch_job_dir, arch_target, slurm_opt])
     log("  %d jobs to proceed after applying white list" % len(jobs))
     if jobs:
         log(json.dumps(jobs, indent=4))
@@ -264,7 +262,7 @@ def download_pull_request(pr, arch_target_map, run_dir, cvmfs_customizations):
     return repo_name, jobs
 
 
-def submit_job(job,submitted_jobs, build_env_cfg, ym, pr_id):
+def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
     """Parse job id and submit jobs from directory
 
     Args:
@@ -317,7 +315,7 @@ def submit_job(job,submitted_jobs, build_env_cfg, ym, pr_id):
 
     os.symlink(job[0], symlink)
     log("Submit command executed!\nStdout: %s\nStderr: %s" % (submitted.stdout, submitted.stderr))
-    return job_id,symlink
+    return job_id, symlink
 
 
 def create_metadata(job, repo_name, pr, job_id):
@@ -337,7 +335,7 @@ def create_metadata(job, repo_name, pr, job_id):
         bot_jobfile.write(bjf)
 
 
-def create_pr_comments(job, job_id,app_name,job_comment,pr,repo_name,gh,symlink):
+def create_pr_comments(job, job_id, app_name, job_comment, pr, repo_name, gh, symlink):
     """create comments for pr
 
     Args:
@@ -396,11 +394,10 @@ def build_easystack_from_pr(pr, event_info):
     job_comment = ''
     for job in jobs:
         # TODO make local_tmp specific to job? to isolate jobs if multiple ones can run on a single node
-        job_id,symlink = submit_job(job,submitted_jobs, build_env_cfg, ym, pr_id)
+        job_id, symlink = submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id)
 
         # create _bot_job<jobid>.metadata file in submission directory
         create_metadata(job, repo_name, pr, job_id)
   
         # report submitted jobs (incl architecture, ...)
-        create_pr_comments(job, job_id,app_name,job_comment,pr,repo_name,gh,symlink)
-       
+        create_pr_comments(job, job_id, app_name, job_comment, pr, repo_name, gh, symlink)
