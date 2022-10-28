@@ -1,8 +1,7 @@
 #!/bin/bash
 #
-# This file is part of PyGHee (pronounced as "piggy"), the GitHub Event Executor,
-# is a GitHub App to process GitHub events, implemented in Python;
-# see https://github.com/boegel/pyghee
+# This file is part of the EESSI build-and-deploy bot,
+# see https://github.com/EESSI/eessi-bot-software-layer
 #
 # author: Kenneth Hoste (@boegel)
 #
