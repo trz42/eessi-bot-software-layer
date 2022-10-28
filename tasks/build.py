@@ -137,6 +137,38 @@ def create_directory(pr, jobs_base_dir, event_info):
     return ym, pr_id, run_dir
 
 
+def run_cmd(run_command, cmd_detail, arch_job_dir):
+    """Run Commands and logs the process
+
+    Args:
+        run_command (string): command to run 
+        cmd_detail (string): purpose of the commant
+        arch_job_dir (string): location of arch_job_dir
+
+    Returns:   
+        tuple of  2 elements containing
+
+        - process_output(string): output of the process
+        - process_exit_code(string): exit code of the process   
+    """
+    log(" '%s' by running '%s' in directory '%s'" % (cmd_detail, run_command, arch_job_dir))
+    result = subprocess.run(run_command,
+                                cwd=arch_job_dir,
+                                shell=True,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+    process_output = result.stdout.decode()
+    process_error = result.stderr.decode()
+    process_exit_code = result.returncode
+
+    if process_exit_code != 0:
+        log("Error: '%s' Exitcode: %s" % (process_error,process_exit_code))
+ 
+    log(" '%s' \nStdout %s\nStderr: %s" % (cmd_detail,result.stdout,result.stderr))
+    
+    return(process_output,process_exit_code)
+
+
 def setup_pr_in_arch_job_dir(repo_name, branch_name, pr, arch_job_dir):
     """Download pull request to arch_job_dir
 
@@ -159,15 +191,8 @@ def setup_pr_in_arch_job_dir(repo_name, branch_name, pr, arch_job_dir):
     #  - REPO_NAME is repo_name
     #  - PR_NUMBER is pr.number
     git_clone_cmd = ' '.join(['git clone', f'https://github.com/{repo_name}', arch_job_dir])
-
-    log("Clone repo by running '%s' in directory '%s'" % (git_clone_cmd,arch_job_dir))
-    cloned_repo = subprocess.run(git_clone_cmd,
-                                cwd=arch_job_dir,
-                                shell=True,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE)
-    log("Cloned repo!\nStdout %s\nStderr: %s" % (cloned_repo.stdout,cloned_repo.stderr))
-
+    clone_output,clone_exit_code = run_cmd(git_clone_cmd, "Clone repo", arch_job_dir)
+    
     git_checkout_cmd = ' '.join([
         'git checkout',
         branch_name,
@@ -179,25 +204,12 @@ def setup_pr_in_arch_job_dir(repo_name, branch_name, pr, arch_job_dir):
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE)
     log("Checked out branch!\nStdout %s\nStderr: %s" % (checkout_repo.stdout,checkout_repo.stderr))
-
+  
     curl_cmd = f'curl -L https://github.com/{repo_name}/pull/{pr.number}.patch > {pr.number}.patch'
-
-    log("Obtain patch by running '%s' in directory '%s'" % (curl_cmd,arch_job_dir))
-    got_patch = subprocess.run(curl_cmd,
-                               cwd=arch_job_dir,
-                               shell=True,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-    log("Got patch!\nStdout %s\nStderr: %s" % (got_patch.stdout,got_patch.stderr))
-
+    curl_output, curl_exit_code = run_cmd(curl_cmd, "Obtain patch", arch_job_dir)
+   
     git_am_cmd = f'git am {pr.number}.patch'
-    log("Apply patch by running '%s' in directory '%s'" % (git_am_cmd,arch_job_dir))
-    patched = subprocess.run(git_am_cmd,
-                             cwd=arch_job_dir,
-                             shell=True,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-    log("Applied patch!\nStdout %s\nStderr: %s" % (patched.stdout,patched.stderr))
+    git_am_output, git_am_exit_code = run_cmd(git_am_cmd, "Apply patch", arch_job_dir)
 
 
 def apply_cvmfs_customizations(cvmfs_customizations,arch_job_dir):
