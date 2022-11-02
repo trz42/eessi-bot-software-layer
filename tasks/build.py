@@ -18,7 +18,7 @@ LOAD_MODULES = "load_modules"
 LOCAL_TMP = "local_tmp"
 SLURM_PARAMS = "slurm_params"
 SUBMIT_COMMAND = "submit_command"
-    
+
 
 def mkdir(path):
     """create directory on the path passed to the method
@@ -52,7 +52,6 @@ def get_build_env_cfg():
     submit_command = buildenv.get(SUBMIT_COMMAND)
     log("submit_command '%s'" % submit_command)
     config_data[SUBMIT_COMMAND] = submit_command
-
 
     slurm_params = buildenv.get(SLURM_PARAMS)
     # always submit jobs with hold set, so job manager can release them
@@ -94,7 +93,7 @@ def get_architecturetargets():
     """get architecturetargets and set arch_target_map
 
     Returns:
-        dict(str, dict): dictionary of arch_target_map which contains entries of the format OS/SUBDIR : ADDITIONAL_SBATCH_PARAMETERS 
+        dict(str, dict): dictionary of arch_target_map which contains entries of the format OS/SUBDIR : ADDITIONAL_SBATCH_PARAMETERS
     """
     architecturetargets = config.get_section('architecturetargets')
     arch_target_map = json.loads(architecturetargets.get('arch_target_map'))
@@ -108,9 +107,9 @@ def create_directory(pr, jobs_base_dir, event_info):
     Args:
         pr (object): pr details
         jobs_base_dir (string): location where the bot prepares directories per job
-        event_info (string): event received by event_handler 
+        event_info (string): event received by event_handler
 
-    Returns:   
+    Returns:
         tuple of 3 elements containing
 
         - ym(string): string with datestamp (<year>.<month>)
@@ -120,7 +119,7 @@ def create_directory(pr, jobs_base_dir, event_info):
     # create directory structure according to alternative described in
     #   https://github.com/EESSI/eessi-bot-software-layer/issues/7
     #   jobs_base_dir/YYYY.MM/pr<id>/event_<id>/run_<id>/target_<cpuarch>
-    
+
     ym = datetime.today().strftime('%Y.%m')
     pr_id = 'pr_%s' % pr.number
     event_id = 'event_%s' % event_info['id']
@@ -135,36 +134,44 @@ def create_directory(pr, jobs_base_dir, event_info):
     return ym, pr_id, run_dir
 
 
-def run_cmd(run_command, cmd_detail, arch_job_dir):
+def run_cmd(cmd, log_msg='', working_dir=None):
+
     """Run Commands and logs the process
 
     Args:
-        run_command (string): command to run 
-        cmd_detail (string): purpose of the commant
-        arch_job_dir (string): location of arch_job_dir
+        cmd (string): command to run
+        log_msg (string): purpose of the commant
+        parent_dir (string): location of arch_job_dir
 
-    Returns:   
+    Returns:
         tuple of  2 elements containing
 
         - process_output(string): output of the process
-        - process_exit_code(string): exit code of the process   
+        - process_exit_code(string): exit code of the process
     """
-    log(" '%s' by running '%s' in directory '%s'" % (cmd_detail, run_command, arch_job_dir))
-    result = subprocess.run(run_command,
-                                cwd=arch_job_dir,
-                                shell=True,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE)
-    process_output = result.stdout.decode()
-    process_error = result.stderr.decode()
+    if working_dir is None:
+        working_dir = os.getcwd()
+
+    if log_msg:
+        log("'%s' by running '%s' in directory '%s'" % (log_msg, cmd, working_dir))
+    else:
+        log("Running '%s' in directory '%s'" % (cmd, working_dir))
+
+    result = subprocess.run(cmd,
+                            cwd=working_dir,
+                            shell=True,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    process_output = result.stdout.decode("UTF-8")
+    process_error = result.stderr.decode("UTF-8")
     process_exit_code = result.returncode
 
     if process_exit_code != 0:
-        log("Error: '%s' Exitcode: %s" % (process_error,process_exit_code))
- 
-    log(" '%s' \nStdout %s\nStderr: %s" % (cmd_detail,result.stdout,result.stderr))
-    
-    return(process_output,process_exit_code)
+        log("Error: '%s' Exitcode: %s" % (process_error, process_exit_code))
+
+    log(" '%s' \nStdout %s\nStderr: %s" % (log_msg, result.stdout, result.stderr))
+
+    return process_output, process_exit_code
 
 
 def setup_pr_in_arch_job_dir(repo_name, branch_name, pr, arch_job_dir):
@@ -189,23 +196,17 @@ def setup_pr_in_arch_job_dir(repo_name, branch_name, pr, arch_job_dir):
     #  - REPO_NAME is repo_name
     #  - PR_NUMBER is pr.number
     git_clone_cmd = ' '.join(['git clone', f'https://github.com/{repo_name}', arch_job_dir])
-    clone_output,clone_exit_code = run_cmd(git_clone_cmd, "Clone repo", arch_job_dir)
+    clone_output, clone_exit_code = run_cmd(git_clone_cmd, "Clone repo", arch_job_dir)
 
     git_checkout_cmd = ' '.join([
         'git checkout',
         branch_name,
     ])
-    log("Checkout branch '%s' by running '%s' in directory '%s'" % (branch_name, git_checkout_cmd, arch_job_dir))
-    checkout_repo = subprocess.run(git_checkout_cmd,
-                                 cwd=arch_job_dir,
-                                 shell=True,
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE)
-    log("Checked out branch!\nStdout %s\nStderr: %s" % (checkout_repo.stdout,checkout_repo.stderr))
-  
+    checkout_output, checkout_exit_code = run_cmd(git_checkout_cmd, "checkout branch '%s'" % branch_name, arch_job_dir)
+
     curl_cmd = f'curl -L https://github.com/{repo_name}/pull/{pr.number}.patch > {pr.number}.patch'
     curl_output, curl_exit_code = run_cmd(curl_cmd, "Obtain patch", arch_job_dir)
-   
+
     git_am_cmd = f'git am {pr.number}.patch'
     git_am_output, git_am_exit_code = run_cmd(git_am_cmd, "Apply patch", arch_job_dir)
 
@@ -214,7 +215,7 @@ def apply_cvmfs_customizations(cvmfs_customizations, arch_job_dir):
     """if cvmfs_customizations are defined then applies it
 
     Args:
-        cvmfs_customizations (dictionary): maps a file name to an entry that needs to be appended to that file. 
+        cvmfs_customizations (dictionary): maps a file name to an entry that needs to be appended to that file.
         arch_job_dir ((string): location of arch_job_dir
     """
     if len(cvmfs_customizations) > 0:
@@ -235,7 +236,7 @@ def download_pull_request(pr, arch_target_map, run_dir, cvmfs_customizations):
 
     Args:
         pr (object): data of pr
-        arch_target_map (dictionary): contains entries of the format OS/SUBDIR : ADDITIONAL_SBATCH_PARAMETERS where the jobs are submitted 
+        arch_target_map (dictionary): contains entries of the format OS/SUBDIR : ADDITIONAL_SBATCH_PARAMETERS where the jobs are submitted
         run_dir (string): path to run directory
         cvmfs_customizations (dictionary): CVMFS configuration for the build job
 
@@ -254,7 +255,7 @@ def download_pull_request(pr, arch_target_map, run_dir, cvmfs_customizations):
     jobs = []
     for arch_target, slurm_opt in arch_target_map.items():
         arch_job_dir = os.path.join(run_dir, arch_target.replace('/', '_'))
-        
+
         mkdir(arch_job_dir)
         log("arch_job_dir '%s'" % arch_job_dir)
 
@@ -263,14 +264,12 @@ def download_pull_request(pr, arch_target_map, run_dir, cvmfs_customizations):
         # check if we need to apply local customizations:
         #   is cvmfs_customizations defined? yes, apply it
         apply_cvmfs_customizations(cvmfs_customizations, arch_job_dir)
-
-
         # enlist jobs to proceed
         jobs.append([arch_job_dir, arch_target, slurm_opt])
     log("  %d jobs to proceed after applying white list" % len(jobs))
     if jobs:
         log(json.dumps(jobs, indent=4))
-    
+
     return repo_name, jobs
 
 
@@ -288,7 +287,7 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
         tuple of 2 elements containing
             - job_id(string):  job_id of submitted job
             - symlink(string): symlink from main pr_<ID> dir to job dir (job[0])
-    """    
+    """
     command_line = ' '.join([
         build_env_cfg[SUBMIT_COMMAND],
         build_env_cfg[SLURM_PARAMS],
@@ -308,6 +307,8 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
     # if target contains generic, add ' --generic' to command line
     if "generic" in job[1]:
         command_line += ' --generic'
+        commandline_output, commandline_exit_code = run_cmd(command_line, "submit job for target '%s'" % job[1])
+
     log("Submit job for target '%s' with '%s' from directory '%s'" % (job[1], command_line, job[0]))
     submitted = subprocess.run(
             command_line,
@@ -317,10 +318,10 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
             stderr=subprocess.PIPE)
     # sbatch output is 'Submitted batch job JOBID'
     #   parse job id & add it to array of submitted jobs PLUS create a symlink from main pr_<ID> dir to job dir (job[0])
-    log(f'build_easystack_from_pr(): sbatch out: {submitted.stdout.decode("UTF-8")}')
-    log(f'build_easystack_from_pr(): sbatch err: {submitted.stderr.decode("UTF-8")}')
+    log(f'build_easystack_from_pr(): sbatch out: {commandline_output}')
+    log(f'build_easystack_from_pr(): sbatch err: {commandline_output}')
 
-    job_id = submitted.stdout.split()[3].decode("UTF-8")
+    job_id = commandline_output.split()[3].decode("UTF-8")
     submitted_jobs.append(job_id)
     symlink = os.path.join(build_env_cfg[JOBS_BASE_DIR], ym, pr_id, job_id)
     log(f"jobs_base_dir: {build_env_cfg[JOBS_BASE_DIR]}, ym: {ym}, pr_id: {pr_id}, job_id: {job_id}")
@@ -341,7 +342,7 @@ def create_metadata(job, repo_name, pr, job_id):
     """
     # create _bot_job<jobid>.metadata file in submission directory
     bot_jobfile = configparser.ConfigParser()
-    bot_jobfile['PR'] = { 'repo' : repo_name, 'pr_number' : pr.number }
+    bot_jobfile['PR'] = {'repo': repo_name, 'pr_number': pr.number}
     bot_jobfile_path = os.path.join(job[0], f'_bot_job{job_id}.metadata')
     with open(bot_jobfile_path, 'w') as bjf:
         bot_jobfile.write(bjf)
@@ -382,25 +383,25 @@ def build_easystack_from_pr(pr, event_info):
 
     Args:
         pr (object): _description_
-        event_info (string): event received by event_handler 
+        event_info (string): event received by event_handler
     """
     # retrieving some settings from 'app.cfg' in bot directory
     # [github]
     app_name = config.get_section('github').get('app_name')
-    
+
     # [buildenv]
     build_env_cfg = get_build_env_cfg()
-    
+
     # [architecturetargets]
-    arch_target_map = get_architecturetargets()   
-    
+    arch_target_map = get_architecturetargets()
+
     # [directory structure]
     ym, pr_id, run_dir = create_directory(pr, build_env_cfg[JOBS_BASE_DIR], event_info)
     gh = github.get_instance()
-    
+
     # [download pull request]
     repo_name, jobs = download_pull_request(pr, arch_target_map, run_dir, build_env_cfg[CVMFS_CUSTOMIZATIONS])
-    
+
     # Run jobs with the build job submission script
     submitted_jobs = []
     job_comment = ''
@@ -410,6 +411,5 @@ def build_easystack_from_pr(pr, event_info):
 
         # create _bot_job<jobid>.metadata file in submission directory
         create_metadata(job, repo_name, pr, job_id)
-  
         # report submitted jobs (incl architecture, ...)
         create_pr_comments(job, job_id, app_name, job_comment, pr, repo_name, gh, symlink)

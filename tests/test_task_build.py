@@ -8,6 +8,8 @@
 import os
 
 from tasks.build import mkdir
+from tasks.build import run_cmd
+from tasks.build import create_directory
 
 
 def test_mkdir(tmpdir):
@@ -32,3 +34,18 @@ def test_mkdir(tmpdir):
 
     mkdir(test_file)
     assert os.path.isfile(test_file)
+
+
+def test_run_cmd(tmpdir):
+    """Tests for run_cmd function."""
+    output, exit_code = run_cmd("echo hello", 'test', tmpdir)
+    assert output == "hello\n"
+    assert exit_code == 0
+
+    output, exit_code = run_cmd("ls -l /does_not_exists.txt", 'fail test', tmpdir)
+    assert exit_code != 0
+
+
+
+
+
