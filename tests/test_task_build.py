@@ -50,4 +50,4 @@ def test_run_cmd(tmpdir):
     output, err, exit_code = run_cmd("this_command_does_not_exist", 'fail test', tmpdir)
     assert exit_code != 0
     assert output == ""
-    assert "this_command_does_not_exist: command not found" in err
+    assert "this_command_does_not_exist: not found" in err
