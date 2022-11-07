@@ -26,7 +26,6 @@ def test_mkdir(tmpdir):
     # calling mkdir on an existing path is fine (even if that path is a file?!)
     mkdir(test_dir)
     assert os.path.isdir(test_dir)
-
     test_file = os.path.join(tmpdir, 'test.txt')
     with open(test_file, 'w') as fp:
         fp.write('')
@@ -50,4 +49,5 @@ def test_run_cmd(tmpdir):
     output, err, exit_code = run_cmd("this_command_does_not_exist", 'fail test', tmpdir)
     assert exit_code != 0
     assert output == ""
-    assert "this_command_does_not_exist: not found" in err
+    assert ("this_command_does_not_exist: command not found" in err or "this_command_does_not_exist: not found" in err)
+
