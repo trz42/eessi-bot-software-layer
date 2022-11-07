@@ -37,15 +37,17 @@ def test_mkdir(tmpdir):
 
 def test_run_cmd(tmpdir):
     """Tests for run_cmd function."""
-    output, exit_code, exit_error = run_cmd("echo hello", 'test', tmpdir)
-    assert output == "hello\n"
+    output, err, exit_code = run_cmd("echo hello", 'test', tmpdir)
     assert exit_code == 0
-    assert exit_error == ""
+    assert output == "hello\n"
+    assert err == ""
 
-    output, exit_code, exit_error = run_cmd("ls -l /does_not_exists.txt", 'fail test', tmpdir)
+    output, err,  exit_code, = run_cmd("ls -l /does_not_exists.txt", 'fail test', tmpdir)
     assert exit_code != 0
-    assert exit_error != ""
- 
-    output, exit_code, exit_error = run_cmd("this_command_does_not_exist", 'fail test', tmpdir)
+    assert output == ""
+    assert "No such file or directory" in err
+
+    output, err, exit_code = run_cmd("this_command_does_not_exist", 'fail test', tmpdir)
     assert exit_code != 0
-    assert exit_error != ""
+    assert output == ""
+    assert "this_command_does_not_exist: command not found" in err

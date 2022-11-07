@@ -163,16 +163,16 @@ def run_cmd(cmd, log_msg='', working_dir=None):
                             shell=True,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
-    process_output = result.stdout.decode("UTF-8")
-    process_error = result.stderr.decode("UTF-8")
-    process_exit_code = result.returncode
+    stdout = result.stdout.decode("UTF-8")
+    stderr = result.stderr.decode("UTF-8")
+    exit_code = result.returncode
 
-    if process_exit_code != 0:
-        log("Error: '%s' Exitcode: %s" % (process_error, process_exit_code))
+    if exit_code != 0:
+        log("Error: '%s' Exitcode: %s" % (stdout, exit_code))
 
-    log(" '%s' \nStdout %s\nStderr: %s" % (log_msg, result.stdout, result.stderr))
+    log(" '%s' \nStdout %s\nStderr: %s" % (log_msg, stdout, stderr))
 
-    return process_output, process_exit_code, process_error
+    return stdout, stderr, exit_code
 
 
 def setup_pr_in_arch_job_dir(repo_name, branch_name, pr, arch_job_dir):
@@ -198,19 +198,20 @@ def setup_pr_in_arch_job_dir(repo_name, branch_name, pr, arch_job_dir):
     #  - REPO_NAME is repo_name
     #  - PR_NUMBER is pr.number
     git_clone_cmd = ' '.join(['git clone', f'https://github.com/{repo_name}', arch_job_dir])
-    clone_output, clone_exit_code, clone_exit_error = run_cmd(git_clone_cmd, "Clone repo", arch_job_dir)
+    clone_output, clone_error, clone_exit_code = run_cmd(git_clone_cmd, "Clone repo", arch_job_dir)
 
     git_checkout_cmd = ' '.join([
         'git checkout',
         branch_name,
     ])
-    checkout_output, checkout_exit_code, = run_cmd(git_checkout_cmd, "checkout branch '%s'" % branch_name, arch_job_dir)
+    checkout_output, checkout_err, checkout_exit_code = run_cmd(git_checkout_cmd,
+                                                                "checkout branch '%s'" % branch_name, arch_job_dir)
 
     curl_cmd = f'curl -L https://github.com/{repo_name}/pull/{pr.number}.patch > {pr.number}.patch'
-    curl_output, curl_exit_code, curl_exit_error = run_cmd(curl_cmd, "Obtain patch", arch_job_dir)
+    curl_output, curl_error, curl_exit_code = run_cmd(curl_cmd, "Obtain patch", arch_job_dir)
 
     git_am_cmd = f'git am {pr.number}.patch'
-    git_am_output, git_am_exit_code, git_am_exit_error = run_cmd(git_am_cmd, "Apply patch", arch_job_dir)
+    git_am_output, git_am_error, git_am_exit_code = run_cmd(git_am_cmd, "Apply patch", arch_job_dir)
 
 
 def apply_cvmfs_customizations(cvmfs_customizations, arch_job_dir):
@@ -312,7 +313,7 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
     if "generic" in job[1]:
         command_line += ' --generic'
 
-    cmdline_output, cmdline_exit_code, cmdline_error = run_cmd(command_line,
+    cmdline_output, cmdline_error, cmdline_exit_code = run_cmd(command_line,
                                                                "submit job for target '%s'" % job[1], job[0])
 
     # sbatch output is 'Submitted batch job JOBID'
