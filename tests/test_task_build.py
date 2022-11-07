@@ -8,6 +8,7 @@
 import os
 
 from tasks.build import mkdir
+from tasks.build import run_cmd
 
 
 def test_mkdir(tmpdir):
@@ -25,10 +26,28 @@ def test_mkdir(tmpdir):
     # calling mkdir on an existing path is fine (even if that path is a file?!)
     mkdir(test_dir)
     assert os.path.isdir(test_dir)
-
     test_file = os.path.join(tmpdir, 'test.txt')
     with open(test_file, 'w') as fp:
         fp.write('')
 
     mkdir(test_file)
     assert os.path.isfile(test_file)
+
+
+def test_run_cmd(tmpdir):
+    """Tests for run_cmd function."""
+    output, err, exit_code = run_cmd("echo hello", 'test', tmpdir)
+    assert exit_code == 0
+    assert output == "hello\n"
+    assert err == ""
+
+    output, err,  exit_code, = run_cmd("ls -l /does_not_exists.txt", 'fail test', tmpdir)
+    assert exit_code != 0
+    assert output == ""
+    assert "No such file or directory" in err
+
+    output, err, exit_code = run_cmd("this_command_does_not_exist", 'fail test', tmpdir)
+    assert exit_code != 0
+    assert output == ""
+    assert ("this_command_does_not_exist: command not found" in err or "this_command_does_not_exist: not found" in err)
+
