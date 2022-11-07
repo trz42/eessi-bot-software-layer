@@ -17,10 +17,11 @@ import json
 
 from connections import github
 from tools import args, config
-from tasks.build import build_easystack_from_pr
+from tasks.build import submit_build_jobs
 
 from pyghee.lib import PyGHee, create_app, read_event_from_json
 from pyghee.utils import log
+
 
 class EESSIBotSoftwareLayer(PyGHee):
     def handle_issue_comment_event(self, event_info, log_file=None):
@@ -43,7 +44,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         user = request_body['sender']['login']
         action = request_body['action']
         # repo_name = request_body['repositories'][0]['full_name'] # not every action has that attribute
-        log("App installation event by user %s with action '%s'" % (user,action))
+        log("App installation event by user %s with action '%s'" % (user, action))
         log("installation event handled!", log_file=log_file)
 
 
@@ -54,11 +55,11 @@ class EESSIBotSoftwareLayer(PyGHee):
 
         # determine label
         label = event_info['raw_request_body']['label']['name']
-        log("Process PR labeled event: PR#%s, label '%s'" % (pr.number,label))
+        log("Process PR labeled event: PR#%s, label '%s'" % (pr.number, label))
 
         if label == "bot:build":
             # run function to build software stack
-            build_easystack_from_pr(pr, event_info)
+            submit_build_jobs(pr, event_info)
         else:
             log("handle_pull_request_labeled_event: no handler for label '%s'" % label)
 
@@ -76,8 +77,9 @@ class EESSIBotSoftwareLayer(PyGHee):
         """
         action = event_info['action']
         gh = github.get_instance()
-        log("repository: '%s'" % event_info['raw_request_body']['repository']['full_name'] )
-        pr = gh.get_repo(event_info['raw_request_body']['repository']['full_name']).get_pull(event_info['raw_request_body']['pull_request']['number'])
+        log("repository: '%s'" % event_info['raw_request_body']['repository']['full_name'])
+        pr = gh.get_repo(event_info['raw_request_body']['repository']
+                         ['full_name']).get_pull(event_info['raw_request_body']['pull_request']['number'])
         log("PR data: %s" % pr)
 
         handler_name = 'handle_pull_request_%s_event' % action
@@ -107,6 +109,6 @@ def main():
         log("EESSI bot for software layer started!")
         waitress.serve(app, listen='*:%s' % opts.port)
 
+
 if __name__ == '__main__':
     main()
-

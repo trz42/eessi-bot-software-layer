@@ -102,7 +102,7 @@ def get_architecturetargets():
     return arch_target_map
 
 
-def create_directory(pr, jobs_base_dir, event_info):
+def create_pr_dir(pr, jobs_base_dir, event_info):
     """Create directory for Pull Request
 
     Args:
@@ -175,7 +175,7 @@ def run_cmd(cmd, log_msg='', working_dir=None):
     return stdout, stderr, exit_code
 
 
-def setup_pr_in_arch_job_dir(repo_name, branch_name, pr, arch_job_dir):
+def download_pr(repo_name, branch_name, pr, arch_job_dir):
     """Download pull request to arch_job_dir
 
     Args:
@@ -234,7 +234,7 @@ def apply_cvmfs_customizations(cvmfs_customizations, arch_job_dir):
             #      for now, only existing mappings may be customized
 
 
-def download_pull_request(pr, arch_target_map, run_dir, cvmfs_customizations):
+def setup_pr_in_arch_job_dir(pr, arch_target_map, run_dir, cvmfs_customizations):
     """setup pull request in arch_job_dir and apply cvmfs customizations
 
     Args:
@@ -253,9 +253,9 @@ def download_pull_request(pr, arch_target_map, run_dir, cvmfs_customizations):
     # need to use `base` instead of `head` ... don't need to know the branch name
     # TODO rename to base_repo_name?
     repo_name = pr.base.repo.full_name
-    log("build_easystack_from_pr: pr.base.repo.full_name '%s'" % pr.base.repo.full_name)
+    log("submit_build_jobs: pr.base.repo.full_name '%s'" % pr.base.repo.full_name)
     branch_name = pr.base.ref
-    log("build_easystack_from_pr: pr.base.repo.ref '%s'" % pr.base.ref)
+    log("submit_build_jobs: pr.base.repo.ref '%s'" % pr.base.ref)
     jobs = []
     for arch_target, slurm_opt in arch_target_map.items():
         arch_job_dir = os.path.join(run_dir, arch_target.replace('/', '_'))
@@ -263,7 +263,7 @@ def download_pull_request(pr, arch_target_map, run_dir, cvmfs_customizations):
         mkdir(arch_job_dir)
         log("arch_job_dir '%s'" % arch_job_dir)
 
-        setup_pr_in_arch_job_dir(repo_name, branch_name, pr, arch_job_dir)
+        download_pr(repo_name, branch_name, pr, arch_job_dir)
 
         # check if we need to apply local customizations:
         #   is cvmfs_customizations defined? yes, apply it
@@ -318,8 +318,8 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
 
     # sbatch output is 'Submitted batch job JOBID'
     #   parse job id & add it to array of submitted jobs PLUS create a symlink from main pr_<ID> dir to job dir (job[0])
-    log(f'build_easystack_from_pr(): sbatch out: {cmdline_output}')
-    log(f'build_easystack_from_pr(): sbatch err: {cmdline_error}')
+    log(f'submit_build_jobs(): sbatch out: {cmdline_output}')
+    log(f'submit_build_jobs(): sbatch err: {cmdline_error}')
 
     job_id = cmdline_output.split()[3]
     submitted_jobs.append(job_id)
@@ -378,7 +378,7 @@ def create_pr_comments(job, job_id, app_name, job_comment, pr, repo_name, gh, sy
     pull_request.create_issue_comment(job_comment)
 
 
-def build_easystack_from_pr(pr, event_info):
+def submit_build_jobs(pr, event_info):
     """Build from the pr by fetching data for build environment cofinguration, downloading pr,
        running jobs and adding comments
 
@@ -397,11 +397,11 @@ def build_easystack_from_pr(pr, event_info):
     arch_target_map = get_architecturetargets()
 
     # [directory structure]
-    ym, pr_id, run_dir = create_directory(pr, build_env_cfg[JOBS_BASE_DIR], event_info)
+    ym, pr_id, run_dir = create_pr_dir(pr, build_env_cfg[JOBS_BASE_DIR], event_info)
     gh = github.get_instance()
 
     # [download pull request]
-    repo_name, jobs = download_pull_request(pr, arch_target_map, run_dir, build_env_cfg[CVMFS_CUSTOMIZATIONS])
+    repo_name, jobs = setup_pr_in_arch_job_dir(pr, arch_target_map, run_dir, build_env_cfg[CVMFS_CUSTOMIZATIONS])
 
     # Run jobs with the build job submission script
     submitted_jobs = []
