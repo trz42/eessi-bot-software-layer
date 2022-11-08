@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 #
-# GitHub App for the EESSI project
+# This file is part of the EESSI build-and-deploy bot,
+# see https://github.com/EESSI/eessi-bot-software-layer
 #
-# A bot to help with requests to add software installations to the EESSI software layer,
-# see https://github.com/EESSI/software-layer
+# The bot helps with requests to add software installations to the
+# EESSI software layer, see https://github.com/EESSI/software-layer
 #
 # author: Kenneth Hoste (@boegel)
 # author: Bob Droege (@bedroge)
+# author: Hafsa Naeem (@hafsa-naeem)
 # author: Thomas Roeblitz (@trz42)
 #
 # license: GPLv2
 #
-
 import waitress
 import json
 

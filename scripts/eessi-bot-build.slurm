@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 #
-# Slurm job script to install additional software into EESSI via build container
+# Slurm job script to add software into EESSI via build container
 #
-# This is part of the GitHub App for the EESSI project:
-# A bot to help with requests to add software installations to the EESSI software layer,
-# see https://github.com/EESSI/software-layer
+# This file is part of the EESSI build-and-deploy bot,
+# see https://github.com/EESSI/eessi-bot-software-layer
+#
+# The bot helps with requests to add software installations to the
+# EESSI software layer, see https://github.com/EESSI/software-layer
 #
 # author: Kenneth Hoste (@boegel)
 # author: Thomas Roeblitz (@trz42)
