@@ -53,5 +53,10 @@ def run_cmd(cmd, log_msg='', working_dir=None):
             f"           stdout '{stdout}'\n"
             f"           stderr '{stderr}'\n"
             f"           exit code {exit_code}")
+    else:
+        log(f"run_cmd(): Result for running '{cmd}' in '{working_dir}\n"
+            f"           stdout '{stdout}'\n"
+            f"           stderr '{stderr}'\n"
+            f"           exit code {exit_code}")
 
     return stdout, stderr, exit_code
