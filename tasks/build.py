@@ -171,20 +171,20 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
     #  - REPO_NAME is repo_name
     #  - PR_NUMBER is pr.number
     git_clone_cmd = ' '.join(['git clone', f'https://github.com/{repo_name}', arch_job_dir])
-    clone_output, clone_error, clone_exit_code = run_cmd(git_clone_cmd, "Clone repo", arch_job_dir)
+    clone_output, clone_error, clone_exit_code = cmds.run_cmd(git_clone_cmd, "Clone repo", arch_job_dir)
 
     git_checkout_cmd = ' '.join([
         'git checkout',
         branch_name,
     ])
-    checkout_output, checkout_err, checkout_exit_code = run_cmd(git_checkout_cmd,
-                                                                "checkout branch '%s'" % branch_name, arch_job_dir)
+    checkout_output, checkout_err, checkout_exit_code = cmds.run_cmd(git_checkout_cmd,
+                                                                     "checkout branch '%s'" % branch_name, arch_job_dir)
 
     curl_cmd = f'curl -L https://github.com/{repo_name}/pull/{pr.number}.patch > {pr.number}.patch'
-    curl_output, curl_error, curl_exit_code = run_cmd(curl_cmd, "Obtain patch", arch_job_dir)
+    curl_output, curl_error, curl_exit_code = cmds.run_cmd(curl_cmd, "Obtain patch", arch_job_dir)
 
     git_am_cmd = f'git am {pr.number}.patch'
-    git_am_output, git_am_error, git_am_exit_code = run_cmd(git_am_cmd, "Apply patch", arch_job_dir)
+    git_am_output, git_am_error, git_am_exit_code = cmds.run_cmd(git_am_cmd, "Apply patch", arch_job_dir)
 
 
 def apply_cvmfs_customizations(cvmfs_customizations, arch_job_dir):
@@ -286,8 +286,8 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
     if "generic" in job[1]:
         command_line += ' --generic'
 
-    cmdline_output, cmdline_error, cmdline_exit_code = run_cmd(command_line,
-                                                               "submit job for target '%s'" % job[1], job[0])
+    cmdline_output, cmdline_error, cmdline_exit_code = cmds.run_cmd(command_line,
+                                                                    "submit job for target '%s'" % job[1], job[0])
 
     # sbatch output is 'Submitted batch job JOBID'
     #   parse job id & add it to array of submitted jobs PLUS create a symlink from main pr_<ID> dir to job dir (job[0])

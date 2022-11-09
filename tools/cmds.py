@@ -16,6 +16,7 @@ import subprocess
 
 from pyghee.utils import log
 
+
 def run_cmd(cmd, log_msg='', working_dir=None):
     """Runs a command in the shell
 
