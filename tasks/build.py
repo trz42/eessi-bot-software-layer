@@ -20,7 +20,7 @@ import time
 from connections import github
 from datetime import datetime, timezone
 from pyghee.utils import log, error
-from tools import config
+from tools import config, cmds
 
 BUILD_JOB_SCRIPT = "build_job_script"
 CVMFS_CUSTOMIZATIONS = "cvmfs_customizations"
@@ -146,46 +146,6 @@ def create_pr_dir(pr, jobs_base_dir, event_info):
     run_dir = os.path.join(event_dir, 'run_%03d' % run)
     mkdir(run_dir)
     return ym, pr_id, run_dir
-
-
-def run_cmd(cmd, log_msg='', working_dir=None):
-
-    """Run Commands and logs the process
-
-    Args:
-        cmd (string): command to run
-        log_msg (string): purpose of the commant
-        parent_dir (string): location of arch_job_dir
-
-    Returns:
-        tuple of  2 elements containing
-
-        - process_output(string): output of the process
-        - process_exit_code(string): exit code of the process
-    """
-    if working_dir is None:
-        working_dir = os.getcwd()
-
-    if log_msg:
-        log("'%s' by running '%s' in directory '%s'" % (log_msg, cmd, working_dir))
-    else:
-        log("Running '%s' in directory '%s'" % (cmd, working_dir))
-
-    result = subprocess.run(cmd,
-                            cwd=working_dir,
-                            shell=True,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-    stdout = result.stdout.decode("UTF-8")
-    stderr = result.stderr.decode("UTF-8")
-    exit_code = result.returncode
-
-    if exit_code != 0:
-        log("Error: '%s' Exitcode: %s" % (stdout, exit_code))
-
-    log(" '%s' \nStdout %s\nStderr: %s" % (log_msg, stdout, stderr))
-
-    return stdout, stderr, exit_code
 
 
 def download_pr(repo_name, branch_name, pr, arch_job_dir):
