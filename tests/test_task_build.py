@@ -12,7 +12,7 @@
 import os
 
 from tasks.build import mkdir
-from tools.cmds import run_cmd
+from tools import run_cmd
 
 
 def test_mkdir(tmpdir):

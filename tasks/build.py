@@ -20,8 +20,7 @@ import time
 from connections import github
 from datetime import datetime, timezone
 from pyghee.utils import log, error
-from tools import config
-from tools.cmds import run_cmd
+from tools import config, run_cmd
 
 BUILD_JOB_SCRIPT = "build_job_script"
 CVMFS_CUSTOMIZATIONS = "cvmfs_customizations"
