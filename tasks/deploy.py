@@ -15,7 +15,8 @@ import sys
 
 from connections import github
 from datetime import datetime, timezone
-from pyghee.utils import log, error
+from pyghee.utils import log
+from tasks.build import get_build_env_cfg
 from tools import config, run_cmd
 
 JOBS_BASE_DIR = "jobs_base_dir"
@@ -45,7 +46,8 @@ def determine_job_dirs(pr_number):
     #    processed over more than one month
     #  - we assume that job IDs are positive integer numbers
     build_env_cfg = get_build_env_cfg()
-    log(f"{funcname}(): jobs_base_dir = {get_build_env_cfg[JOBS_BASE_DIR]}")
+    jobs_base_dir = build_env_cfg[JOBS_BASE_DIR]
+    log(f"{funcname}(): jobs_base_dir = {jobs_base_dir}")
 
     date_pr_job_pattern = (f"[0-9][0-9][0-9][0-9].[0-9][0-9]/"
                            f"pr_{pr_number}/[0-9]*")
@@ -189,7 +191,7 @@ def append_tarball_to_upload_log(tarball, job_dir):
     uploaded_txt = os.path.join(pr_base_dir, 'uploaded.txt')
     with open(uploaded_txt, "a") as upload_log:
         job_plus_tarball = os.path.join(os.path.basename(job_dir), tarball)
-        uploaded_file.write(f"{job_plus_tarball}\n")
+        upload_log.write(f"{job_plus_tarball}\n")
 
 
 def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number):
@@ -220,7 +222,7 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number):
     #     bucket_name = 'eessi-staging'
     #     if endpoint_url not set use EESSI S3 bucket
     # (2) run command
-    cmd_args = [upload_to_s3_script,]
+    cmd_args = [upload_to_s3_script, ]
     if len(bucket_name) > 0:
         cmd_args.extend(['--bucket-name', bucket_name])
     if len(endpoint_url) > 0:
@@ -365,7 +367,7 @@ def determine_tarballs_to_deploy(successes, upload_policy):
             else:
                 deploy = True
         elif upload_policy == "once":
-            uploaded = uploaded_before(build_target, job_dir)
+            uploaded = uploaded_before(build_target, s["job_dir"])
             if uploaded is None:
                 deploy = True
             else:
