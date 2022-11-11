@@ -400,7 +400,7 @@ def deploy_built_artefacts(pr, event_info):
     deploy_permission = deploycfg.get(DEPLOY_PERMISSION, '')
     log(f"{funcname}(): deploy permission '{deploy_permission}'")
 
-    labeler = event_info['sender']['login']
+    labeler = event_info['raw_request_body']['sender']['login']
     if labeler not in deploy_permission.split():
         log(f"{funcname}(): GH account '{labeler}' is not authorized to deploy")
         # TODO update PR comments for this bot instance?
