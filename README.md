@@ -307,6 +307,41 @@ submit_command = /usr/bin/sbatch
 ```
 This is the full path to the Slurm command used for submitting batch jobs. You may want to verify if `sbatch` is provided at that path or determine its actual location (`which sbatch`).
 
+### Section `[deploycfg]`
+The section `[deploycfg]` defines settings for uploading built artefacts (tarballs) to an S3 bucket.
+```
+upload_to_s3_script = PATH_TO_EESSI_BOT/scripts/eessi-upload-to-staging
+```
+Provides the location for the script used for uploading built software packages to an S3 bucket.
+
+```
+endpoint_url = URL_TO_S3_SERVER
+```
+Provides an endpoint (URL) to a server hosting an S3 bucket. The server could be hosted by a public Cloud provider or running in a private environment, for example, using Minio. The bot uploads tarballs to the bucket which will be periodically scanned by the ingestion procedure at the Stratum 0 server.
+
+```
+bucket_name = eessi-staging
+```
+Name of the bucket used for uploading of tarballs. The bucket must be available on the default server (`https://${bucket_name}.s3.amazonaws.com`) or the one provided via `endpoint_url`.
+
+```
+upload_policy = once
+```
+The `upload_policy` defines what policy is used for uploading built artefacts to an S3 bucket.
+|:--------|:--------------------------------|
+|Value|Policy|
+|`all`|Upload all artefacts (mulitple uploads of the same artefact possible).|
+|`latest`|For each build target (prefix in tarball name `eessi-VERSION-{software,init,compat}-OS-ARCH)` only upload the latest built artefact.|
+|`once`|Only once upload any built artefact for the build target.|
+|`none`|Do not upload any built artefacts.|
+
+```
+deploy_permission = GH_ACCOUNT_1 GH_ACCOUNT_2 ...
+```
+The option `deploy_permission` defines which GitHub accounts can trigger the
+deployment procedure. The value can be empty (any GH account can trigger the
+deployment) or a space delimited list of GH accounts.
+
 ### Section `[architecturetargets]`
 The section `[architecturetargets]` defines for which targets (OS/SUBDIR), e.g., `linux/amd/zen2` the EESSI bot should submit jobs and what additional `sbatch` parameters will be used for requesting a compute node with the CPU microarchitecture needed to build the software stack.
 ```
