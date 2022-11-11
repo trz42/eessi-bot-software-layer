@@ -47,8 +47,8 @@ def determine_job_dirs(pr_number):
     build_env_cfg = get_build_env_cfg()
     log(f"{funcname}(): jobs_base_dir = {get_build_env_cfg[JOBS_BASE_DIR]}")
 
-    date_pr_job_pattern =
-        f"[0-9][0-9][0-9][0-9].[0-9][0-9]/pr_{pr_number}/[0-9]*"
+    date_pr_job_pattern = (f"[0-9][0-9][0-9][0-9].[0-9][0-9]/"
+                           f"pr_{pr_number}/[0-9]*")
     log(f"{funcname}(): date_pr_job_pattern = {date_pr_job_pattern}")
 
     glob_str = os.path.join(jobs_base_dir, date_pr_job_pattern)
@@ -166,7 +166,7 @@ def update_pr_comment(tarball, repo_name, pr_number, state, msg):
             issue_comment = pull_request.get_issue_comment(int(comment.id))
 
             dt = datetime.now(timezone.utc)
-            comment_update = (f"\n|{dt.strftime("%b %d %X %Z %Y")}|{state}|"
+            comment_update = (f"\n|{dt.strftime('%b %d %X %Z %Y')}|{state}|"
                               f"transfer of `{tarball}` to S3 bucket {msg}|")
 
             # append update to existing comment
@@ -220,13 +220,13 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number):
     #     bucket_name = 'eessi-staging'
     #     if endpoint_url not set use EESSI S3 bucket
     # (2) run command
-    cmd_args = [ upload_to_s3_script, ]
+    cmd_args = [upload_to_s3_script,]
     if len(bucket_name) > 0:
-        cmd_args.extend([ '--bucket-name', bucket_name ])
+        cmd_args.extend(['--bucket-name', bucket_name])
     if len(endpoint_url) > 0:
-        cmd_args.extend([ '--endpoint-url', endpoint_url ])
-    cmd_args.extend([ '--repository', repo_name ])
-    cmd_args.extend([ '--pull-request', str(pr_number) ])
+        cmd_args.extend(['--endpoint-url', endpoint_url])
+    cmd_args.extend(['--repository', repo_name])
+    cmd_args.extend(['--pull-request', str(pr_number)])
     cmd_args.append(abs_path)
     upload_cmd = ' '.join(cmd_args)
 
@@ -395,7 +395,7 @@ def deploy_built_artefacts(pr, event_info):
 
     # verify that the GH account that set label bot:deploy has the
     # permission to trigger the deployment
-    deploy_permission = deploycfg.get(DEPLOY_PERMISSION,'')
+    deploy_permission = deploycfg.get(DEPLOY_PERMISSION, '')
     log(f"{funcname}(): deploy permission '{deploy_permission}'")
 
     labeler = event_info['sender']['login']
