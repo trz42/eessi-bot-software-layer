@@ -207,7 +207,7 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number):
     funcname = sys._getframe().f_code.co_name
 
     tarball = f"{build_target}-{timestamp}.tar.gz"
-    abs_path = os.join.path(job_dir, tarball)
+    abs_path = os.path.join(job_dir, tarball)
     log(f"{funcname}(): deploying build '{abs_path}'")
 
     # obtain config settings
