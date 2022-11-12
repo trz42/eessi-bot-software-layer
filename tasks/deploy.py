@@ -261,7 +261,7 @@ def uploaded_before(build_target, job_dir):
     """
     funcname = sys._getframe().f_code.co_name
 
-    log("{funcname}(): any previous uploads for {build_target}?")
+    log(f"{funcname}(): any previous uploads for {build_target}?")
 
     pr_base_dir = os.path.dirname(job_dir)
     uploaded_txt = os.path.join(pr_base_dir, "uploaded.txt")
