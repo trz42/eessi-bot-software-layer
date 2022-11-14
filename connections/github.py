@@ -10,7 +10,6 @@
 # license: GPLv2
 #
 import datetime
-import os
 
 from tools import config
 from github import Github, GithubIntegration
