@@ -10,9 +10,9 @@
 # license: GPLv2
 #
 import os
-from eessi_bot_job_manager import EESSIBotSoftwareLayerJobManager()
+from eessi_bot_job_manager import EESSIBotSoftwareLayerJobManager
 
-from eessi_bot_job_manager import read_job_pr_metadata
+#from eessi_bot_job_manager import ESSIBotSoftwareLayerJobManager.read_job_pr_metadata
 
 
 def test_read_job_pr_metadata(tmpdir):
@@ -23,7 +23,13 @@ def test_read_job_pr_metadata(tmpdir):
     assert read_job.read_job_pr_metadata(path) is None
 
     with open(path, 'w') as fp:
-        fp.write("...")
+        fp.write('''[PR]
+        repo=test
+        pr_number=12345''')
         
-    metadata = read_job.read_job_pr_metadata(path)
-    assert metadata is not None
+    metadata_pr = read_job.read_job_pr_metadata(path)
+    expected = {
+    "repo": "test",
+    "pr_number": "12345",
+    }
+    assert metadata_pr == expected

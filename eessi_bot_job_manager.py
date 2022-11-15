@@ -32,7 +32,7 @@ from connections import github
 from datetime import datetime, timezone
 from tools import args, config
 
-from pyghee.utils import create_file, log
+from pyghee.utils import create_file, log, error
 
 
 def mkdir(path):
@@ -87,7 +87,7 @@ class EESSIBotSoftwareLayerJobManager:
         # find all symlinks resembling job ids (digits only) in jobdir
         known_jobs = {}
         if os.path.isdir(self.submitted_jobs_dir):
-            regex = re.compile("(\d)+")
+            regex = re.compile(r"(\d)+")
             for fname in os.listdir(self.submitted_jobs_dir):
                 if regex.match(fname):
                     full_path = os.path.join(self.submitted_jobs_dir, fname)
@@ -103,7 +103,8 @@ class EESSIBotSoftwareLayerJobManager:
                 else:
                     log(
                         "get_known_jobs(): entry %s in %s "
-                        "doesn't match regex" % (fname, self.submitted_jobs_dir),
+                        "doesn't match regex" %
+                        (fname, self.submitted_jobs_dir),
                         self.logfile,
                     )
         else:
@@ -123,7 +124,7 @@ class EESSIBotSoftwareLayerJobManager:
         #                                         'state':val,'reason':val}
         new_jobs = []
         for ckey in current_jobs:
-            if not ckey in known_jobs:
+            if ckey not in known_jobs:
                 new_jobs.append(ckey)
 
         return new_jobs
@@ -136,7 +137,7 @@ class EESSIBotSoftwareLayerJobManager:
         #                                         'state':val,'reason':val}
         finished_jobs = []
         for kkey in known_jobs:
-            if not kkey in current_jobs:
+            if kkey not in current_jobs:
                 finished_jobs.append(kkey)
 
         return finished_jobs
@@ -148,6 +149,19 @@ class EESSIBotSoftwareLayerJobManager:
         if isfile is False:
             log("this is a non bot job and it can't be processed")
             return None
+        else:
+            metadata = configparser.ConfigParser()
+            try:
+                metadata.read(job_metadata_path)
+            except Exception as e:
+                print(e)
+                error(f"Unable to read job metadata file {job_metadata_path}!")
+            # get section
+            if "PR" in metadata:
+                metadata_pr = metadata["PR"]
+            else:
+                metadata_pr = {}
+            return metadata_pr
 
     # job_manager.process_new_job(current_jobs[nj])
     def process_new_job(self, new_job):
@@ -172,8 +186,10 @@ class EESSIBotSoftwareLayerJobManager:
             stderr=subprocess.PIPE,
         )
 
-        # parse output, look for WorkDir=dir
-        match = re.search(".* WorkDir=(\S+) .*", str(scontrol.stdout, "UTF-8"))
+        # parse output,
+        # look for WorkDir=dir
+        match = re.search(r".* WorkDir=(\S+) .*",
+                          str(scontrol.stdout, "UTF-8"))
         if match:
             log(
                 "process_new_job(): work dir of job %s: '%s'"
@@ -188,18 +204,13 @@ class EESSIBotSoftwareLayerJobManager:
 
             # check if metadata file exist
             metadata_pr = self.read_job_pr_metadata(job_metadata_path)
+
             if metadata_pr is None:
                 return
 
             else:
-                metadata = configparser.ConfigParser()
-                try:
-                    metadata.read(job_metadata_path)
-                except Exception as e:
-                    print(e)
-                    error(f"Unable to read job metadata file {job_metadata_path}!")
-
-                symlink_source = os.path.join(self.submitted_jobs_dir, new_job["jobid"])
+                symlink_source = os.path.join(self.submitted_jobs_dir,
+                                              new_job["jobid"])
                 log(
                     "process_new_job(): create a symlink: %s -> %s"
                     % (symlink_source, match.group(1)),
@@ -212,8 +223,8 @@ class EESSIBotSoftwareLayerJobManager:
                     new_job["jobid"],
                 )
                 log(
-                    "process_new_job(): run scontrol command: %s" % release_cmd,
-                    self.logfile,
+                    "process_new_job(): run scontrol command: %s" %
+                    release_cmd, self.logfile,
                 )
                 release = subprocess.run(
                     release_cmd,
@@ -243,11 +254,6 @@ class EESSIBotSoftwareLayerJobManager:
                 #   the file should be written by the event handler
                 #           to the working dir of the job
 
-                # get section
-                if "PR" in metadata:
-                    metadata_pr = metadata["PR"]
-                else:
-                    metadata_pr = {}
                 # get repo name
                 repo_name = metadata_pr["repo"] or ""
                 # get pr number
@@ -260,7 +266,7 @@ class EESSIBotSoftwareLayerJobManager:
 
                 # (b) find & get comment for this job
                 # only get comment if we don't know its id yet
-                if not "comment_id" in new_job:
+                if "comment_id" not in new_job:
                     comments = pr.get_issue_comments()
                     for comment in comments:
                         # NOTE adjust search string if format changed by event
@@ -285,12 +291,12 @@ class EESSIBotSoftwareLayerJobManager:
                 # (c) add a row to the table
                 # add row to status table if we found a comment
                 if "comment_id" in new_job:
-                    issue_comment = pr.get_issue_comment(int(new_job["comment_id"]))
+                    issue_comment = pr.get_issue_comment(int
+                                                         (new_job["comment_id"]))
                     original_body = issue_comment.body
                     dt = datetime.now(timezone.utc)
-                    update = "\n|%s|released|job awaits launch by Slurm scheduler|" % (
-                        dt.strftime("%b %d %X %Z %Y")
-                    )
+                    update = "\n|%s|released|job awaits launch by"
+                    update += " Slurm scheduler|" % (dt.strftime("%b %d %X %Z %Y"))
                     issue_comment.edit(original_body + update)
                 else:
                     log(
@@ -344,18 +350,6 @@ class EESSIBotSoftwareLayerJobManager:
             raise Exception("Unable to find metadata file")
 
         else:
-            metadata = configparser.ConfigParser()
-            try:
-                metadata.read(job_metadata_path)
-            except Exception as e:
-                print(e)
-                error(f"Unable to read job metadata file {job_metadata_path}!")
-
-            # get section
-            if "PR" in metadata:
-                metadata_pr = metadata["PR"]
-            else:
-                metadata_pr = {}
             # get repo name
             repo_name = metadata_pr["repo"] or ""
             # get pr number
@@ -365,7 +359,7 @@ class EESSIBotSoftwareLayerJobManager:
             pull_request = repo.get_pull(int(pr_number))
 
             # determine comment to be updated
-            if not "comment_id" in finished_job:
+            if "comment_id" not in finished_job:
                 comments = pull_request.get_issue_comments()
                 for comment in comments:
                     # NOTE adjust search string if format changed by event
@@ -388,7 +382,8 @@ class EESSIBotSoftwareLayerJobManager:
                         break
 
             # analyse job result
-            slurm_out = os.path.join(sym_dst, "slurm-%s.out" % finished_job["jobid"])
+            slurm_out = os.path.join(sym_dst, "slurm-%s.out" %
+                                     finished_job["jobid"])
 
             # determine all tarballs that are stored in
             #     the job directory (only expecting 1)
@@ -420,13 +415,14 @@ class EESSIBotSoftwareLayerJobManager:
 
             dt = datetime.now(timezone.utc)
 
-            if no_missing_modules and targz_created and len(eessi_tarballs) == 1:
+            if (no_missing_modules and targz_created and
+                    len(eessi_tarballs) == 1):
                 # We've got one tarball and slurm out messages are ok
                 # Prepare a message with information such as
                 #   (installation status, tarball name, tarball size)
                 comment_update = "\n|%s|finished|:grin: SUCCESS " % dt.strftime(
-                    "%b %d %X %Z %Y"
-                )
+                     "%b %d %X %Z %Y")
+
                 tarball_size = os.path.getsize(eessi_tarballs[0]) / 2**30
                 comment_update += "tarball <code>%s</code> (%.3f GiB) " % (
                     os.path.basename(eessi_tarballs[0]),
@@ -434,7 +430,8 @@ class EESSIBotSoftwareLayerJobManager:
                 )
                 comment_update += "in job dir|"
                 # NOTE explicitly name repo in build job comment?
-                # comment_update += '\nAwaiting approval to ingest tarball into the repository.'
+                # comment_update += '\nAwaiting approval to
+                #  comment_update +=  ingest tarball into the repository.'
             else:
                 # something is not allright:
                 #  - no slurm out or
@@ -478,21 +475,23 @@ class EESSIBotSoftwareLayerJobManager:
                     # no luck, job just seemed to have failed ...
                     comment_update += (
                         "<li>No tarball matching <code>%s</code> found in job dir.</li>"
-                        % tarball_pattern.replace("*", "\*")
+                        % tarball_pattern.replace(r"*", r"\*")
                     )
 
                 if len(eessi_tarballs) > 1:
                     # something's fishy, we only expected a single tar.gz file
                     comment_update += (
-                        "<li>Found %d tarballs in job dir - only 1 matching <code>%s</code> expected.</li>"
+                        "<li>Found %d tarballs in job dir - only 1 "
+                        "matching <code>%s</code> expected.</li>"
                         % (
                             len(eessi_tarballs),
-                            tarball_pattern.replace("*", "\*"),
+                            tarball_pattern.replace(r"*", r"\*"),
                         )
                     )
                 comment_update += "</ul>|"
-                # comment_update += '\nAn admin may investigate what went wrong. (TODO implement procedure to ask for details by adding a command to this comment.)'
-
+                # comment_update += '\nAn admin may investigate what went wrong.
+                # comment_update += (TODO implement procedure to ask for
+                # comment_update +=  details by adding a command to this comment.)'
             # (c) add a row to the table
             # add row to status table if we found a comment
             if "comment_id" in finished_job:
@@ -504,17 +503,19 @@ class EESSIBotSoftwareLayerJobManager:
                 issue_comment.edit(original_body + comment_update)
             else:
                 log(
-                    "process_finished_job(): did not obtain/find a comment for job '%s'"
-                    % finished_job["jobid"],
+                    "process_finished_job(): did not obtain/find a "
+                    "comment for job '%s'" % finished_job["jobid"],
                     self.logfile,
                 )
                 # TODO just create one?
 
             # move symlink from job_ids_dir/submitted to jobs_ids_dir/finished
-            old_symlink = os.path.join(self.submitted_jobs_dir, finished_job["jobid"])
+            old_symlink = os.path.join(
+                self.submitted_jobs_dir, finished_job["jobid"])
             finished_jobs_dir = os.path.join(self.job_ids_dir, "finished")
             mkdir(finished_jobs_dir)
-            new_symlink = os.path.join(finished_jobs_dir, finished_job["jobid"])
+            new_symlink = os.path.join(
+                finished_jobs_dir, finished_job["jobid"])
             log(
                 f"process_finished_job(): os.rename({old_symlink},{new_symlink})",
                 self.logfile,
@@ -531,10 +532,12 @@ def main():
     github.connect()
 
     job_manager = EESSIBotSoftwareLayerJobManager()
-    job_manager.logfile = os.path.join(os.getcwd(), "eessi_bot_job_manager.log")
+    job_manager.logfile = os.path.join(
+        os.getcwd(), "eessi_bot_job_manager.log")
     job_manager.job_filter = {}
-    if not opts.jobs is None:
-        job_manager.job_filter = {jobid: None for jobid in opts.jobs.split(",")}
+    if opts.jobs is not None:
+        job_manager.job_filter = {jobid: None
+                                  for jobid in opts.jobs.split(",")}
 
     log(
         "job manager just started, logging to '%s', processing job ids '%s'"
@@ -569,11 +572,11 @@ def main():
         job_manager.submitted_jobs_dir = os.path.join(
             job_manager.job_ids_dir, "submitted"
         )
-        job_manager.poll_command = job_mgr.get("poll_command") or false
+        job_manager.poll_command = job_mgr.get("poll_command") or False
         poll_interval = int(job_mgr.get("poll_interval") or 0)
         if poll_interval <= 0:
             poll_interval = 60
-        job_manager.scontrol_command = job_mgr.get("scontrol_command") or false
+        job_manager.scontrol_command = job_mgr.get("scontrol_command") or False
         mkdir(job_manager.submitted_jobs_dir)
 
     # max_iter
@@ -587,13 +590,15 @@ def main():
     while max_iter < 0 or i < max_iter:
         log("job manager main loop: iteration %d" % i, job_manager.logfile)
         log(
-            "job manager main loop: known_jobs='%s'" % ",".join(known_jobs.keys()),
+            "job manager main loop: known_jobs='%s'" % ",".join(
+                known_jobs.keys()),
             job_manager.logfile,
         )
 
         current_jobs = job_manager.get_current_jobs()
         log(
-            "job manager main loop: current_jobs='%s'" % ",".join(current_jobs.keys()),
+            "job manager main loop: current_jobs='%s'" % ",".join(
+                current_jobs.keys()),
             job_manager.logfile,
         )
 
@@ -607,11 +612,15 @@ def main():
             if not job_manager.job_filter or nj in job_manager.job_filter:
                 job_manager.process_new_job(current_jobs[nj])
             # else:
-            #    log("job manager main loop: skipping new job %s due to parameter '--jobs %s'" % (nj,opts.jobs), job_manager.logfile)
+            #    log("job manager main loop: skipping new job"
+            #        " %s due to parameter '--jobs %s'" % (
+            #          nj,opts.jobs), job_manager.logfile)
 
-        finished_jobs = job_manager.determine_finished_jobs(known_jobs, current_jobs)
+        finished_jobs = job_manager.determine_finished_jobs(
+                        known_jobs, current_jobs)
         log(
-            "job manager main loop: finished_jobs='%s'" % ",".join(finished_jobs),
+            "job manager main loop: finished_jobs='%s'" %
+            ",".join(finished_jobs),
             job_manager.logfile,
         )
         # process finished jobs
@@ -619,7 +628,9 @@ def main():
             if not job_manager.job_filter or fj in job_manager.job_filter:
                 job_manager.process_finished_job(known_jobs[fj])
             # else:
-            #    log("job manager main loop: skipping finished job %s due to parameter '--jobs %s'" % (fj,opts.jobs), job_manager.logfile)
+            #    log("job manager main loop: skipping finished "
+            #        "job %s due"" to parameter '--jobs %s'" % (fj,opts.jobs),
+            #        " job_manager.logfile)"
 
         known_jobs = current_jobs
 
