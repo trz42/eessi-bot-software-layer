@@ -144,9 +144,7 @@ class EESSIBotSoftwareLayerJobManager:
 
     def read_job_pr_metadata(self, job_metadata_path):
         # check if metadata file exist
-        isfile = os.path.isfile(job_metadata_path)
-        log("The test for metafile returns: %s" % isfile)
-        if isfile is False:
+        if os.path.isfile(job_metadata_path):
             log("this is a non bot job and it can't be processed")
             return None
         else:
@@ -255,9 +253,9 @@ class EESSIBotSoftwareLayerJobManager:
                 #           to the working dir of the job
 
                 # get repo name
-                repo_name = metadata_pr["repo"] or ""
+                repo_name = metadata_pr.get("repo", "")
                 # get pr number
-                pr_number = metadata_pr["pr_number"] or None
+                pr_number = metadata_pr.get("pr_number", None)
 
                 gh = github.get_instance()
 
