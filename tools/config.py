@@ -14,6 +14,7 @@ from .logging import error
 
 _config = {}
 
+
 def read_file(path):
     """
     Read a given configuration file.

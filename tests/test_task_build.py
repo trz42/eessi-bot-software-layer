@@ -12,7 +12,7 @@
 import os
 
 from tasks.build import mkdir
-from tasks.build import run_cmd
+from tools import run_cmd
 
 
 def test_mkdir(tmpdir):
@@ -54,4 +54,3 @@ def test_run_cmd(tmpdir):
     assert exit_code != 0
     assert output == ""
     assert ("this_command_does_not_exist: command not found" in err or "this_command_does_not_exist: not found" in err)
-

@@ -10,13 +10,13 @@
 # license: GPLv2
 #
 import datetime
-import os
 
 from tools import config
 from github import Github, GithubIntegration
 
 _token = None
 _gh = None
+
 
 def get_token():
     global _token
@@ -44,6 +44,7 @@ def get_instance():
     if not _gh or (_token and datetime.datetime.utcnow() > _token.expires_at):
         _gh = connect()
     return _gh
+
 
 def token():
     global _token
