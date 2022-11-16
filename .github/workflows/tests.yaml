@@ -16,11 +16,17 @@ jobs:
         with:
           python-version: ${{matrix.python}}
 
-      - name: Install required Python packages + pytest
+      - name: Install required Python packages + pytest + flake8
         run: |
+          python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
           python -m pip install pytest
+          python -m pip install --upgrade flake8
 
       - name: Run test suite
         run: |
           ./test.sh
+
+      - name: Run flake8 to verify PEP8-compliance of Python code
+        run: |
+          flake8
