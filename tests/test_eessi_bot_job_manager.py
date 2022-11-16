@@ -28,7 +28,7 @@ def test_read_job_pr_metadata(tmpdir):
 
     metadata_pr = read_job.read_job_pr_metadata(path)
     expected = {
-                "repo": "test",
-                "pr_number": "12345",
+        "repo": "test",
+        "pr_number": "12345",
     }
     assert metadata_pr == expected
