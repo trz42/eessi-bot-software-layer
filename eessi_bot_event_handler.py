@@ -14,14 +14,13 @@
 # license: GPLv2
 #
 import waitress
-import json
 
 from connections import github
 from tools import args, config
 from tasks.build import submit_build_jobs
 from tasks.deploy import deploy_built_artefacts
 
-from pyghee.lib import PyGHee, create_app, read_event_from_json
+from pyghee.lib import PyGHee, create_app, get_event_info, read_event_from_json
 from pyghee.utils import log
 
 
@@ -37,7 +36,6 @@ class EESSIBotSoftwareLayer(PyGHee):
         log("Comment posted in %s by @%s: %s" % (issue_url, comment_author, comment_txt))
         log("issue_comment event handled!", log_file=log_file)
 
-
     def handle_installation_event(self, event_info, log_file=None):
         """
         Handle installation of app.
@@ -48,7 +46,6 @@ class EESSIBotSoftwareLayer(PyGHee):
         # repo_name = request_body['repositories'][0]['full_name'] # not every action has that attribute
         log("App installation event by user %s with action '%s'" % (user, action))
         log("installation event handled!", log_file=log_file)
-
 
     def handle_pull_request_labeled_event(self, event_info, pr):
         """
@@ -68,13 +65,11 @@ class EESSIBotSoftwareLayer(PyGHee):
         else:
             log("handle_pull_request_labeled_event: no handler for label '%s'" % label)
 
-
     def handle_pull_request_opened_event(self, event_info, pr):
         """
         Handle opening of a pull request.
         """
         log("PR opened: waiting for label bot:build")
-
 
     def handle_pull_request_event(self, event_info, log_file=None):
         """
@@ -103,9 +98,10 @@ def main():
     github.connect()
 
     if opts.file:
+        app = create_app(klass=EESSIBotSoftwareLayer)
         event = read_event_from_json(opts.file)
         event_info = get_event_info(event)
-        handle_event(event_info)
+        app.handle_event(event_info)
     elif opts.cron:
         log("Running in cron mode")
     else:
