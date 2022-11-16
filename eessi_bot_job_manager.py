@@ -154,7 +154,8 @@ class EESSIBotSoftwareLayerJobManager:
         Check if metadata file exists, read it and return 'PR' section if so, return None if not.
         """
         # check if metadata file exist
-        if  os.path.isfile(job_metadata_path):
+        if os.path.isfile(job_metadata_path):
+            log("Found metadata file at {job_metadata_path}")
             metadata = configparser.ConfigParser()
             try:
                 metadata.read(job_metadata_path)
@@ -304,8 +305,8 @@ class EESSIBotSoftwareLayerJobManager:
                                                      (new_job["comment_id"]))
                 original_body = issue_comment.body
                 dt = datetime.now(timezone.utc)
-                update = "\n|%s|released|job awaits launch by"
-                update += " Slurm scheduler|" % (dt.strftime("%b %d %X %Z %Y"))
+                update = "\n|%s|" % dt.strftime("%b %d %X %Z %Y")
+                update += "released|job awaits launch by Slurm scheduler|"
                 issue_comment.edit(original_body + update)
             else:
                 log(
