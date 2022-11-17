@@ -7,4 +7,4 @@
 #
 # license: GPLv2
 #
-PYTHONPATH=$PWD:$PYTHONPATH pytest -vv -s
+PYTHONPATH=$PWD:$PYTHONPATH pytest -v -s
