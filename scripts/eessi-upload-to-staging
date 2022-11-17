@@ -1,10 +1,7 @@
 #!/bin/bash
 #
-# This file is part of the EESSI build-and-deploy bot,
-# see https://github.com/EESSI/eessi-bot-software-layer
-#
-# The bot helps with requests to add software installations to the
-# EESSI software layer, see https://github.com/EESSI/software-layer
+# This file is part of the EESSI infrastructure,
+# see https://github.com/EESSI/infrastructure
 #
 # author: Bob Droege (@bedroge)
 # author: Terje Kvernes (@terjekv)
@@ -31,7 +28,7 @@ function upload_to_staging_bucket
 function check_file_name
 {
   filename=$1
-  if ( echo ${filename} | grep ^eessi > /dev/null && 
+  if ( echo ${filename} | grep ^eessi > /dev/null &&
     echo ${filename} | grep -E '(compat|init|software)' > /dev/null ); then
     return 0
   else
