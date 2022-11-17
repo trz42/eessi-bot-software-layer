@@ -84,7 +84,7 @@ class EESSIBotSoftwareLayerJobManager:
                     "reason": job[8],
                 }
                 if current_jobs[job[0]]['state'] in bad_state_codes:
-                    error("Job {} in state {}: {}".format(job[0], job[4], bad_state_messages[job[4]))
+                    error("Job {} in state {}: {}".format(job[0], job[4], bad_state_messages[job[4]]))
 
         return current_jobs
 
