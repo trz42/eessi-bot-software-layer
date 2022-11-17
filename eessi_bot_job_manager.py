@@ -217,7 +217,7 @@ class EESSIBotSoftwareLayerJobManager:
 
             if metadata_pr is None:
                 log("No metadata file found at {job_metadata_path} for job {jobid}, so skipping it")
-                return
+                return False
 
             symlink_source = os.path.join(self.submitted_jobs_dir, job_id)
             log(
@@ -324,7 +324,7 @@ class EESSIBotSoftwareLayerJobManager:
                 self.logfile,
             )
 
-        return
+        return True
 
     # job_manager.process_finished_job(known_jobs[fj])
     def process_finished_job(self, finished_job):
@@ -615,9 +615,15 @@ def main():
             job_manager.logfile,
         )
         # process new jobs
+        non_bot_jobs = []
         for nj in new_jobs:
+            # assume it is not a bot job
+            is_bot_job = False
             if not job_manager.job_filter or nj in job_manager.job_filter:
-                job_manager.process_new_job(current_jobs[nj])
+                is_bot_job = job_manager.process_new_job(current_jobs[nj])
+            if is_bot_job is False:
+                # add job id to non_bot_jobs list
+                non_bot_jobs.append(nj)
             # else:
             #    log("job manager main loop: skipping new job"
             #        " %s due to parameter '--jobs %s'" % (
@@ -638,6 +644,10 @@ def main():
             #    log("job manager main loop: skipping finished "
             #        "job %s due"" to parameter '--jobs %s'" % (fj,opts.jobs),
             #        " job_manager.logfile)"
+
+        # remove non bot jobs from current_jobs
+        for job in non_bot_jobs:
+            current_jobs.pop(job)
 
         known_jobs = current_jobs
 
