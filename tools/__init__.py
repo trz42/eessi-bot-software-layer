@@ -49,10 +49,14 @@ def run_cmd(cmd, log_msg='', working_dir=None):
     exit_code = result.returncode
 
     if exit_code != 0:
-        log(f"run_cmd(): Error running '{cmd}' in '{working_dir}\n"
+        error_msg=(
+            f"run_cmd(): Error running '{cmd}' in '{working_dir}\n"
             f"           stdout '{stdout}'\n"
             f"           stderr '{stderr}'\n"
-            f"           exit code {exit_code}")
+            f"           exit code {exit_code}"
+        )
+        log(error_msg)
+        raise RuntimeError(error_msg)
     else:
         log(f"run_cmd(): Result for running '{cmd}' in '{working_dir}\n"
             f"           stdout '{stdout}'\n"
