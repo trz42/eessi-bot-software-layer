@@ -20,9 +20,9 @@ def read_file(path):
     Read a given configuration file.
     """
     global _config
-    _config = configparser.ConfigParser()
     try:
-        _config.read(path)
+        _config = configparser.ConfigParser()
+        _config.read_file(path)
     except Exception as e:
         print(e)
         error(f'Unable to read configuration file {path}!')
