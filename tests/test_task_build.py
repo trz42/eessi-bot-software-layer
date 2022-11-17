@@ -16,16 +16,20 @@ from tools import run_subprocess
 def test_run_cmd(tmpdir):
     """Tests for run_cmd function."""
     output, err, exit_code = run_subprocess("echo hello", 'test', tmpdir)
+    print(output, err, exit_code)
+
     assert exit_code == 0
     assert output == "hello\n"
     assert err == ""
 
     output, err,  exit_code, = run_subprocess("ls -l /does_not_exists.txt", 'fail test', tmpdir)
+    print(output, err, exit_code)
     assert exit_code != 0
     assert output == ""
     assert "No such file or directory" in err
 
     output, err, exit_code = run_subprocess("this_command_does_not_exist", 'fail test', tmpdir)
+    print(output, err, exit_code)
     assert exit_code != 0
     assert output == ""
     assert ("this_command_does_not_exist: command not found" in err or "this_command_does_not_exist: not found" in err)
