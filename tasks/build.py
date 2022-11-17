@@ -30,17 +30,6 @@ LOCAL_TMP = "local_tmp"
 SLURM_PARAMS = "slurm_params"
 SUBMIT_COMMAND = "submit_command"
 
-
-def mkdir(path):
-    """create directory on the path passed to the method
-
-    Args:
-        path (string): location to where the directory is being created
-    """
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-
 def get_build_env_cfg():
     """Gets build environment values
 
@@ -136,13 +125,13 @@ def create_pr_dir(pr, jobs_base_dir, event_info):
     pr_id = 'pr_%s' % pr.number
     event_id = 'event_%s' % event_info['id']
     event_dir = os.path.join(jobs_base_dir, ym, pr_id, event_id)
-    mkdir(event_dir)
+    os.makedirs(event_dir, exist_ok=True)
 
     run = 0
     while os.path.exists(os.path.join(event_dir, 'run_%03d' % run)):
         run += 1
     run_dir = os.path.join(event_dir, 'run_%03d' % run)
-    mkdir(run_dir)
+    os.makedirs(run_dir, exist_ok=True)
     return ym, pr_id, run_dir
 
 
@@ -231,7 +220,7 @@ def setup_pr_in_arch_job_dir(pr, arch_target_map, run_dir, cvmfs_customizations)
     for arch_target, slurm_opt in arch_target_map.items():
         arch_job_dir = os.path.join(run_dir, arch_target.replace('/', '_'))
 
-        mkdir(arch_job_dir)
+        os.makedirs(arch_job_dir, exist_ok=True)
         log("arch_job_dir '%s'" % arch_job_dir)
 
         download_pr(repo_name, branch_name, pr, arch_job_dir)

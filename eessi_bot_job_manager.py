@@ -41,11 +41,6 @@ from tools import args, config
 from pyghee.utils import log, error
 
 
-def mkdir(path):
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-
 class EESSIBotSoftwareLayerJobManager:
     "main class for (Slurm) job manager of EESSI bot (separate process)"
 
@@ -522,7 +517,7 @@ class EESSIBotSoftwareLayerJobManager:
         old_symlink = os.path.join(
             self.submitted_jobs_dir, finished_job["jobid"])
         finished_jobs_dir = os.path.join(self.job_ids_dir, "finished")
-        mkdir(finished_jobs_dir)
+        os.makedirs(finished_jobs_dir, exist_ok=True)
         new_symlink = os.path.join(
             finished_jobs_dir, finished_job["jobid"])
         log(
@@ -584,7 +579,7 @@ def main():
         if poll_interval <= 0:
             poll_interval = 60
         job_manager.scontrol_command = job_mgr.get("scontrol_command") or False
-        mkdir(job_manager.submitted_jobs_dir)
+        os.makedirs(job_manager.submitted_jobs_dir, exist_ok=True)
 
     # max_iter
     #   < 0: run loop indefinitely
