@@ -11,7 +11,7 @@
 #
 import datetime
 
-from tools import config
+from tools import config, logging
 from github import Github, GithubIntegration
 
 _token = None
@@ -28,9 +28,15 @@ def get_token():
     with open(private_key_path, 'r') as private_key_file:
         private_key = private_key_file.read()
 
-    github_integration = GithubIntegration(app_id, private_key)
-    # Note that installation access tokens last only for 1 hour, you will need to regenerate them after they expire.
-    _token = github_integration.get_access_token(installation_id)
+    # If the config keys are not set, get_access_token will raise a NotImplementedError
+    # Returning NoneType token will stop the connection in get_instance
+    try:
+        github_integration = GithubIntegration(app_id, private_key)
+        # Note that installation access tokens last only for 1 hour, you will need to regenerate them after they expire.
+        _token = github_integration.get_access_token(installation_id)
+    except NotImplementedError as e:
+        logging.error(e)
+        _token = None
 
     return _token
 
