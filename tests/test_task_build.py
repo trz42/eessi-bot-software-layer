@@ -9,9 +9,9 @@
 #
 # license: GPLv2
 #
-import os
 
 from tools import run_subprocess
+
 
 def test_run_cmd(tmpdir):
     """Tests for run_cmd function."""

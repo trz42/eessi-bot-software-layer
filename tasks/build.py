@@ -30,6 +30,7 @@ LOCAL_TMP = "local_tmp"
 SLURM_PARAMS = "slurm_params"
 SUBMIT_COMMAND = "submit_command"
 
+
 def get_build_env_cfg():
     """Gets build environment values
 

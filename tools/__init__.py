@@ -16,6 +16,7 @@ import subprocess
 
 from pyghee.utils import log
 
+
 def run_cmd(cmd, log_msg='', working_dir=None):
     """Runs a command in the shell, raising an error if one occurs.
 
@@ -34,7 +35,7 @@ def run_cmd(cmd, log_msg='', working_dir=None):
     stdout, stderr, exit_code = run_subprocess(cmd, log_msg, working_dir)
 
     if exit_code != 0:
-        error_msg=(
+        error_msg = (
             f"run_cmd(): Error running '{cmd}' in '{working_dir}\n"
             f"           stdout '{stdout}'\n"
             f"           stderr '{stderr}'\n"
@@ -49,6 +50,7 @@ def run_cmd(cmd, log_msg='', working_dir=None):
             f"           exit code {exit_code}")
 
     return stdout, stderr, exit_code
+
 
 def run_subprocess(cmd, log_msg, working_dir):
     """Runs a command in the shell
