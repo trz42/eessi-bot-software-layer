@@ -16,8 +16,41 @@ import subprocess
 
 from pyghee.utils import log
 
-
 def run_cmd(cmd, log_msg='', working_dir=None):
+    """Runs a command in the shell, raising an error if one occurs.
+
+    Args:
+        cmd (string): command to run
+        log_msg (string): purpose of the command
+        working_dir (string): location of arch_job_dir
+
+    Returns:
+        tuple of 3 elements containing
+        - stdout (string): stdout of the process
+        - stderr (string): stderr of the process
+        - exit_code (string): exit code of the process
+    """
+
+    stdout, stderr, exit_code = run_subprocess(cmd, log_msg, working_dir)
+
+    if exit_code != 0:
+        error_msg=(
+            f"run_cmd(): Error running '{cmd}' in '{working_dir}\n"
+            f"           stdout '{stdout}'\n"
+            f"           stderr '{stderr}'\n"
+            f"           exit code {exit_code}"
+        )
+        log(error_msg)
+        raise RuntimeError(error_msg)
+    else:
+        log(f"run_cmd(): Result for running '{cmd}' in '{working_dir}\n"
+            f"           stdout '{stdout}'\n"
+            f"           stderr '{stderr}'\n"
+            f"           exit code {exit_code}")
+
+    return stdout, stderr, exit_code
+
+def run_subprocess(cmd, log_msg, working_dir):
     """Runs a command in the shell
 
     Args:
@@ -31,6 +64,7 @@ def run_cmd(cmd, log_msg='', working_dir=None):
         - stderr (string): stderr of the process
         - exit_code (string): exit code of the process
     """
+
     if working_dir is None:
         working_dir = os.getcwd()
 
@@ -47,20 +81,5 @@ def run_cmd(cmd, log_msg='', working_dir=None):
     stdout = result.stdout.decode("UTF-8")
     stderr = result.stderr.decode("UTF-8")
     exit_code = result.returncode
-
-    if exit_code != 0:
-        error_msg=(
-            f"run_cmd(): Error running '{cmd}' in '{working_dir}\n"
-            f"           stdout '{stdout}'\n"
-            f"           stderr '{stderr}'\n"
-            f"           exit code {exit_code}"
-        )
-        log(error_msg)
-        raise RuntimeError(error_msg)
-    else:
-        log(f"run_cmd(): Result for running '{cmd}' in '{working_dir}\n"
-            f"           stdout '{stdout}'\n"
-            f"           stderr '{stderr}'\n"
-            f"           exit code {exit_code}")
 
     return stdout, stderr, exit_code
