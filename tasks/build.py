@@ -332,18 +332,22 @@ def create_pr_comments(job, job_id, app_name, job_comment, pr, repo_name, gh, sy
         gh (object):github instance
         symlink(string): symlink from main pr_<ID> dir to job dir
     """
-    job_comment = f'Job `{job_id}` on `{app_name}`'
     # obtain arch from job[1] which has the format OS/ARCH
-
     arch_name = '-'.join(job[1].split('/')[1:])
-    job_comment += f' for `{arch_name}`'
-    job_comment += ' in job dir `%s`\n' % symlink
-    job_comment += '|date|job status|comment|\n'
-    job_comment += '|----------|----------|------------------------|\n'
 
+    # get current data/time
     dt = datetime.now(timezone.utc)
-    job_comment += f'|{dt.strftime("%b %d %X %Z %Y")}|submitted|job waits for release by job manager|'
 
+    # construct initial job comment
+    job_comment = (f"New job on instance `{app_name}`"
+                   f" for architecture `{arch_name}`"
+                   f" in job dir `{symlink}`\n"
+                   f"|date|job status|comment|\n"
+                   f"|----------|----------|------------------------|\n"
+                   f"|{dt.strftime('%b %d %X %Z %Y')}|submitted|"
+                   f"job id `{job_id}` awaits release by job manager|")
+
+    # create comment to pull request
     repo = gh.get_repo(repo_name)
     pull_request = repo.get_pull(pr.number)
     pull_request.create_issue_comment(job_comment)
