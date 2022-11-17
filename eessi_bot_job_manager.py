@@ -71,8 +71,6 @@ class EESSIBotSoftwareLayerJobManager:
         current_jobs = {}
         lines = str(squeue.stdout, "UTF-8").rstrip().split("\n")
         bad_state_messages = {'F': 'Failure', 'OOM': 'Out of Memory', 'TO': 'Time Out'}
-        bad_state_codes = bad_state_messages.keys()
-
         # get job info, logging any Slurm issues
         for i in range(2, len(lines)):
             # assume lines 2 to len(lines) contain jobs
@@ -83,7 +81,7 @@ class EESSIBotSoftwareLayerJobManager:
                     "state": job[4],
                     "reason": job[8],
                 }
-                if current_jobs[job[0]]['state'] in bad_state_codes:
+                if current_jobs[job[0]]['state'] in bad_state_messages:
                     error("Job {} in state {}: {}".format(job[0], job[4], bad_state_messages[job[4]]))
 
         return current_jobs
