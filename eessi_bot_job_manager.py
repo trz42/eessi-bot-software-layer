@@ -68,9 +68,10 @@ class EESSIBotSoftwareLayerJobManager:
         # if any with the following information per job:
         #  jobid, state, nodelist_reason
         # skip first two lines of output ("range(2,...)")
-        # TODO check for errors of squeue call
         current_jobs = {}
         lines = str(squeue.stdout, "UTF-8").rstrip().split("\n")
+        bad_state_messages = {'F': 'Failure', 'OOM': 'Out of Memory', 'TO': 'Time Out'}
+        bad_state_codes = bad_state_messages.keys()
         for i in range(2, len(lines)):
             # assume lines 2 to len(lines) contain jobs
             job = lines[i].rstrip().split()
@@ -80,6 +81,8 @@ class EESSIBotSoftwareLayerJobManager:
                     "state": job[4],
                     "reason": job[8],
                 }
+                if current_jobs[job[0]]['state'] in bad_state_codes:
+                    error("Job {} in state {}: {}".format(job[0], job[4], bad_state_messages[job[4]))
 
         return current_jobs
 
