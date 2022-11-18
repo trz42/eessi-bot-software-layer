@@ -282,10 +282,7 @@ class EESSIBotSoftwareLayerJobManager:
                     # NOTE adjust search string if format changed by event
                     #        handler (separate process running
                     #        eessi_bot_event_handler.py)
-                    cms = "^Job `%s` on `%s`.*" % (
-                        job_id,
-                        config.get_section("github").get("app_name"),
-                    )
+                    cms = f".*submitted.*job id `{new_job['jobid']}`.*"
 
                     comment_match = re.search(cms, comment.body)
 
@@ -374,10 +371,7 @@ class EESSIBotSoftwareLayerJobManager:
                 # NOTE adjust search string if format changed by event
                 #        handler (separate process running
                 #        eessi_bot_event_handler.py)
-                cms = "^Job `%s` on `%s`.*" % (
-                    finished_job["jobid"],
-                    config.get_section("github").get("app_name"),
-                )
+                cms = f".*submitted.*job id `{finished_job['jobid']}`.*"
 
                 comment_match = re.search(cms, comment.body)
 

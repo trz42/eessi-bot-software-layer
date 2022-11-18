@@ -197,6 +197,46 @@ The above command `pip3 install --user -r requirements.txt` installs the latest 
 export PYTHONPATH=SOME_PATH/PyGHee:$PYTHONPATH
 ```
 
+### <a name="step4.2"></a>Step 4.2: Installing tools to access S3 bucket
+
+The script `scripts/eessi-upload-to-staging` uploads a tarball and an associated metadata file to an S3 bucket. It needs two tools for this, `aws` to actually upload the files and `jq` to create the metadata file. This section describes how these tools are installed and configured on the `bot machine`.
+
+Create a new directory, say `BOT_ROOT/tools` and change into the directory.
+
+For installing the AWS Command Line Interface, including the tool `aws`,
+please follow the instructions at the
+[AWS Command Line Interface guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+
+Add the directory that contains `aws` to the `PATH` environment variable.
+Make sure that the `PATH` is set correctly for newly spawned shells, e.g.,
+it should be exported in files such as `$HOME/.bash_profile`.
+
+Verify that `aws` executes by running `aws --version`. Then, run
+`aws configure` to set credentials for accessing the S3 bucket.
+See [New configuration quick setup](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html)
+for detailed setup instructions. If you are using a non AWS S3 bucket
+you will likely only have to provide the `Access Key ID` and the
+`Secret Access Key`.
+
+Next, install the tool `jq` into the same directory into which
+`aws` was installed in. First, run `cd $(dirname $(which aws))`.
+Then, download `jq` from `https://github.com/stedolan/jq/releases`
+by running, for example,
+```
+curl https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 -o jq-linux64
+```
+You may check if there are newer releases and choose a different
+package depending on your operating system. Update the permissions
+of the downloaded tool (`jq-linux64` for the above `curl` example)
+with
+```
+chmod +x jq-linux64
+```
+Finally, create a symbolic link for `jq` by running
+```
+ln -s jq-linux64 jq
+```
+
 ## <a name="step5"></a>Step 5: Configuring the EESSI bot on the `bot machine`
 
 For the event handler, you need to set up two environment variables: `GITHUB_TOKEN` ([Step 5.1](#step5.1)) and `GITHUB_APP_SECRET_TOKEN` ([Step 5.2](#step5.2)). For both the event handler and the job manager you need a private key ([Step 5.3](#step5.3)).
@@ -306,6 +346,41 @@ This defines additional parameters for submitting batch jobs. "--hold" should be
 submit_command = /usr/bin/sbatch
 ```
 This is the full path to the Slurm command used for submitting batch jobs. You may want to verify if `sbatch` is provided at that path or determine its actual location (`which sbatch`).
+
+### Section `[deploycfg]`
+The section `[deploycfg]` defines settings for uploading built artefacts (tarballs) to an S3 bucket.
+```
+upload_to_s3_script = PATH_TO_EESSI_BOT/scripts/eessi-upload-to-staging
+```
+Provides the location for the script used for uploading built software packages to an S3 bucket.
+
+```
+endpoint_url = URL_TO_S3_SERVER
+```
+Provides an endpoint (URL) to a server hosting an S3 bucket. The server could be hosted by a public Cloud provider or running in a private environment, for example, using Minio. The bot uploads tarballs to the bucket which will be periodically scanned by the ingestion procedure at the Stratum 0 server.
+
+```
+bucket_name = eessi-staging
+```
+Name of the bucket used for uploading of tarballs. The bucket must be available on the default server (`https://${bucket_name}.s3.amazonaws.com`) or the one provided via `endpoint_url`.
+
+```
+upload_policy = once
+```
+The `upload_policy` defines what policy is used for uploading built artefacts to an S3 bucket.
+|:--------|:--------------------------------|
+|Value|Policy|
+|`all`|Upload all artefacts (mulitple uploads of the same artefact possible).|
+|`latest`|For each build target (prefix in tarball name `eessi-VERSION-{software,init,compat}-OS-ARCH)` only upload the latest built artefact.|
+|`once`|Only once upload any built artefact for the build target.|
+|`none`|Do not upload any built artefacts.|
+
+```
+deploy_permission = GH_ACCOUNT_1 GH_ACCOUNT_2 ...
+```
+The option `deploy_permission` defines which GitHub accounts can trigger the
+deployment procedure. The value can be empty (any GH account can trigger the
+deployment) or a space delimited list of GH accounts.
 
 ### Section `[architecturetargets]`
 The section `[architecturetargets]` defines for which targets (OS/SUBDIR), e.g., `linux/amd/zen2` the EESSI bot should submit jobs and what additional `sbatch` parameters will be used for requesting a compute node with the CPU microarchitecture needed to build the software stack.
