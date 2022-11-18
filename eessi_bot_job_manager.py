@@ -49,6 +49,9 @@ def mkdir(path):
 class EESSIBotSoftwareLayerJobManager:
     "main class for (Slurm) job manager of EESSI bot (separate process)"
 
+    def __init__(self):
+        self.logfile = os.path.join(os.getcwd(), "eessi_bot_job_manager.log")
+
     def get_current_jobs(self):
         # who am i
         username = os.getlogin()
@@ -534,8 +537,6 @@ def main():
     github.connect()
 
     job_manager = EESSIBotSoftwareLayerJobManager()
-    job_manager.logfile = os.path.join(
-        os.getcwd(), "eessi_bot_job_manager.log")
     job_manager.job_filter = {}
     if opts.jobs is not None:
         job_manager.job_filter = {jobid: None
