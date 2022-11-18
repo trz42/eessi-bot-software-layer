@@ -154,7 +154,7 @@ class EESSIBotSoftwareLayerJobManager:
         """
         # check if metadata file exist
         if os.path.isfile(job_metadata_path):
-            log("Found metadata file at {job_metadata_path}")
+            log(f"Found metadata file at {job_metadata_path}", self.logfile)
             metadata = configparser.ConfigParser()
             try:
                 metadata.read(job_metadata_path)
@@ -168,7 +168,7 @@ class EESSIBotSoftwareLayerJobManager:
                 metadata_pr = {}
             return metadata_pr
         else:
-            log("No metadata file found at {job_metadata_path}, so not a bot job")
+            log(f"No metadata file found at {job_metadata_path}, so not a bot job", self.logfile)
             return None
 
     # job_manager.process_new_job(current_jobs[nj])
@@ -216,7 +216,8 @@ class EESSIBotSoftwareLayerJobManager:
             metadata_pr = self.read_job_pr_metadata(job_metadata_path)
 
             if metadata_pr is None:
-                log("No metadata file found at {job_metadata_path} for job {jobid}, so skipping it")
+                log(f"No metadata file found at {job_metadata_path} for job {jobid}, so skipping it",
+                    self.logfile)
                 return False
 
             symlink_source = os.path.join(self.submitted_jobs_dir, job_id)
