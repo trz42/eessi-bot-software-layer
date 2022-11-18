@@ -216,7 +216,7 @@ class EESSIBotSoftwareLayerJobManager:
             metadata_pr = self.read_job_pr_metadata(job_metadata_path)
 
             if metadata_pr is None:
-                log(f"No metadata file found at {job_metadata_path} for job {jobid}, so skipping it",
+                log(f"No metadata file found at {job_metadata_path} for job {job_id}, so skipping it",
                     self.logfile)
                 return False
 
