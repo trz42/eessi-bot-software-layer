@@ -49,6 +49,9 @@ def mkdir(path):
 class EESSIBotSoftwareLayerJobManager:
     "main class for (Slurm) job manager of EESSI bot (separate process)"
 
+    def __init__(self):
+        self.logfile = os.path.join(os.getcwd(), "eessi_bot_job_manager.log")
+
     def get_current_jobs(self):
         # who am i
         username = os.getlogin()
@@ -154,7 +157,7 @@ class EESSIBotSoftwareLayerJobManager:
         """
         # check if metadata file exist
         if os.path.isfile(job_metadata_path):
-            log("Found metadata file at {job_metadata_path}")
+            log(f"Found metadata file at {job_metadata_path}", self.logfile)
             metadata = configparser.ConfigParser()
             try:
                 metadata.read(job_metadata_path)
@@ -168,7 +171,7 @@ class EESSIBotSoftwareLayerJobManager:
                 metadata_pr = {}
             return metadata_pr
         else:
-            log("No metadata file found at {job_metadata_path}, so not a bot job")
+            log(f"No metadata file found at {job_metadata_path}, so not a bot job", self.logfile)
             return None
 
     # job_manager.process_new_job(current_jobs[nj])
@@ -216,8 +219,9 @@ class EESSIBotSoftwareLayerJobManager:
             metadata_pr = self.read_job_pr_metadata(job_metadata_path)
 
             if metadata_pr is None:
-                log("No metadata file found at {job_metadata_path} for job {jobid}, so skipping it")
-                return
+                log(f"No metadata file found at {job_metadata_path} for job {job_id}, so skipping it",
+                    self.logfile)
+                return False
 
             symlink_source = os.path.join(self.submitted_jobs_dir, job_id)
             log(
@@ -321,7 +325,7 @@ class EESSIBotSoftwareLayerJobManager:
                 self.logfile,
             )
 
-        return
+        return True
 
     # job_manager.process_finished_job(known_jobs[fj])
     def process_finished_job(self, finished_job):
@@ -533,8 +537,6 @@ def main():
     github.connect()
 
     job_manager = EESSIBotSoftwareLayerJobManager()
-    job_manager.logfile = os.path.join(
-        os.getcwd(), "eessi_bot_job_manager.log")
     job_manager.job_filter = {}
     if opts.jobs is not None:
         job_manager.job_filter = {jobid: None
@@ -609,9 +611,15 @@ def main():
             job_manager.logfile,
         )
         # process new jobs
+        non_bot_jobs = []
         for nj in new_jobs:
+            # assume it is not a bot job
+            is_bot_job = False
             if not job_manager.job_filter or nj in job_manager.job_filter:
-                job_manager.process_new_job(current_jobs[nj])
+                is_bot_job = job_manager.process_new_job(current_jobs[nj])
+            if not is_bot_job:
+                # add job id to non_bot_jobs list
+                non_bot_jobs.append(nj)
             # else:
             #    log("job manager main loop: skipping new job"
             #        " %s due to parameter '--jobs %s'" % (
@@ -632,6 +640,10 @@ def main():
             #    log("job manager main loop: skipping finished "
             #        "job %s due"" to parameter '--jobs %s'" % (fj,opts.jobs),
             #        " job_manager.logfile)"
+
+        # remove non bot jobs from current_jobs
+        for job in non_bot_jobs:
+            current_jobs.pop(job)
 
         known_jobs = current_jobs
 
