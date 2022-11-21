@@ -617,7 +617,7 @@ def main():
             is_bot_job = False
             if not job_manager.job_filter or nj in job_manager.job_filter:
                 is_bot_job = job_manager.process_new_job(current_jobs[nj])
-            if is_bot_job is False:
+            if not is_bot_job:
                 # add job id to non_bot_jobs list
                 non_bot_jobs.append(nj)
             # else:
