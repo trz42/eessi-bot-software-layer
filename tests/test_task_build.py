@@ -56,7 +56,6 @@ def test_run_cmd(tmpdir):
     assert output == ""
     assert ("this_command_does_not_exist: command not found" in err or "this_command_does_not_exist: not found" in err)
 
-
-    run_cmd("echo hello", "test in file", tmpdir, log_file=log_file)
+    output, err, exit_code = run_cmd("echo hello", "test in file", tmpdir, log_file=log_file)
     with open(log_file, "r") as fp:
         assert "test in file" in fp.read()
