@@ -17,6 +17,7 @@ import waitress
 
 from connections import github
 from tools import args, config
+from tools.args import parse_common_args, event_handler_parse
 from tasks.build import submit_build_jobs
 from tasks.deploy import deploy_built_artefacts
 
@@ -25,6 +26,11 @@ from pyghee.utils import log
 
 
 class EESSIBotSoftwareLayer(PyGHee):
+    def parse_args(self, arg):
+        parsed, unknown = parse_common_args(arg)
+        unknown = event_handler_parse(unknown)
+        return parsed, unknown
+
     def handle_issue_comment_event(self, event_info, log_file=None):
         """
         Handle adding/removing of comment in issue or PR.
@@ -93,7 +99,8 @@ class EESSIBotSoftwareLayer(PyGHee):
 
 def main():
     """Main function."""
-    opts = args.parse()
+    opt = EESSIBotSoftwareLayer()
+    opts = opt.parse_args()
     config.read_file("app.cfg")
     github.connect()
 

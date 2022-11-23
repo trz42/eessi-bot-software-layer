@@ -35,6 +35,7 @@ import subprocess
 import time
 
 from connections import github
+from tools.args import parse_common_args, job_manager_parse
 from datetime import datetime, timezone
 from tools import args, config
 
@@ -51,6 +52,11 @@ class EESSIBotSoftwareLayerJobManager:
 
     def __init__(self):
         self.logfile = os.path.join(os.getcwd(), "eessi_bot_job_manager.log")
+
+    def parse_args(self, arg):
+        parsed, unknown = parse_common_args(arg)
+        unknown = job_manager_parse(unknown)
+        return parsed, unknown
 
     def get_current_jobs(self):
         # who am i
@@ -532,7 +538,8 @@ class EESSIBotSoftwareLayerJobManager:
 
 def main():
     """Main function."""
-    opts = args.parse()
+    opt = EESSIBotSoftwareLayerJobManager()
+    opts = opt.parse_args()
     config.read_file("app.cfg")
     github.connect()
 

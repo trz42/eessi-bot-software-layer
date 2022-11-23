@@ -12,14 +12,9 @@
 import argparse
 
 
-def parse():
+def parse_common_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        "-c", "--cron",
-        help="run in cron mode instead of web app mode",
-        action="store_true",
-    )
     parser.add_argument(
         "-b", "--build",
         help="accept software build requests",
@@ -36,10 +31,30 @@ def parse():
         help="use event data from a JSON file",
     )
 
+    args, unknown = parser.parse_known_args()
+
+    return args, unknown
+
+
+def event_handler_parse():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "-c", "--cron",
+        help="run in cron mode instead of web app mode",
+        action="store_true",
+    )
+
     parser.add_argument(
         "-p", "--port", default=3000,
         help="listen on a specific port for events (default 3000)",
     )
+
+    return parser.parse_args()
+
+
+def job_manager_parse():
+    parser = argparse.ArgumentParser()
 
     parser.add_argument(
         "-i", "--max-manager-iterations", default=-1,
