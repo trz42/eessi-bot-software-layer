@@ -37,7 +37,7 @@ import time
 from connections import github
 from tools.args import parse_common_args, job_manager_parse
 from datetime import datetime, timezone
-from tools import args, config
+from tools import config
 
 from pyghee.utils import log, error
 

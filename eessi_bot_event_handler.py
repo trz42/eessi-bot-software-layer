@@ -16,7 +16,7 @@
 import waitress
 
 from connections import github
-from tools import args, config
+from tools import config
 from tools.args import parse_common_args, event_handler_parse
 from tasks.build import submit_build_jobs
 from tasks.deploy import deploy_built_artefacts
