@@ -55,7 +55,8 @@ class EESSIBotSoftwareLayerJobManager:
         squeue_cmd = "%s --long --user=%s" % (self.poll_command, username)
         squeue_output, squeue_err, squeue_exitcode = run_cmd(
             squeue_cmd,
-            "get_current_jobs(): squeue command"
+            "get_current_jobs(): squeue command",
+            log_file=self.logfile,
         )
 
         # create dictionary of jobs
@@ -175,7 +176,8 @@ class EESSIBotSoftwareLayerJobManager:
         )
         scontrol_output, scontrol_err, scontrol_exitcode = run_cmd(
             scontrol_cmd,
-            "process_new_job(): scontrol command"
+            "process_new_job(): scontrol command",
+            log_file=self.logfile,
         )
 
         # parse output,
@@ -216,7 +218,8 @@ class EESSIBotSoftwareLayerJobManager:
 
             release_output, release_err, release_exitcode = run_cmd(
                 release_cmd,
-                "process_new_job(): scontrol command"
+                "process_new_job(): scontrol command",
+                log_file=self.logfile,
             )
 
             # update PR
