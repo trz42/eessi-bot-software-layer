@@ -17,7 +17,7 @@ import subprocess
 from pyghee.utils import log
 
 
-def run_cmd(cmd, log_msg='', working_dir=None):
+def run_cmd(cmd, log_msg='', working_dir=None, log_file=None):
     """Runs a command in the shell
 
     Args:
@@ -35,28 +35,29 @@ def run_cmd(cmd, log_msg='', working_dir=None):
         working_dir = os.getcwd()
 
     if log_msg:
-        log(f"run_cmd(): '{log_msg}' by running '{cmd}' in directory '{working_dir}'")
+        log(f"run_cmd(): '{log_msg}' by running '{cmd}' in directory '{working_dir}'", log_file=log_file)
     else:
-        log(f"run_cmd(): Running '{cmd}' in directory '{working_dir}'")
+        log(f"run_cmd(): Running '{cmd}' in directory '{working_dir}'", log_file=log_file)
 
     result = subprocess.run(cmd,
                             cwd=working_dir,
                             shell=True,
+                            encoding="UTF-8",
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
-    stdout = result.stdout.decode("UTF-8")
-    stderr = result.stderr.decode("UTF-8")
+    stdout = result.stdout
+    stderr = result.stderr
     exit_code = result.returncode
 
     if exit_code != 0:
         log(f"run_cmd(): Error running '{cmd}' in '{working_dir}\n"
             f"           stdout '{stdout}'\n"
             f"           stderr '{stderr}'\n"
-            f"           exit code {exit_code}")
+            f"           exit code {exit_code}", log_file=log_file)
     else:
         log(f"run_cmd(): Result for running '{cmd}' in '{working_dir}\n"
             f"           stdout '{stdout}'\n"
             f"           stderr '{stderr}'\n"
-            f"           exit code {exit_code}")
+            f"           exit code {exit_code}", log_file=log_file)
 
     return stdout, stderr, exit_code

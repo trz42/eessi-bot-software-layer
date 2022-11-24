@@ -31,12 +31,11 @@ import configparser
 import glob
 import os
 import re
-import subprocess
 import time
 
 from connections import github
 from datetime import datetime, timezone
-from tools import args, config
+from tools import args, config, run_cmd
 
 from pyghee.utils import log, error
 
@@ -57,28 +56,19 @@ class EESSIBotSoftwareLayerJobManager:
         username = os.getlogin()
 
         squeue_cmd = "%s --long --user=%s" % (self.poll_command, username)
-        log(
-            "get_current_jobs(): run squeue command: %s" % squeue_cmd,
-            self.logfile,
+        squeue_output, squeue_err, squeue_exitcode = run_cmd(
+            squeue_cmd,
+            "get_current_jobs(): squeue command",
+            log_file=self.logfile,
         )
 
-        squeue = subprocess.run(
-            squeue_cmd,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        log(
-            "get_current_jobs(): squeue output\n%s" % squeue.stdout,
-            self.logfile,
-        )
         # create dictionary of jobs
         # if any with the following information per job:
         #  jobid, state, nodelist_reason
         # skip first two lines of output ("range(2,...)")
         # TODO check for errors of squeue call
         current_jobs = {}
-        lines = str(squeue.stdout, "UTF-8").rstrip().split("\n")
+        lines = str(squeue_output).rstrip().split("\n")
         for i in range(2, len(lines)):
             # assume lines 2 to len(lines) contain jobs
             job = lines[i].rstrip().split()
@@ -187,22 +177,16 @@ class EESSIBotSoftwareLayerJobManager:
             self.scontrol_command,
             job_id,
         )
-        log(
-            "process_new_job(): run scontrol command: %s" % scontrol_cmd,
-            self.logfile,
-        )
-
-        scontrol = subprocess.run(
+        scontrol_output, scontrol_err, scontrol_exitcode = run_cmd(
             scontrol_cmd,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            "process_new_job(): scontrol command",
+            log_file=self.logfile,
         )
 
         # parse output,
         # look for WorkDir=dir
         match = re.search(r".* WorkDir=(\S+) .*",
-                          str(scontrol.stdout, "UTF-8"))
+                          str(scontrol_output))
         if match:
             log(
                 "process_new_job(): work dir of job %s: '%s'"
@@ -235,25 +219,11 @@ class EESSIBotSoftwareLayerJobManager:
                 self.scontrol_command,
                 job_id,
             )
-            log(
-                "process_new_job(): run scontrol command: %s" %
-                release_cmd, self.logfile,
-            )
-            release = subprocess.run(
+
+            release_output, release_err, release_exitcode = run_cmd(
                 release_cmd,
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            log(
-                "process_new_job(): scontrol out: %s"
-                % release.stdout.decode("UTF-8"),
-                self.logfile,
-            )
-            log(
-                "process_new_job(): scontrol err: %s"
-                % release.stderr.decode("UTF-8"),
-                self.logfile,
+                "process_new_job(): scontrol command",
+                log_file=self.logfile,
             )
 
             # update PR
