@@ -26,11 +26,6 @@ from pyghee.utils import log
 
 
 class EESSIBotSoftwareLayer(PyGHee):
-    def parse_args(self, arg):
-        parsed, unknown = parse_common_args(arg)
-        unknown = event_handler_parse(unknown)
-        return parsed, unknown
-
     def handle_issue_comment_event(self, event_info, log_file=None):
         """
         Handle adding/removing of comment in issue or PR.
@@ -99,8 +94,7 @@ class EESSIBotSoftwareLayer(PyGHee):
 
 def main():
     """Main function."""
-    opt = EESSIBotSoftwareLayer()
-    opts = opt.parse_args()
+    opts = event_handler_parse()
     config.read_file("app.cfg")
     github.connect()
 

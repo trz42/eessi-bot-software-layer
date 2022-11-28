@@ -12,7 +12,22 @@
 import argparse
 
 
-def parse_common_args():
+def parse_common_args(args=None):
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "-d", "--debug",
+        help="print debug information",
+        action="store_true",
+    )
+
+    args, unknown = parser.parse_known_args()
+
+    return args, unknown
+
+
+def event_handler_parse(args=None):
+    parsed_args, unknown_args = parse_common_args(args=args)
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -31,14 +46,6 @@ def parse_common_args():
         help="use event data from a JSON file",
     )
 
-    args, unknown = parser.parse_known_args()
-
-    return args, unknown
-
-
-def event_handler_parse():
-    parser = argparse.ArgumentParser()
-
     parser.add_argument(
         "-c", "--cron",
         help="run in cron mode instead of web app mode",
@@ -50,12 +57,12 @@ def event_handler_parse():
         help="listen on a specific port for events (default 3000)",
     )
 
-    return parser.parse_args()
+    return parser.parse_args(unknown_args, namespace=parsed_args)
 
 
-def job_manager_parse():
+def job_manager_parse(args=None):
+    parsed_args, unknown_args = parse_common_args(args=args)
     parser = argparse.ArgumentParser()
-
     parser.add_argument(
         "-i", "--max-manager-iterations", default=-1,
         help="loop behaviour: i<0 - indefinite, i==0 - don't run, i>0: run i iterations (default -1)",
@@ -66,4 +73,4 @@ def job_manager_parse():
         help="limits the processing to a specific job id or list of comma-separated list of job ids",
     )
 
-    return parser.parse_args()
+    return parser.parse_args(unknown_args, namespace=parsed_args)

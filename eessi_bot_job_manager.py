@@ -53,11 +53,6 @@ class EESSIBotSoftwareLayerJobManager:
     def __init__(self):
         self.logfile = os.path.join(os.getcwd(), "eessi_bot_job_manager.log")
 
-    def parse_args(self, arg):
-        parsed, unknown = parse_common_args(arg)
-        unknown = job_manager_parse(unknown)
-        return parsed, unknown
-
     def get_current_jobs(self):
         # who am i
         username = os.getlogin()
@@ -538,8 +533,8 @@ class EESSIBotSoftwareLayerJobManager:
 
 def main():
     """Main function."""
-    opt = EESSIBotSoftwareLayerJobManager()
-    opts = opt.parse_args()
+
+    opts = job_manager_parse()
     config.read_file("app.cfg")
     github.connect()
 
