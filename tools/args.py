@@ -21,9 +21,9 @@ def parse_common_args(args=None):
         action="store_true",
     )
 
-    args, unknown = parser.parse_known_args()
+    parsed_args, unknown = parser.parse_known_args(args=args)
 
-    return args, unknown
+    return parsed_args, unknown
 
 
 def event_handler_parse(args=None):
@@ -57,7 +57,7 @@ def event_handler_parse(args=None):
         help="listen on a specific port for events (default 3000)",
     )
 
-    return parser.parse_args(unknown_args, namespace=parsed_args)
+    return parser.parse_args(args=unknown_args, namespace=parsed_args)
 
 
 def job_manager_parse(args=None):
@@ -73,4 +73,4 @@ def job_manager_parse(args=None):
         help="limits the processing to a specific job id or list of comma-separated list of job ids",
     )
 
-    return parser.parse_args(unknown_args, namespace=parsed_args)
+    return parser.parse_args(args=unknown_args, namespace=parsed_args)
