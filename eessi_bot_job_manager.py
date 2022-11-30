@@ -34,8 +34,9 @@ import re
 import time
 
 from connections import github
+from tools.args import job_manager_parse
 from datetime import datetime, timezone
-from tools import args, config, run_cmd
+from tools import config, run_cmd
 
 from pyghee.utils import log, error
 
@@ -502,7 +503,8 @@ class EESSIBotSoftwareLayerJobManager:
 
 def main():
     """Main function."""
-    opts = args.parse()
+
+    opts = job_manager_parse()
     config.read_file("app.cfg")
     github.connect()
 
