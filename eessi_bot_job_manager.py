@@ -54,7 +54,9 @@ class EESSIBotSoftwareLayerJobManager:
 
     def get_current_jobs(self):
         # who am i
-        username = os.getlogin()
+        username = os.getenv('USER', None)
+        if username is None:
+            raise Exception("Unable to find username")
 
         squeue_cmd = "%s --long --user=%s" % (self.poll_command, username)
         squeue_output, squeue_err, squeue_exitcode = run_cmd(
