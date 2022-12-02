@@ -539,3 +539,7 @@ def main():
         update = (f"\n|{now.strftime('%b %d %X %Z %Y')}|resubmitted"
                   f"|job id `{job_id}`, dir `{symlink}` awaits release by job manager|")
         comment.edit(comment.body + update)
+
+
+if __name__ == "__main__":
+    main()
