@@ -422,8 +422,10 @@ def submit_job(job, cfg, ym, pr):
         # some ERROR happened, log and exit (leave directory for inspection)
         error(f"{fn}(): sbatch failed; exiting with code 3", rc=3)
     else:
+        jobs_base_dir = buildenv[config.OPTION_JOBS_BASE_DIR]
         job_id = submit.stdout.split()[3]
-        symlink = os.path.join(buildenv[config.OPTION_JOBS_BASE_DIR], ym, pr.number, job_id)
+        pr_id = f"pr_{pr.number}"
+        symlink = os.path.join(jobs_base_dir, ym, pr_id, job_id)
         print(f"{fn}(): symlinking {symlink} -> {job[0]}")
         os.symlink(job[0], symlink)
 
@@ -529,13 +531,6 @@ def main():
     # rename job metadata file
     new_metadata_path = bot_jobfile_path.replace('TEMP', job_id, 1)
     os.rename(bot_jobfile_path, new_metadata_path)
-
-    # create symlink from jobs_base_dir/YYYY.MM/pr_PR_NUMBER to
-    #   rerun_job_dir
-    jobs_base_dir = cfg[config.SECTION_BUILDENV][config.OPTION_JOBS_BASE_DIR]
-    pr_id = f"pr_{pr.number}"
-    symlink = os.path.join(jobs_base_dir, ym, pr_id, job_id)
-    os.symlink(rerun_job_dir, symlink)
 
     # update PR comment with
     #   'date | resubmitted | jobid + directory'
