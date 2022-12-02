@@ -252,7 +252,8 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
     """Parse job id and submit jobs from directory
 
     Args:
-        job (list): jobs to be submitted
+        job (list): job to be submitted with elements:
+                    [arch_job_dir, arch_target, slurm_opt]
         submitted_jobs (list): jobs submitted
         build_env_cfg (dictionary): build environment data
         ym (string): string with datestamp (<year>.<month>)

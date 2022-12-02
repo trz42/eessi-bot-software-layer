@@ -74,3 +74,20 @@ def job_manager_parse(args=None):
     )
 
     return parser.parse_args(args=unknown_args, namespace=parsed_args)
+
+
+def resubmit_parse(args=None):
+    parsed_args, unknown_args = parse_common_args(args=args)
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "-o", "--original-job-dir",
+        help="original job directory when resubmitting",
+    )
+
+    parser.add_argument(
+        "-m", "--modified-job-dir",
+        help="directory containing modifications to the original job",
+    )
+
+    return parser.parse_args(args=unknown_args, namespace=parsed_args)

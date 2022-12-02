@@ -24,13 +24,16 @@ def error(msg, rc=1):
     sys.exit(rc)
 
 
-def log(msg):
+def log(msg, log_file=None):
     """
     Log message
     """
-    with open(LOG, 'a') as fh:
-        timestamp = datetime.datetime.now().strftime("%Y%m%d-T%H:%M:%S")
-        fh.write('[' + timestamp + '] ' + msg + '\n')
+    timestamp = datetime.datetime.now().strftime("%Y%m%d-T%H:%M:%S")
+    if log_file is None:
+        with open(LOG, 'a') as fh:
+            fh.write('[' + timestamp + '] ' + msg + '\n')
+    else:
+        log_file.write('[' + timestamp + '] ' + msg + '\n')
 
 
 def log_event(request):
