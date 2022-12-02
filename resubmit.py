@@ -439,9 +439,6 @@ def main():
     # parse command-line args
     opts = resubmit_parse()
 
-    # needed for accessing private key for making connection to github
-    config.read_file("app.cfg")
-
     # determine directory of original job (current or given as argument)
     original_job_dir = get_original_job_dir(opts)
 
@@ -457,6 +454,10 @@ def main():
     app_cfg_dir = os.path.dirname(os.path.realpath(__file__))
     app_cfg = os.path.join(app_cfg_dir, 'app.cfg')
     print(f"{fn}(): app.cfg ........: '{app_cfg}'")
+
+    # old method to read configuration is needed for accessing
+    #   private key when making connection to github
+    config.read_file(app_cfg)
 
     # read config file to make required options available
     cfg = config.read_and_validate_config(app_cfg, REQUIRED_CONFIG, log_file=sys.stdout)
