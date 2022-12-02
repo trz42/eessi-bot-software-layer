@@ -439,6 +439,9 @@ def main():
     # parse command-line args
     opts = resubmit_parse()
 
+    # needed for accessing private key for making connection to github
+    config.read_file("app.cfg")
+
     # determine directory of original job (current or given as argument)
     original_job_dir = get_original_job_dir(opts)
 
