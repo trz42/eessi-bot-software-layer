@@ -538,7 +538,7 @@ IMAGE-SCREENSHOT
 
 Every now and then a build job will fail as indicated with 'FAILURE' in the comment column (see image below).
 
-[Example job that failed](docs/img/job-failure-1.png)
+![Example job that failed](docs/img/job-failure-1.png)
 
 Typically the first step is to look into the output of the job, e.g.,
 the Slurm output file `/cluster/projects/nn9992k/pilot.nessi/PR62/jobs/2022.11/pr_49/7203357/slurm-7203357.out`
@@ -548,19 +548,21 @@ could temporarily not be downloaded (case 1). At other times more debug
 output is needed to investigate the problem and subsequently changes to
 the build procedure may be needed (case 2).
 
-In both cases the pull request to the software-layer could be modified
-and the building could be restarted by resending the labeled event (via
-the smee channel webpage or GitHub) or by clearing and setting the
-`bot:build` label. However, this may be a bit cumbersome and also
-trigger the rebuild for all other targets and bot instances too even if
-they succeeded. Hence, a tool for only locally resubmitting a job
-including potential changes was developed. The tool updates the PR
-comment and integrates seamlessly with the job manager, that is, any
-resubmitted job will be controlled by the job manager and comments to the
-PR will be updated as if the job was submitted by the event handler. See
-image below where also the resubmitted job failed.
+In the first case, the build job could be triggered by resending the
+_label_ event (via smee channel webpage or GitHub settings for the app
+installation or removing and setting the `bot:build` label). In the
+second case, the pull request to the software-layer could be modified
+and then the building could be retriggered in the first case. However,
+this may be a bit cumbersome and also trigger the rebuild for all other
+targets and bot instances too even if they succeeded. Hence, a tool for
+only locally resubmitting a job including potential changes was developed.
+The tool, named `resubmit.py`, updates the PR comment and integrates
+seamlessly with the job manager, that is, any resubmitted job will be
+controlled by the job manager and comments to the PR will be updated as
+if the job was submitted by the event handler. See image below where also
+the resubmitted job failed.
 
-[Example resubmitted job that failed](docs/img/job-resubmitted-failure.png)
+![Example resubmitted job that failed](docs/img/job-resubmitted-failure.png)
 
 A job without any changes (case 1) can be easily resubmitted by running the
 following command in the directory of the job that failed (in the above
@@ -571,8 +573,9 @@ example that would be directory
 cd /cluster/projects/nn9992k/pilot.nessi/PR62/jobs/2022.11/pr_49/7203357
 resubmit.py
 ```
-If `resubmit.py` is not in the `PATH` prefix it with the location of the
-`eessi-bot-software-layer` repository.
+If `resubmit.py`'s location is not in the `PATH`, the relative or absolute
+path to its location (in the `eessi-bot-software-layer` repository) needs
+to be provided.
 
 The directory of the original job can also be given via the command line
 parameter `-o` or `--original-job-dir`, e.g.,
