@@ -27,6 +27,7 @@ import sys
 from connections import github
 from datetime import datetime, timezone
 from tools import config
+from tools.config import convert_cvmfs_customizations_option
 from tools.args import resubmit_parse
 from tools.logging import error
 
@@ -480,7 +481,8 @@ def main():
     # TODO (maybe) create mappings_file to be used by
     #      eessi-bot-build.slurm to init SINGULARITY_BIND;
     #      for now, only existing mappings may be customized
-    cvmfs_customizations = cfg[config.SECTION_BUILDENV][config.OPTION_CVMFS_CUSTOMIZATIONS]
+    cvmfs_customizations_str = cfg[config.SECTION_BUILDENV][config.OPTION_CVMFS_CUSTOMIZATIONS]
+    cvmfs_customizations = convert_cvmfs_customizations_option(cvmfs_customizations_str, log_file=sys.stdout)
     if len(cvmfs_customizations) > 0:
         # for each entry/key, append value to file
         for key in cvmfs_customizations.keys():

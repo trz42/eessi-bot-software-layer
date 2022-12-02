@@ -94,26 +94,38 @@ def read_and_validate_config(path, required_config, log_file=None):
             if item not in config[section]:
                 error(f"{fn}(): Missing item '{item}' in section '[{section}]' "
                       f"in config file {path}")
-            if item is OPTION_CVMFS_CUSTOMIZATIONS:
-                cvmfs_customizations = {}
-                try:
-                    cvmfs_customizations_str = config[section].get(OPTION_CVMFS_CUSTOMIZATIONS)
-                    log(f"{fn}(): cvmfs_customizations_str '{cvmfs_customizations_str}'", log_file=log_file)
-
-                    if cvmfs_customizations_str is not None:
-                        cvmfs_customizations = json.loads(cvmfs_customizations_str)
-
-                    config[section][item] = cvmfs_customizations
-                    log(f"{fn}(): cvmfs_customizations '{json.dumps(cvmfs_customizations)}'", log_file=log_file)
-                except json.decoder.JSONDecodeError as e:
-                    print(e)
-                    error(f"{fn}(): value for option 'cvmfs_customizations' "
-                          f"({cvmfs_customizations_str}) could not be decoded.")
-                log(f"{fn}(): added {section}[{item}] = {json.dumps(config[section][item])}", log_file=log_file)
-            else:
-                log(f"{fn}(): added {section}[{item}] = {config[section][item]}", log_file=log_file)
+            log(f"{fn}(): added {section}[{item}] = {config[section][item]}", log_file=log_file)
 
     return config
+
+
+def convert_cvmfs_customizations_option(option, log_file=None):
+    """Convert CVMFS_CUSTOMIZATIONS option to json dictionary.
+
+    Args:
+        option (string): value for app.cfg option CVMFS_CUSTOMIZATIONS
+        log_file (fh): logging output to
+
+    Returns:
+        cvmfs_customizations (dict): dictionary containing the customizations
+    """
+    fn = sys._getframe().f_code.co_name
+
+#        cvmfs_customizations_str = config[section].get(OPTION_CVMFS_CUSTOMIZATIONS)
+    cvmfs_customizations = {}
+    try:
+        log(f"{fn}(): cvmfs_customizations_str '{option}'", log_file=log_file)
+
+        if option is not None:
+            cvmfs_customizations = json.loads(option)
+
+        log(f"{fn}(): cvmfs_customizations '{json.dumps(cvmfs_customizations)}'", log_file=log_file)
+    except json.decoder.JSONDecodeError as e:
+        print(e)
+        error(f"{fn}(): value for option 'cvmfs_customizations' "
+              f"({option}) could not be decoded.")
+
+    return cvmfs_customizations
 
 
 def get_section(name):
