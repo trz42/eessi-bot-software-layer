@@ -37,7 +37,7 @@ import time
 from connections import github
 from datetime import datetime, timezone
 from tools import args, config, run_cmd
-from tools.pr_comments import get_comment, update_comment
+from tools.pr_comments import get_submitted_job_comment, update_comment
 
 from pyghee.utils import log, error
 
@@ -252,8 +252,8 @@ class EESSIBotSoftwareLayerJobManager:
             # (b) find & get comment for this job
             # only get comment if we don't know its id yet
             if "comment_id" not in new_job:
-                # search_pattern = f"submitted.*job id `{new_job['jobid']}`"
-                new_job_cmnt = get_comment(pr, new_job['jobid'])
+                new_job_cmnt = get_submitted_job_comment(pr, new_job['jobid'])
+
                 if new_job_cmnt:
                     log(
                         "process_new_job(): found comment with id %s"
@@ -330,8 +330,7 @@ class EESSIBotSoftwareLayerJobManager:
 
         # determine comment to be updated
         if "comment_id" not in finished_job:
-            # search_pattern = f"submitted.*job id `{finished_job['jobid']}`"
-            finished_job_cmnt = get_comment(pull_request, finished_job['jobid'])
+            finished_job_cmnt = get_submitted_job_comment(pull_request, finished_job['jobid'])
 
             if finished_job_cmnt:
                 log(
