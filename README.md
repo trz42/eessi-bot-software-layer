@@ -534,3 +534,67 @@ or in case of failure
 
 IMAGE-SCREENSHOT
 
+# Debugging a failing build job
+
+Every now and then a build job will fail as indicated with 'FAILURE' in the comment column (see image below).
+
+[Example job that failed](docs/img/job-failure-1.png)
+
+Typically the first step is to look into the output of the job, e.g.,
+the Slurm output file `/cluster/projects/nn9992k/pilot.nessi/PR62/jobs/2022.11/pr_49/7203357/slurm-7203357.out`
+in case of the example shown in the above image. Sometimes the build
+job failed because of a transient problem such as a source file that
+could temporarily not be downloaded (case 1). At other times more debug
+output is needed to investigate the problem and subsequently changes to
+the build procedure may be needed (case 2).
+
+In both cases the pull request to the software-layer could be modified
+and the building could be restarted by resending the labeled event (via
+the smee channel webpage or GitHub) or by clearing and setting the
+`bot:build` label. However, this may be a bit cumbersome and also
+trigger the rebuild for all other targets and bot instances too even if
+they succeeded. Hence, a tool for only locally resubmitting a job
+including potential changes was developed. The tool updates the PR
+comment and integrates seamlessly with the job manager, that is, any
+resubmitted job will be controlled by the job manager and comments to the
+PR will be updated as if the job was submitted by the event handler. See
+image below where also the resubmitted job failed.
+
+[Example resubmitted job that failed](docs/img/job-resubmitted-failure.png)
+
+A job without any changes (case 1) can be easily resubmitted by running the
+following command in the directory of the job that failed (in the above
+example that would be directory
+`/cluster/projects/nn9992k/pilot.nessi/PR62/jobs/2022.11/pr_49/7203357`)
+
+```
+cd /cluster/projects/nn9992k/pilot.nessi/PR62/jobs/2022.11/pr_49/7203357
+resubmit.py
+```
+If `resubmit.py` is not in the `PATH` prefix it with the location of the
+`eessi-bot-software-layer` repository.
+
+The directory of the original job can also be given via the command line
+parameter `-o` or `--original-job-dir`, e.g.,
+
+```
+resubmit.py -o /cluster/projects/nn9992k/pilot.nessi/PR62/jobs/2022.11/pr_49/7203357
+```
+
+In case a simple rerun of the job does not succeed, more in-depth analysis
+is necessary. For example, the build script of the software-layer pull request
+`EESSI-pilot-install-software.sh` could be modified to only build a problematic
+package (or even just a dependency), to log more debugging information or the
+retain build logs. Any changes can be easily achieved by preparing them in a
+separate directory, say `debug_1` (can be located anywhere on the filesystem, but
+a subdirectory of the failed job may be good practice) and providing its location
+with the parameters `-m` or `--modified-job-dir`. All files stored in that
+directory are copied into a freshly downloaded pull request (as was done for the
+original job). For example, the `debug_1` directory could contain a modified
+`EESSI-pilot-install-software.sh`. The command to resubmit the job would then be
+
+```
+resubmit.py -m debug_1
+```
+if `debug_1` is in the current directory. Command line arguments `-o` and `-m` can
+be combined.
