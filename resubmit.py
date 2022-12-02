@@ -249,7 +249,7 @@ def copy_contents(source_directory: str, target_directory: str) -> bool:
     Returns:
         result (bool): True if successful, False otherwise
     """
-    for root, dirs, files in os.walk(source_directory):
+    for root, _dirs, files in os.walk(source_directory):
         # path = root.split(os.sep)
         # base = os.path.basename(root)
         # dirname = os.path.dirname(root)
