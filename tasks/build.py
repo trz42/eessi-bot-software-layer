@@ -315,6 +315,9 @@ def create_metadata(job, repo_name, pr, job_id):
     # create _bot_job<jobid>.metadata file in submission directory
     bot_jobfile = configparser.ConfigParser()
     bot_jobfile['PR'] = {'repo': repo_name, 'pr_number': pr.number}
+    bot_jobfile['ARCH'] = {'architecture': '-'.join(job[1].split('/')[1:]),
+                           'os': job[1].split('/')[0],
+                           'slurm_opt': job[2], }
     bot_jobfile_path = os.path.join(job[0], f'_bot_job{job_id}.metadata')
     with open(bot_jobfile_path, 'w') as bjf:
         bot_jobfile.write(bjf)
