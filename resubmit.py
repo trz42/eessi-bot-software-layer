@@ -425,7 +425,10 @@ def submit_job(job, cfg, ym, pr):
         jobs_base_dir = buildenv[config.OPTION_JOBS_BASE_DIR]
         job_id = submit.stdout.split()[3]
         pr_id = f"pr_{pr.number}"
-        symlink = os.path.join(jobs_base_dir, ym, pr_id, job_id)
+        pr_dir = os.path.join(jobs_base_dir, ym, pr_id)
+        # ensure that parent directory of symlink exists
+        os.makedirs(pr_dir, exist_ok=True)
+        symlink = os.path.join(pr_dir, job_id)
         print(f"{fn}(): symlinking {symlink} -> {job[0]}")
         os.symlink(job[0], symlink)
 
