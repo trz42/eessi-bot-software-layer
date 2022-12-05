@@ -35,6 +35,7 @@ import time
 
 
 from connections import github
+from tools.args import job_manager_parse
 from datetime import datetime, timezone
 from tools import args, config, run_cmd
 from tools.pr_comments import get_submitted_job_comment, update_comment
@@ -55,7 +56,9 @@ class EESSIBotSoftwareLayerJobManager:
 
     def get_current_jobs(self):
         # who am i
-        username = os.getlogin()
+        username = os.getenv('USER', None)
+        if username is None:
+            raise Exception("Unable to find username")
 
         squeue_cmd = "%s --long --user=%s" % (self.poll_command, username)
         squeue_output, squeue_err, squeue_exitcode = run_cmd(
@@ -480,7 +483,8 @@ class EESSIBotSoftwareLayerJobManager:
 
 def main():
     """Main function."""
-    opts = args.parse()
+
+    opts = job_manager_parse()
     config.read_file("app.cfg")
     github.connect()
 
