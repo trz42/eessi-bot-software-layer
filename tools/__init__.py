@@ -53,7 +53,7 @@ def run_cmd(cmd, log_msg='', working_dir=None):
 
 
 def run_subprocess(cmd, log_msg, working_dir):
-    """Runs a command in the shell
+    """Runs a command in the shell. No error is raised if the command fails, the exit code is returned in all scenarios.
 
     Args:
         cmd (string): command to run
