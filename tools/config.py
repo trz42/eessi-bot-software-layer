@@ -22,7 +22,7 @@ def read_file(path):
     global _config
     try:
         _config = configparser.ConfigParser()
-        _config.read_file(path)
+        _config.read(path)
     except Exception as e:
         print(e)
         error(f'Unable to read configuration file {path}!')
