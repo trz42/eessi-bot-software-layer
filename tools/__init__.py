@@ -71,9 +71,9 @@ def run_subprocess(cmd, log_msg, working_dir):
         working_dir = os.getcwd()
 
     if log_msg:
-        log(f"run_cmd(): '{log_msg}' by running '{cmd}' in directory '{working_dir}'")
+        log(f"run_subprocess(): '{log_msg}' by running '{cmd}' in directory '{working_dir}'")
     else:
-        log(f"run_cmd(): Running '{cmd}' in directory '{working_dir}'")
+        log(f"run_subprocess(): Running '{cmd}' in directory '{working_dir}'")
 
     result = subprocess.run(cmd,
                             cwd=working_dir,
