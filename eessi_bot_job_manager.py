@@ -81,13 +81,15 @@ class EESSIBotSoftwareLayerJobManager:
             # assume lines 2 to len(lines) contain jobs
             job = lines[i].rstrip().split()
             if len(job) == 9:
-                current_jobs[job[0]] = {
-                    "jobid": job[0],
-                    "state": job[4],
+                job_id = job[0]
+                state = job[4]
+                current_jobs[job_id] = {
+                    "jobid": job_id,
+                    "state": state,
                     "reason": job[8],
                 }
-                if current_jobs[job[0]]['state'] in bad_state_messages:
-                    error("Job {} in state {}: {}".format(job[0], job[4], bad_state_messages[job[4]]))
+                if state in bad_state_messages:
+                    error("Job {} in state {}: {}".format(job_id, state, bad_state_messages[state]))
 
         return current_jobs
 
