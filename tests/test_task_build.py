@@ -6,6 +6,7 @@
 #
 # author: Kenneth Hoste (@boegel)
 # author: Hafsa Naeem (@hafsa-naeem)
+# author: Jacob Ziemke (@jacobz137)
 #
 # license: GPLv2
 #
@@ -13,8 +14,8 @@
 from tools import run_subprocess
 
 
-def test_run_cmd(tmpdir):
-    """Tests for run_cmd function."""
+def test_run_subprocess(tmpdir):
+    """Tests for run_subprocess function."""
     output, err, exit_code = run_subprocess("echo hello", 'test', tmpdir)
     assert exit_code == 0
     assert output == "hello\n"
