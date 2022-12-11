@@ -336,13 +336,17 @@ class EESSIBotSoftwareLayerJobManager:
                     self.logfile,
                 )
                 running_job["comment_id"] = running_job_cmnt.id
+                running_job["comment_body"] = running_job_cmnt.body
 
         if "comment_id" in running_job:
             dt = datetime.now(timezone.utc)
-            update = "\n|%s|" % dt.strftime("%b %d %X %Z %Y")
-            update += "Running|Job id %s is in running state" % running_job['jobid']
-            update_comment(running_job["comment_id"], pullrequest, update)
-
+            running_msg = "job %s is running" % running_job['jobid']
+            if "comment_body" in running_job and running_msg in running_job["comment_body"]:
+                log("Not updating comment, '%s' already found" % running_msg)
+            else:
+                update = "\n|%s|" % dt.strftime("%b %d %X %Z %Y")
+                update += "running|" + running_msg
+                update_comment(running_job["comment_id"], pullrequest, update)
         else:
             log(
                 "process_running_job(): did not obtain/find a comment"
