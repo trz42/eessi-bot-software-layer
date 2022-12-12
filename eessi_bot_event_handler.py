@@ -91,7 +91,7 @@ class EESSIBotSoftwareLayer(PyGHee):
             handler(event_info, pr)
         else:
             log("No handler for PR action '%s'" % action)
-    
+
     def start(self, app, port=None):
         start_msg = "EESSI bot for software layer started!"
         print(start_msg)
@@ -99,15 +99,11 @@ class EESSIBotSoftwareLayer(PyGHee):
         port_info = "app is listening on port %s" % port
         print(port_info)
         log(port_info)
-       # waitress.serve(app, listen='*:%s' % opts.port)
         my_logfile = os.path.join(os.getcwd(), "pyghee.log")
-
         log_file_info = "logging in to %s" % my_logfile
         print(log_file_info)
         log(log_file_info)
         waitress.serve(app, listen='*:%s' % port)
-
-        
 
 
 def main():
@@ -127,8 +123,6 @@ def main():
         # Run as web app
         app = create_app(klass=EESSIBotSoftwareLayer)
         app.start(app, port=opts.port)
-
-
 
 if __name__ == '__main__':
     main()
