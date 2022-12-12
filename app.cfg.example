@@ -100,6 +100,9 @@ upload_policy = once
 # value can be a space delimited list of GH accounts
 deploy_permission = trz42
 
+[buildcfg]
+# which GH account has the permission to trigger the build 
+build_permission = Hafsa-Naeem
 
 [architecturetargets]
 # defines both for which architectures the bot will build

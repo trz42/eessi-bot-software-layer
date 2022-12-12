@@ -14,6 +14,7 @@
 import configparser
 import json
 import os
+import sys
 
 from connections import github
 from datetime import datetime, timezone
@@ -29,6 +30,8 @@ LOAD_MODULES = "load_modules"
 LOCAL_TMP = "local_tmp"
 SLURM_PARAMS = "slurm_params"
 SUBMIT_COMMAND = "submit_command"
+BUILDCFG = "buildcfg"
+BUILD_PERMISSION = "build_permission"
 
 
 def mkdir(path):
@@ -389,3 +392,25 @@ def submit_build_jobs(pr, event_info):
         create_metadata(job, repo_name, pr, job_id)
         # report submitted jobs (incl architecture, ...)
         create_pr_comments(job, job_id, app_name, job_comment, pr, repo_name, gh, symlink)
+
+
+def build_built_artefacts(pr, event_info):
+    funcname = sys._getframe().f_code.co_name
+
+    log(f"{funcname}(): build for PR {pr.number}")
+
+    buildcfg = config.get_section(BUILDCFG)
+
+    # verify that the GH account that set label bot:build has the
+    # permission to trigger the deployment
+    build_permission = buildcfg.get(BUILD_PERMISSION, '')
+    log(f"{funcname}(): build permission '{build_permission}'")
+
+    build_labeler = event_info['raw_request_body']['sender']['login']
+    if build_labeler not in build_permission.split():
+        log(f"{funcname}(): GH account '{build_labeler}' is not authorized to build")
+        # TODO update PR comments for this bot instance?
+        return
+    else:
+        log(f"{funcname}(): GH account '{build_labeler}' is authorized to build")
+        submit_build_jobs(pr, event_info)
