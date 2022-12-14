@@ -89,7 +89,7 @@ class EESSIBotSoftwareLayerJobManager:
                     "reason": job[8],
                 }
                 if state in bad_state_messages:
-                    error("Job {} in state {}: {}".format(job_id, state, bad_state_messages[state]))
+                    log("Job {} in state {}: {}".format(job_id, state, bad_state_messages[state]))
 
         return current_jobs
 
