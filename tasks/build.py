@@ -30,7 +30,6 @@ LOAD_MODULES = "load_modules"
 LOCAL_TMP = "local_tmp"
 SLURM_PARAMS = "slurm_params"
 SUBMIT_COMMAND = "submit_command"
-BUILDCFG = "buildcfg"
 BUILD_PERMISSION = "build_permission"
 
 
@@ -394,23 +393,31 @@ def submit_build_jobs(pr, event_info):
         create_pr_comments(job, job_id, app_name, job_comment, pr, repo_name, gh, symlink)
 
 
-def build_built_artefacts(pr, event_info):
+def check_build_permission(pr, event_info):
+    """check if the GH account is authorized to trigger build
+
+    Args:
+        pr (object): pr details
+        event_info (string): event received by event_handler
+
+    """
     funcname = sys._getframe().f_code.co_name
 
     log(f"{funcname}(): build for PR {pr.number}")
 
-    buildcfg = config.get_section(BUILDCFG)
+    buildenv = config.get_section('buildenv')
 
     # verify that the GH account that set label bot:build has the
-    # permission to trigger the deployment
-    build_permission = buildcfg.get(BUILD_PERMISSION, '')
+    # permission to trigger the build
+    build_permission = buildenv.get(BUILD_PERMISSION, '')
+
     log(f"{funcname}(): build permission '{build_permission}'")
 
     build_labeler = event_info['raw_request_body']['sender']['login']
     if build_labeler not in build_permission.split():
         log(f"{funcname}(): GH account '{build_labeler}' is not authorized to build")
         # TODO update PR comments for this bot instance?
-        return
+        return False
     else:
         log(f"{funcname}(): GH account '{build_labeler}' is authorized to build")
-        submit_build_jobs(pr, event_info)
+        return True

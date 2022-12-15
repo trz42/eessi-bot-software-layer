@@ -18,7 +18,7 @@ import waitress
 from connections import github
 from tools import config
 from tools.args import event_handler_parse
-from tasks.build import build_built_artefacts
+from tasks.build import check_build_permission, submit_build_jobs
 from tasks.deploy import deploy_built_artefacts
 
 from pyghee.lib import PyGHee, create_app, get_event_info, read_event_from_json
@@ -59,7 +59,9 @@ class EESSIBotSoftwareLayer(PyGHee):
 
         if label == "bot:build":
             # run function to build software stack
-            build_built_artefacts(pr, event_info)
+            if check_build_permission(pr, event_info):
+                submit_build_jobs(pr, event_info)
+
         elif label == "bot:deploy":
             # run function to deploy built artefacts
             deploy_built_artefacts(pr, event_info)
