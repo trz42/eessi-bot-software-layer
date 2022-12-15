@@ -92,7 +92,13 @@ class EESSIBotSoftwareLayer(PyGHee):
         else:
             log("No handler for PR action '%s'" % action)
 
-    def start(self, app, port=None):
+    def start(self, app, port=3000):
+        """starts the app and log information in the log file
+
+        Args:
+            app (object): instance of class EESSIBotSoftwareLayer
+            port (int, optional): Defaults to 3000.
+        """
         start_msg = "EESSI bot for software layer started!"
         print(start_msg)
         log(start_msg)
