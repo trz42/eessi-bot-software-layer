@@ -87,6 +87,15 @@ class EESSIBotSoftwareLayerJobManager:
         return current_jobs
 
     def determine_running_jobs(self, known_jobs, current_jobs):
+        """ determine which jobs are in running state
+
+        Args:
+            known_jobs (dict): dictionary containing data of known jobs
+            current_jobs (dict): dictionary containing data of current jobs
+
+        Returns:
+            running_jobs (dict): dictionary containing data of ruuning jobs
+        """
         running_jobs = []
         for rkey in current_jobs:
             if rkey in known_jobs:
