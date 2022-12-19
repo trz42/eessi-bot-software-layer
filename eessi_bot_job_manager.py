@@ -86,6 +86,23 @@ class EESSIBotSoftwareLayerJobManager:
 
         return current_jobs
 
+    def determine_running_jobs(self, known_jobs, current_jobs):
+        """ determine which jobs are in running state
+
+        Args:
+            known_jobs (dict): dictionary containing data of known jobs
+            current_jobs (dict): dictionary containing data of current jobs
+
+        Returns:
+            running_jobs (dict): dictionary containing data of ruuning jobs
+        """
+        running_jobs = []
+        for rkey in current_jobs:
+            if rkey in known_jobs:
+                running_jobs.append(rkey)
+
+        return running_jobs
+
     # known_jobs = job_manager.get_known_jobs()
     def get_known_jobs(self):
         # find all symlinks resembling job ids (digits only) in jobdir
@@ -290,6 +307,69 @@ class EESSIBotSoftwareLayerJobManager:
             )
 
         return True
+
+    def process_running_jobs(self, running_job):
+        """process the jobs in running state and print comment
+
+        Args:
+            running_job (dict): dictionary containing data of the running jobs
+
+        Raises:
+            Exception: raise exception if there is no metadata file
+        """
+
+        gh = github.get_instance()
+
+        # set some variables for accessing work dir of job
+        job_dir = os.path.join(self.submitted_jobs_dir, running_job["jobid"])
+
+        # TODO create function for obtaining values from metadata file
+        #        might be based on allowing multiple configuration files
+        #        in tools/config.py
+        metadata_file = "_bot_job%s.metadata" % running_job["jobid"]
+        job_metadata_path = os.path.join(job_dir, metadata_file)
+
+        # check if metadata file exist
+        metadata_pr = self.read_job_pr_metadata(job_metadata_path)
+        if metadata_pr is None:
+            raise Exception("Unable to find metadata file")
+
+        # get repo name
+        repo_name = metadata_pr.get("repo", "")
+        # get pr number
+        pr_number = metadata_pr.get("pr_number", None)
+
+        repo = gh.get_repo(repo_name)
+        pullrequest = repo.get_pull(int(pr_number))
+
+        # determine comment to be updated
+        if "comment_id" not in running_job:
+            running_job_cmnt = get_submitted_job_comment(pullrequest, running_job['jobid'])
+
+            if running_job_cmnt:
+                log(
+                    "process_running_job(): found comment with id %s"
+                    % running_job_cmnt.id,
+                    self.logfile,
+                )
+                running_job["comment_id"] = running_job_cmnt.id
+                running_job["comment_body"] = running_job_cmnt.body
+
+        if "comment_id" in running_job:
+            dt = datetime.now(timezone.utc)
+            running_msg = "job %s is running" % running_job['jobid']
+            if "comment_body" in running_job and running_msg in running_job["comment_body"]:
+                log("Not updating comment, '%s' already found" % running_msg)
+            else:
+                update = "\n|%s|" % dt.strftime("%b %d %X %Z %Y")
+                update += "running|" + running_msg
+                update_comment(running_job["comment_id"], pullrequest, update)
+        else:
+            log(
+                "process_running_job(): did not obtain/find a comment"
+                " for job '%s'" % running_job['jobid'],
+                self.logfile,
+            )
 
     # job_manager.process_finished_job(known_jobs[fj])
     def process_finished_job(self, finished_job):
@@ -576,6 +656,17 @@ def main():
             #    log("job manager main loop: skipping new job"
             #        " %s due to parameter '--jobs %s'" % (
             #          nj,opts.jobs), job_manager.logfile)
+
+        running_jobs = job_manager.determine_running_jobs(known_jobs, current_jobs)
+        log(
+            "job manager main loop: running_jobs='%s'" %
+            ",".join(running_jobs),
+            job_manager.logfile,
+        )
+
+        for rj in running_jobs:
+            if not job_manager.job_filter or rj in job_manager.job_filter:
+                job_manager.process_running_jobs(known_jobs[rj])
 
         finished_jobs = job_manager.determine_finished_jobs(
                         known_jobs, current_jobs)
