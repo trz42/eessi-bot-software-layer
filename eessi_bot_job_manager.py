@@ -43,11 +43,6 @@ from tools.pr_comments import get_submitted_job_comment, update_comment
 from pyghee.utils import log, error
 
 
-def mkdir(path):
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-
 class EESSIBotSoftwareLayerJobManager:
     "main class for (Slurm) job manager of EESSI bot (separate process)"
 
@@ -71,18 +66,28 @@ class EESSIBotSoftwareLayerJobManager:
         # if any with the following information per job:
         #  jobid, state, nodelist_reason
         # skip first two lines of output ("range(2,...)")
-        # TODO check for errors of squeue call
         current_jobs = {}
         lines = str(squeue_output).rstrip().split("\n")
+        bad_state_messages = {
+            "F": "Failure",
+            "OOM": "Out of Memory",
+            "TO": "Time Out",
+        }
+
+        # get job info, logging any Slurm issues
         for i in range(2, len(lines)):
             # assume lines 2 to len(lines) contain jobs
             job = lines[i].rstrip().split()
             if len(job) == 9:
-                current_jobs[job[0]] = {
-                    "jobid": job[0],
-                    "state": job[4],
+                job_id = job[0]
+                state = job[4]
+                current_jobs[job_id] = {
+                    "jobid": job_id,
+                    "state": state,
                     "reason": job[8],
                 }
+                if state in bad_state_messages:
+                    log("Job {} in state {}: {}".format(job_id, state, bad_state_messages[state]))
 
         return current_jobs
 
@@ -471,7 +476,7 @@ class EESSIBotSoftwareLayerJobManager:
         old_symlink = os.path.join(
             self.submitted_jobs_dir, finished_job["jobid"])
         finished_jobs_dir = os.path.join(self.job_ids_dir, "finished")
-        mkdir(finished_jobs_dir)
+        os.makedirs(finished_jobs_dir, exist_ok=True)
         new_symlink = os.path.join(
             finished_jobs_dir, finished_job["jobid"])
         log(
@@ -532,7 +537,7 @@ def main():
         if poll_interval <= 0:
             poll_interval = 60
         job_manager.scontrol_command = job_mgr.get("scontrol_command") or False
-        mkdir(job_manager.submitted_jobs_dir)
+        os.makedirs(job_manager.submitted_jobs_dir, exist_ok=True)
 
     # max_iter
     #   < 0: run loop indefinitely
