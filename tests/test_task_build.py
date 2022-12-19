@@ -12,6 +12,7 @@
 #
 
 import os
+import pytest
 
 from tools import run_cmd, run_subprocess
 
@@ -25,11 +26,12 @@ def test_run_cmd(tmpdir):
     assert output == "hello\n"
     assert err == ""
 
-    output, err,  exit_code = run_cmd("ls -l /does_not_exists.txt", 'fail test', tmpdir, log_file=log_file)
+    with pytest.raises(Exception) as e_info:
+        output, err,  exit_code = run_cmd("ls -l /does_not_exists.txt", 'fail test', tmpdir, log_file=log_file)
 
-    assert exit_code != 0
-    assert output == ""
-    assert "No such file or directory" in err
+        assert exit_code != 0
+        assert output == ""
+        assert "No such file or directory" in err
 
     output, err, exit_code = run_cmd("this_command_does_not_exist", 'fail test', tmpdir, log_file=log_file)
 
