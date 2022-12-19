@@ -315,7 +315,7 @@ class EESSIBotSoftwareLayerJobManager:
             running_job (dict): dictionary containing data of the running jobs
 
         Raises:
-            Exception: raise exception if there is no meta data file
+            Exception: raise exception if there is no metadata file
         """
 
         gh = github.get_instance()
