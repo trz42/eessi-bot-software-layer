@@ -309,6 +309,14 @@ class EESSIBotSoftwareLayerJobManager:
         return True
 
     def process_running_jobs(self, running_job):
+        """process the jobs in running state and print comment
+
+        Args:
+            running_job (dict): dictionary containing data of the running jobs
+
+        Raises:
+            Exception: raise exception if there is no meta data file
+        """
 
         gh = github.get_instance()
 
