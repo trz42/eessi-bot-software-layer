@@ -11,6 +11,8 @@
 # license: GPLv2
 #
 
+import os
+
 from tools import run_cmd, run_subprocess
 
 
