@@ -67,6 +67,11 @@ slurm_params = --hold
 # full path to the job submission command
 submit_command = /usr/bin/sbatch
 
+# which GH account has the permission to trigger the build (by setting
+# the label 'bot:build' (apparently this cannot be restricted on GitHub)
+# if value is left/empty everyone can trigger the build
+# value can be a space delimited list of GH accounts
+build_permission = Hafsa-Naeem
 
 [deploycfg]
 # script for uploading built software packages to S3 bucket
