@@ -31,12 +31,14 @@ import configparser
 import glob
 import os
 import re
-import subprocess
 import time
 
+
 from connections import github
+from tools.args import job_manager_parse
 from datetime import datetime, timezone
-from tools import args, config
+from tools import config, run_cmd
+from tools.pr_comments import get_submitted_job_comment, update_comment
 
 from pyghee.utils import log, error
 
@@ -44,32 +46,28 @@ from pyghee.utils import log, error
 class EESSIBotSoftwareLayerJobManager:
     "main class for (Slurm) job manager of EESSI bot (separate process)"
 
+    def __init__(self):
+        self.logfile = os.path.join(os.getcwd(), "eessi_bot_job_manager.log")
+
     def get_current_jobs(self):
         # who am i
-        username = os.getlogin()
+        username = os.getenv('USER', None)
+        if username is None:
+            raise Exception("Unable to find username")
 
         squeue_cmd = "%s --long --user=%s" % (self.poll_command, username)
-        log(
-            "get_current_jobs(): run squeue command: %s" % squeue_cmd,
-            self.logfile,
+        squeue_output, squeue_err, squeue_exitcode = run_cmd(
+            squeue_cmd,
+            "get_current_jobs(): squeue command",
+            log_file=self.logfile,
         )
 
-        squeue = subprocess.run(
-            squeue_cmd,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        log(
-            "get_current_jobs(): squeue output\n%s" % squeue.stdout,
-            self.logfile,
-        )
         # create dictionary of jobs
         # if any with the following information per job:
         #  jobid, state, nodelist_reason
         # skip first two lines of output ("range(2,...)")
         current_jobs = {}
-        lines = str(squeue.stdout, "UTF-8").rstrip().split("\n")
+        lines = str(squeue_output).rstrip().split("\n")
         bad_state_messages = {
             "F": "Failure",
             "OOM": "Out of Memory",
@@ -159,7 +157,7 @@ class EESSIBotSoftwareLayerJobManager:
         """
         # check if metadata file exist
         if os.path.isfile(job_metadata_path):
-            log("Found metadata file at {job_metadata_path}")
+            log(f"Found metadata file at {job_metadata_path}", self.logfile)
             metadata = configparser.ConfigParser()
             try:
                 metadata.read(job_metadata_path)
@@ -173,7 +171,7 @@ class EESSIBotSoftwareLayerJobManager:
                 metadata_pr = {}
             return metadata_pr
         else:
-            log("No metadata file found at {job_metadata_path}, so not a bot job")
+            log(f"No metadata file found at {job_metadata_path}, so not a bot job", self.logfile)
             return None
 
     # job_manager.process_new_job(current_jobs[nj])
@@ -189,22 +187,16 @@ class EESSIBotSoftwareLayerJobManager:
             self.scontrol_command,
             job_id,
         )
-        log(
-            "process_new_job(): run scontrol command: %s" % scontrol_cmd,
-            self.logfile,
-        )
-
-        scontrol = subprocess.run(
+        scontrol_output, scontrol_err, scontrol_exitcode = run_cmd(
             scontrol_cmd,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            "process_new_job(): scontrol command",
+            log_file=self.logfile,
         )
 
         # parse output,
         # look for WorkDir=dir
         match = re.search(r".* WorkDir=(\S+) .*",
-                          str(scontrol.stdout, "UTF-8"))
+                          str(scontrol_output))
         if match:
             log(
                 "process_new_job(): work dir of job %s: '%s'"
@@ -221,8 +213,9 @@ class EESSIBotSoftwareLayerJobManager:
             metadata_pr = self.read_job_pr_metadata(job_metadata_path)
 
             if metadata_pr is None:
-                log("No metadata file found at {job_metadata_path} for job {jobid}, so skipping it")
-                return
+                log(f"No metadata file found at {job_metadata_path} for job {job_id}, so skipping it",
+                    self.logfile)
+                return False
 
             symlink_source = os.path.join(self.submitted_jobs_dir, job_id)
             log(
@@ -236,25 +229,11 @@ class EESSIBotSoftwareLayerJobManager:
                 self.scontrol_command,
                 job_id,
             )
-            log(
-                "process_new_job(): run scontrol command: %s" %
-                release_cmd, self.logfile,
-            )
-            release = subprocess.run(
+
+            release_output, release_err, release_exitcode = run_cmd(
                 release_cmd,
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            log(
-                "process_new_job(): scontrol out: %s"
-                % release.stdout.decode("UTF-8"),
-                self.logfile,
-            )
-            log(
-                "process_new_job(): scontrol err: %s"
-                % release.stderr.decode("UTF-8"),
-                self.logfile,
+                "process_new_job(): scontrol command",
+                log_file=self.logfile,
             )
 
             # update PR
@@ -281,37 +260,23 @@ class EESSIBotSoftwareLayerJobManager:
             # (b) find & get comment for this job
             # only get comment if we don't know its id yet
             if "comment_id" not in new_job:
-                comments = pr.get_issue_comments()
-                for comment in comments:
-                    # NOTE adjust search string if format changed by event
-                    #        handler (separate process running
-                    #        eessi_bot_event_handler.py)
-                    cms = "^Job `%s` on `%s`.*" % (
-                        job_id,
-                        config.get_section("github").get("app_name"),
+                new_job_cmnt = get_submitted_job_comment(pr, new_job['jobid'])
+
+                if new_job_cmnt:
+                    log(
+                        "process_new_job(): found comment with id %s"
+                        % new_job_cmnt.id,
+                        self.logfile,
                     )
-
-                    comment_match = re.search(cms, comment.body)
-
-                    if comment_match:
-                        log(
-                            "process_new_job(): found comment with id %s"
-                            % comment.id,
-                            self.logfile,
-                        )
-                        new_job["comment_id"] = comment.id
-                        break
+                    new_job["comment_id"] = new_job_cmnt.id
 
             # (c) add a row to the table
             # add row to status table if we found a comment
             if "comment_id" in new_job:
-                issue_comment = pr.get_issue_comment(int
-                                                     (new_job["comment_id"]))
-                original_body = issue_comment.body
                 dt = datetime.now(timezone.utc)
                 update = "\n|%s|" % dt.strftime("%b %d %X %Z %Y")
                 update += "released|job awaits launch by Slurm scheduler|"
-                issue_comment.edit(original_body + update)
+                update_comment(new_job["comment_id"], pr, update)
             else:
                 log(
                     "process_new_job(): did not obtain/find a comment"
@@ -329,7 +294,7 @@ class EESSIBotSoftwareLayerJobManager:
                 self.logfile,
             )
 
-        return
+        return True
 
     # job_manager.process_finished_job(known_jobs[fj])
     def process_finished_job(self, finished_job):
@@ -373,26 +338,15 @@ class EESSIBotSoftwareLayerJobManager:
 
         # determine comment to be updated
         if "comment_id" not in finished_job:
-            comments = pull_request.get_issue_comments()
-            for comment in comments:
-                # NOTE adjust search string if format changed by event
-                #        handler (separate process running
-                #        eessi_bot_event_handler.py)
-                cms = "^Job `%s` on `%s`.*" % (
-                    finished_job["jobid"],
-                    config.get_section("github").get("app_name"),
+            finished_job_cmnt = get_submitted_job_comment(pull_request, finished_job['jobid'])
+
+            if finished_job_cmnt:
+                log(
+                    "process_finished_job(): found comment with id %s"
+                    % finished_job_cmnt.id,
+                    self.logfile,
                 )
-
-                comment_match = re.search(cms, comment.body)
-
-                if comment_match:
-                    log(
-                        "process_finished_job(): found comment with id %s"
-                        % comment.id,
-                        self.logfile,
-                    )
-                    finished_job["comment_id"] = comment.id
-                    break
+                finished_job["comment_id"] = finished_job_cmnt.id
 
         # analyse job result
         slurm_out = os.path.join(sym_dst, "slurm-%s.out" %
@@ -509,12 +463,7 @@ class EESSIBotSoftwareLayerJobManager:
         # (c) add a row to the table
         # add row to status table if we found a comment
         if "comment_id" in finished_job:
-            issue_comment = pull_request.get_issue_comment(
-                int(finished_job["comment_id"])
-            )
-            original_body = issue_comment.body
-            dt = datetime.now(timezone.utc)
-            issue_comment.edit(original_body + comment_update)
+            update_comment(finished_job["comment_id"], pull_request, comment_update)
         else:
             log(
                 "process_finished_job(): did not obtain/find a "
@@ -539,13 +488,12 @@ class EESSIBotSoftwareLayerJobManager:
 
 def main():
     """Main function."""
-    opts = args.parse()
+
+    opts = job_manager_parse()
     config.read_file("app.cfg")
     github.connect()
 
     job_manager = EESSIBotSoftwareLayerJobManager()
-    job_manager.logfile = os.path.join(
-        os.getcwd(), "eessi_bot_job_manager.log")
     job_manager.job_filter = {}
     if opts.jobs is not None:
         job_manager.job_filter = {jobid: None
@@ -620,9 +568,15 @@ def main():
             job_manager.logfile,
         )
         # process new jobs
+        non_bot_jobs = []
         for nj in new_jobs:
+            # assume it is not a bot job
+            is_bot_job = False
             if not job_manager.job_filter or nj in job_manager.job_filter:
-                job_manager.process_new_job(current_jobs[nj])
+                is_bot_job = job_manager.process_new_job(current_jobs[nj])
+            if not is_bot_job:
+                # add job id to non_bot_jobs list
+                non_bot_jobs.append(nj)
             # else:
             #    log("job manager main loop: skipping new job"
             #        " %s due to parameter '--jobs %s'" % (
@@ -643,6 +597,10 @@ def main():
             #    log("job manager main loop: skipping finished "
             #        "job %s due"" to parameter '--jobs %s'" % (fj,opts.jobs),
             #        " job_manager.logfile)"
+
+        # remove non bot jobs from current_jobs
+        for job in non_bot_jobs:
+            current_jobs.pop(job)
 
         known_jobs = current_jobs
 
