@@ -22,6 +22,7 @@
 # author: Kenneth Hoste (@boegel)
 # author: Bob Droege (@bedroge)
 # author: Hafsa Naeem (@hafsa-naeem)
+# author: Jacob Ziemke (@jacobz137)
 # author: Thomas Roeblitz (@trz42)
 #
 # license: GPLv2

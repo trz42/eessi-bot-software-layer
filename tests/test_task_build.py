@@ -7,6 +7,7 @@
 # author: Kenneth Hoste (@boegel)
 # author: Hafsa Naeem (@hafsa-naeem)
 # author: Jacob Ziemke (@jacobz137)
+# author: Thomas Roeblitz (@trz42)
 #
 # license: GPLv2
 #
