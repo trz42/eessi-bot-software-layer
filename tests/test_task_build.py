@@ -28,11 +28,21 @@ def test_run_cmd(tmpdir):
     assert err == ""
 
     with pytest.raises(Exception):
-        output, err,  exit_code = run_cmd("ls -l /does_not_exists.txt", 'fail test', tmpdir, log_file=log_file)
+        output, err, exit_code = run_cmd("ls -l /does_not_exists.txt", 'fail test', tmpdir, log_file=log_file)
 
         assert exit_code != 0
         assert output == ""
         assert "No such file or directory" in err
+
+    output, err, exit_code = run_cmd("ls -l /does_not_exists.txt",
+                                     'fail test',
+                                     tmpdir,
+                                     log_file=log_file,
+                                     raise_on_error=False)
+
+    assert exit_code != 0
+    assert output == ""
+    assert "No such file or directory" in err
 
     with pytest.raises(Exception):
         output, err, exit_code = run_cmd("this_command_does_not_exist", 'fail test', tmpdir, log_file=log_file)
@@ -41,6 +51,17 @@ def test_run_cmd(tmpdir):
         assert output == ""
         assert ("this_command_does_not_exist: command not found" in err or
                 "this_command_does_not_exist: not found" in err)
+
+    output, err, exit_code = run_cmd("this_command_does_not_exist",
+                                     'fail test',
+                                     tmpdir,
+                                     log_file=log_file,
+                                     raise_on_error=False)
+
+    assert exit_code != 0
+    assert output == ""
+    assert ("this_command_does_not_exist: command not found" in err or
+            "this_command_does_not_exist: not found" in err)
 
     output, err, exit_code = run_cmd("echo hello", "test in file", tmpdir, log_file=log_file)
     with open(log_file, "r") as fp:
