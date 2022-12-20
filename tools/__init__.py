@@ -18,7 +18,7 @@ import subprocess
 from pyghee.utils import log
 
 
-def run_cmd(cmd, log_msg='', working_dir=None, log_file=None):
+def run_cmd(cmd, log_msg='', working_dir=None, log_file=None, raise_on_error=True):
     """Runs a command in the shell, raising an error if one occurs.
 
     Args:
@@ -26,6 +26,7 @@ def run_cmd(cmd, log_msg='', working_dir=None, log_file=None):
         log_msg (string): purpose of the command
         working_dir (string): location of arch_job_dir
         log_file (string): path to log file
+        raise_on_error (bool): raise an exception in case of error
 
     Returns:
         tuple of 3 elements containing
@@ -44,7 +45,8 @@ def run_cmd(cmd, log_msg='', working_dir=None, log_file=None):
             f"           exit code {exit_code}"
         )
         log(error_msg, log_file=log_file)
-        raise RuntimeError(error_msg)
+        if raise_on_error:
+            raise RuntimeError(error_msg)
     else:
         log(f"run_cmd(): Result for running '{cmd}' in '{working_dir}\n"
             f"           stdout '{stdout}'\n"

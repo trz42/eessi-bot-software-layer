@@ -233,7 +233,7 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number):
     upload_cmd = ' '.join(cmd_args)
 
     # run_cmd does all the logging we might need
-    out, err, ec = run_cmd(upload_cmd, 'Upload tarball to S3 bucket')
+    out, err, ec = run_cmd(upload_cmd, 'Upload tarball to S3 bucket', raise_on_error=False)
 
     if ec == 0:
         # add file to 'job_dir/../uploaded.txt'
