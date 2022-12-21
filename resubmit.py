@@ -392,6 +392,8 @@ def submit_job(job, cfg, ym, pr):
     """
     fn = sys._getframe().f_code.co_name
 
+    print(f"{fn}(): job '{'//'.join(job)}'")
+
     buildenv = cfg[config.SECTION_BUILDENV]
     command_line = " ".join([
         buildenv[config.OPTION_SUBMIT_COMMAND],
@@ -529,7 +531,7 @@ def main():
     # create _bot_job<jobid>.metadata file in submission directory
     ym = now.strftime("%Y.%m")
     print(f"{fn}(): Submit job for target '{arch_name}' from directory '{rerun_job_dir}'")
-    job_id, symlink = submit_job([rerun_job_dir, os_name, slurm_opt], cfg, ym, pr)
+    job_id, symlink = submit_job([rerun_job_dir, arch_name, slurm_opt], cfg, ym, pr)
 
     # rename job metadata file
     new_metadata_path = bot_jobfile_path.replace('TEMP', job_id, 1)
