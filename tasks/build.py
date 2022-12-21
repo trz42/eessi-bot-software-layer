@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 from pyghee.utils import log, error
 from tools import config, run_cmd
 
+BUILDENV = "buildenv"
 BUILD_JOB_SCRIPT = "build_job_script"
 CVMFS_CUSTOMIZATIONS = "cvmfs_customizations"
 HTTP_PROXY = "http_proxy"
@@ -39,24 +40,25 @@ def get_build_env_cfg():
     Returns:
          dict(str, dict): dictionary of configuration data
     """
-    buildenv = config.get_section('buildenv')
+    cfg = config.read_config('app.cfg')
+    build_cfg = cfg['buildenv']
 
-    jobs_base_dir = buildenv.get(JOBS_BASE_DIR)
+    jobs_base_dir = build_cfg[JOBS_BASE_DIR]
     log("jobs_base_dir '%s'" % jobs_base_dir)
     config_data = {JOBS_BASE_DIR: jobs_base_dir}
-    local_tmp = buildenv.get(LOCAL_TMP)
+    local_tmp = build_cfg[LOCAL_TMP]
     log("local_tmp '%s'" % local_tmp)
     config_data[LOCAL_TMP] = local_tmp
 
-    build_job_script = buildenv.get(BUILD_JOB_SCRIPT)
+    build_job_script = build_cfg[BUILD_JOB_SCRIPT]
     log("build_job_script '%s'" % build_job_script)
     config_data[BUILD_JOB_SCRIPT] = build_job_script
 
-    submit_command = buildenv.get(SUBMIT_COMMAND)
+    submit_command =build_cfg[SUBMIT_COMMAND]
     log("submit_command '%s'" % submit_command)
     config_data[SUBMIT_COMMAND] = submit_command
 
-    slurm_params = buildenv.get(SLURM_PARAMS)
+    slurm_params = build_cfg[SLURM_PARAMS]
     # always submit jobs with hold set, so job manager can release them
     slurm_params += ' --hold'
     log("slurm_params '%s'" % slurm_params)
@@ -64,7 +66,7 @@ def get_build_env_cfg():
 
     cvmfs_customizations = {}
     try:
-        cvmfs_customizations_str = buildenv.get(CVMFS_CUSTOMIZATIONS)
+        cvmfs_customizations_str = build_cfg[CVMFS_CUSTOMIZATIONS]
         log("cvmfs_customizations '%s'" % cvmfs_customizations_str)
 
         if cvmfs_customizations_str is not None:
@@ -77,15 +79,15 @@ def get_build_env_cfg():
 
     config_data[CVMFS_CUSTOMIZATIONS] = cvmfs_customizations
 
-    http_proxy = buildenv.get(HTTP_PROXY) or ''
+    http_proxy = build_cfg[HTTP_PROXY] or ''
     log("http_proxy '%s'" % http_proxy)
     config_data[HTTP_PROXY] = http_proxy
 
-    https_proxy = buildenv.get(HTTPS_PROXY) or ''
+    https_proxy = build_cfg[HTTPS_PROXY] or ''
     log("https_proxy '%s'" % https_proxy)
     config_data[HTTPS_PROXY] = https_proxy
 
-    load_modules = buildenv.get(LOAD_MODULES) or ''
+    load_modules = build_cfg[LOAD_MODULES] or ''
     log("load_modules '%s'" % load_modules)
     config_data[LOAD_MODULES] = load_modules
 
@@ -99,8 +101,10 @@ def get_architecturetargets():
         dict(str, dict): dictionary of arch_target_map which contains entries of the format
                          OS/SUBDIR : ADDITIONAL_SBATCH_PARAMETERS
     """
-    architecturetargets = config.get_section('architecturetargets')
-    arch_target_map = json.loads(architecturetargets.get('arch_target_map'))
+    cfg = config.read_config('app.cfg')
+    architecturetargets_cfg = cfg['buildenv']
+    architecturetargets = architecturetargets_cfg['architecturetargets']
+    arch_target_map = json.loads(architecturetargets_cfg['arch_target_map'])
     log("arch target map '%s'" % json.dumps(arch_target_map))
     return arch_target_map
 
@@ -355,7 +359,9 @@ def submit_build_jobs(pr, event_info):
     """
     # retrieving some settings from 'app.cfg' in bot directory
     # [github]
-    app_name = config.get_section('github').get('app_name')
+    cfg = config.read_config('app.cfg')
+    app_cfg = cfg['github']
+    app_name = app_cfg['app_name']
 
     # [buildenv]
     build_env_cfg = get_build_env_cfg()
@@ -395,16 +401,17 @@ def check_build_permission(pr, event_info):
 
     log(f"{funcname}(): build for PR {pr.number}")
 
-    buildenv = config.get_section('buildenv')
+    cfg = config.read_config('app.cfg')
+    build_cfg = cfg['buildenv']
 
     # verify that the GH account that set label bot:build has the
     # permission to trigger the build
-    build_permission = buildenv.get(BUILD_PERMISSION, '')
+    build_permission = build_cfg[BUILD_PERMISSION]
 
     log(f"{funcname}(): build permission '{build_permission}'")
 
     build_labeler = event_info['raw_request_body']['sender']['login']
-    if build_labeler not in build_permission.split():
+    if build_labeler not in build_cfg[BUILD_PERMISSION]:
         log(f"{funcname}(): GH account '{build_labeler}' is not authorized to build")
         # TODO update PR comments for this bot instance?
         return False
