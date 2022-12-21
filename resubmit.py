@@ -400,11 +400,11 @@ def submit_job(job, cfg, ym, pr):
         buildenv[config.OPTION_BUILD_JOB_SCRIPT],
         "--tmpdir", buildenv[config.OPTION_LOCAL_TMP],
     ])
-    if buildenv[config.OPTION_HTTP_PROXY] is not None:
+    if len(buildenv[config.OPTION_HTTP_PROXY]) > 0:
         command_line += f" --http-proxy {buildenv[config.OPTION_HTTP_PROXY]}"
-    if buildenv[config.OPTION_HTTPS_PROXY] is not None:
+    if len(buildenv[config.OPTION_HTTPS_PROXY]) > 0:
         command_line += f" --https-proxy {buildenv[config.OPTION_HTTPS_PROXY]}"
-    if buildenv[config.OPTION_LOAD_MODULES] is not None:
+    if len(buildenv[config.OPTION_LOAD_MODULES]) > 0:
         command_line += f" --load-modules {buildenv[config.OPTION_LOAD_MODULES]}"
     # TODO the handling of generic targets requires a bit knowledge about
     #      the internals of building the software layer, maybe ok for now,
