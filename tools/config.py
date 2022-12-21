@@ -9,6 +9,7 @@
 # license: GPLv2
 #
 import configparser
+import sys
 
 from .logging import error
 
@@ -26,6 +27,24 @@ def read_file(path):
     except Exception as e:
         print(e)
         error(f'Unable to read configuration file {path}!')
+
+
+def read_config(path):
+    """Read the config file
+    Args:
+        path (string): path to the configuration file
+    Returns:
+        dict (str, dict): dictionary containing configuration settings
+    """
+    fn = sys._getframe().f_code.co_name
+
+    config = configparser.ConfigParser()
+    try:
+        config.read(path)
+    except Exception:
+        error(f"{fn}(): Unable to read configuration file {path}!")
+
+    return config
 
 
 def get_section(name):

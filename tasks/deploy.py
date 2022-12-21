@@ -382,6 +382,7 @@ def determine_tarballs_to_deploy(successes, upload_policy):
     return to_be_deployed
 
 
+
 def deploy_built_artefacts(pr, event_info):
     """Deploy built artefacts.
 
@@ -391,17 +392,13 @@ def deploy_built_artefacts(pr, event_info):
     """
     funcname = sys._getframe().f_code.co_name
 
-    log(f"{funcname}(): deploy for PR {pr.number}")
-
-    deploycfg = config.get_section(DEPLOYCFG)
-
     # verify that the GH account that set label bot:deploy has the
     # permission to trigger the deployment
-    deploy_permission = deploycfg.get(DEPLOY_PERMISSION, '')
-    log(f"{funcname}(): deploy permission '{deploy_permission}'")
+    cfg = config.read_config('app.cfg')
+    deploy_cfg = cfg[DEPLOYCFG]
 
     labeler = event_info['raw_request_body']['sender']['login']
-    if labeler not in deploy_permission.split():
+    if labeler not in deploy_cfg[DEPLOY_PERMISSION]:
         log(f"{funcname}(): GH account '{labeler}' is not authorized to deploy")
         # TODO update PR comments for this bot instance?
         return
@@ -409,8 +406,7 @@ def deploy_built_artefacts(pr, event_info):
         log(f"{funcname}(): GH account '{labeler}' is authorized to deploy")
 
     # get upload policy from config
-    upload_policy = deploycfg.get(UPLOAD_POLICY)
-    log(f"{funcname}(): upload policy '{upload_policy}'")
+    upload_policy = deploy_cfg[UPLOAD_POLICY]
 
     if upload_policy == "none":
         return
