@@ -382,7 +382,6 @@ def determine_tarballs_to_deploy(successes, upload_policy):
     return to_be_deployed
 
 
-
 def deploy_built_artefacts(pr, event_info):
     """Deploy built artefacts.
 
