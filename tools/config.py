@@ -13,23 +13,8 @@ import sys
 
 from .logging import error
 
-_config = {}
 
-
-def read_file(path):
-    """
-    Read a given configuration file.
-    """
-    global _config
-    try:
-        _config = configparser.ConfigParser()
-        _config.read(path)
-    except Exception as e:
-        print(e)
-        error(f'Unable to read configuration file {path}!')
-
-
-def read_config(path):
+def read_config(path='app.cfg'):
     """Read the config file
     Args:
         path (string): path to the configuration file
@@ -38,17 +23,10 @@ def read_config(path):
     """
     fn = sys._getframe().f_code.co_name
 
-    config = configparser.ConfigParser()
     try:
+        config = configparser.ConfigParser()
         config.read(path)
     except Exception:
         error(f"{fn}(): Unable to read configuration file {path}!")
 
     return config
-
-
-def get_section(name):
-    if name in _config:
-        return _config[name]
-    else:
-        return {}
