@@ -48,7 +48,9 @@ class EESSIBotSoftwareLayerJobManager:
     "main class for (Slurm) job manager of EESSI bot (separate process)"
 
     def __init__(self):
-        self.logfile = os.path.join(os.getcwd(), "eessi_bot_job_manager.log")
+        cfg = config.read_config()
+        job_manager_cfg = cfg['job_manager']
+        self.logfile = job_manager_cfg.get('log_path')
 
     def get_current_jobs(self):
         # who am i

@@ -23,10 +23,15 @@ from tasks.deploy import deploy_built_artefacts
 
 from pyghee.lib import PyGHee, create_app, get_event_info, read_event_from_json
 from pyghee.utils import log
-import os
 
 
 class EESSIBotSoftwareLayer(PyGHee):
+    def log(self, msg):
+        cfg = config.read_config()
+        event_handler_cfg = cfg['event_handler']
+        self.logfile = event_handler_cfg.get('log_path')
+        log(msg, log_file=self.logfile)
+
     def handle_issue_comment_event(self, event_info, log_file=None):
         """
         Handle adding/removing of comment in issue or PR.
@@ -35,8 +40,8 @@ class EESSIBotSoftwareLayer(PyGHee):
         issue_url = request_body['issue']['url']
         comment_author = request_body['comment']['user']['login']
         comment_txt = request_body['comment']['body']
-        log("Comment posted in %s by @%s: %s" % (issue_url, comment_author, comment_txt))
-        log("issue_comment event handled!", log_file=log_file)
+        self.log("Comment posted in %s by @%s: %s" % (issue_url, comment_author, comment_txt))
+        self.log("issue_comment event handled!")
 
     def handle_installation_event(self, event_info, log_file=None):
         """
@@ -46,8 +51,8 @@ class EESSIBotSoftwareLayer(PyGHee):
         user = request_body['sender']['login']
         action = request_body['action']
         # repo_name = request_body['repositories'][0]['full_name'] # not every action has that attribute
-        log("App installation event by user %s with action '%s'" % (user, action))
-        log("installation event handled!", log_file=log_file)
+        self.log("App installation event by user %s with action '%s'" % (user, action))
+        self.log("installation event handled!")
 
     def handle_pull_request_labeled_event(self, event_info, pr):
         """
@@ -56,7 +61,7 @@ class EESSIBotSoftwareLayer(PyGHee):
 
         # determine label
         label = event_info['raw_request_body']['label']['name']
-        log("Process PR labeled event: PR#%s, label '%s'" % (pr.number, label))
+        self.log("Process PR labeled event: PR#%s, label '%s'" % (pr.number, label))
 
         if label == "bot:build":
             # run function to build software stack
@@ -67,13 +72,13 @@ class EESSIBotSoftwareLayer(PyGHee):
             # run function to deploy built artefacts
             deploy_built_artefacts(pr, event_info)
         else:
-            log("handle_pull_request_labeled_event: no handler for label '%s'" % label)
+            self.log("handle_pull_request_labeled_event: no handler for label '%s'" % label)
 
     def handle_pull_request_opened_event(self, event_info, pr):
         """
         Handle opening of a pull request.
         """
-        log("PR opened: waiting for label bot:build")
+        self.log("PR opened: waiting for label bot:build")
 
     def handle_pull_request_event(self, event_info, log_file=None):
         """
@@ -81,18 +86,18 @@ class EESSIBotSoftwareLayer(PyGHee):
         """
         action = event_info['action']
         gh = github.get_instance()
-        log("repository: '%s'" % event_info['raw_request_body']['repository']['full_name'])
+        self.log("repository: '%s'" % event_info['raw_request_body']['repository']['full_name'])
         pr = gh.get_repo(event_info['raw_request_body']['repository']
                          ['full_name']).get_pull(event_info['raw_request_body']['pull_request']['number'])
-        log("PR data: %s" % pr)
+        self.log("PR data: %s" % pr)
 
         handler_name = 'handle_pull_request_%s_event' % action
         if hasattr(self, handler_name):
             handler = getattr(self, handler_name)
-            log("Handling PR action '%s' for PR #%d..." % (action, pr.number))
+            self.log("Handling PR action '%s' for PR #%d..." % (action, pr.number))
             handler(event_info, pr)
         else:
-            log("No handler for PR action '%s'" % action)
+            self.log("No handler for PR action '%s'" % action)
 
     def start(self, app, port=3000):
         """starts the app and log information in the log file
@@ -103,14 +108,16 @@ class EESSIBotSoftwareLayer(PyGHee):
         """
         start_msg = "EESSI bot for software layer started!"
         print(start_msg)
-        log(start_msg)
+        self.log(start_msg)
         port_info = "app is listening on port %s" % port
         print(port_info)
-        log(port_info)
-        my_logfile = os.path.join(os.getcwd(), "pyghee.log")
+        self.log(port_info)
+        cfg = config.read_config()
+        event_handler_cfg = cfg['event_handler']
+        my_logfile = event_handler_cfg.get('log_path')
         log_file_info = "logging in to %s" % my_logfile
         print(log_file_info)
-        log(log_file_info)
+        self.log(log_file_info)
         waitress.serve(app, listen='*:%s' % port)
 
 
@@ -126,7 +133,7 @@ def main():
         event_info = get_event_info(event)
         app.handle_event(event_info)
     elif opts.cron:
-        log("Running in cron mode")
+        app.log("Running in cron mode")
     else:
         # Run as web app
         app = create_app(klass=EESSIBotSoftwareLayer)
