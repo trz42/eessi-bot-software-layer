@@ -391,7 +391,7 @@ def deploy_built_artefacts(pr, event_info):
         event_info (dict): dictionary containing event information
     """
     funcname = sys._getframe().f_code.co_name
-    
+
     log(f"{funcname}(): deploy for PR {pr.number}")
 
     cfg = config.read_config()

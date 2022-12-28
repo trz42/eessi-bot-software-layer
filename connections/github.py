@@ -20,7 +20,6 @@ _gh = None
 
 def get_token():
     global _token
-    
     cfg = config.read_config()
     github_cfg = cfg['github']
     app_id = github_cfg.get('app_id')

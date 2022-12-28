@@ -50,9 +50,6 @@ class EESSIBotSoftwareLayerJobManager:
     def __init__(self):
         self.logfile = os.path.join(os.getcwd(), "eessi_bot_job_manager.log")
 
-    def log(self, msg):
-        log(msg, log_file=self.logfile)
-
     def get_current_jobs(self):
         # who am i
         username = os.getenv('USER', None)
@@ -574,6 +571,8 @@ def main():
     """Main function."""
 
     opts = job_manager_parse()
+
+    # config is read to raise an exception early when the job_manager runs.
     config.read_config()
     github.connect()
 
