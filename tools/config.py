@@ -9,27 +9,24 @@
 # license: GPLv2
 #
 import configparser
+import sys
 
 from .logging import error
 
-_config = {}
 
+def read_config(path='app.cfg'):
+    """Read the config file
+    Args:
+        path (string): path to the configuration file
+    Returns:
+        dict (str, dict): dictionary containing configuration settings
+    """
+    fn = sys._getframe().f_code.co_name
 
-def read_file(path):
-    """
-    Read a given configuration file.
-    """
-    global _config
     try:
-        _config = configparser.ConfigParser()
-        _config.read(path)
-    except Exception as e:
-        print(e)
-        error(f'Unable to read configuration file {path}!')
+        config = configparser.ConfigParser()
+        config.read(path)
+    except Exception:
+        error(f"{fn}(): Unable to read configuration file {path}!")
 
-
-def get_section(name):
-    if name in _config:
-        return _config[name]
-    else:
-        return {}
+    return config

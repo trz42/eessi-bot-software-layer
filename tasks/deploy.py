@@ -211,7 +211,8 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number):
     log(f"{funcname}(): deploying build '{abs_path}'")
 
     # obtain config settings
-    deploycfg = config.get_section(DEPLOYCFG)
+    cfg = config.read_config()
+    deploycfg = cfg[DEPLOYCFG]
     upload_to_s3_script = deploycfg.get(UPLOAD_TO_S3_SCRIPT)
     endpoint_url = deploycfg.get(ENDPOINT_URL) or ''
     bucket_name = deploycfg.get(BUCKET_NAME)
@@ -393,14 +394,15 @@ def deploy_built_artefacts(pr, event_info):
 
     log(f"{funcname}(): deploy for PR {pr.number}")
 
-    deploycfg = config.get_section(DEPLOYCFG)
-
-    # verify that the GH account that set label bot:deploy has the
-    # permission to trigger the deployment
-    deploy_permission = deploycfg.get(DEPLOY_PERMISSION, '')
+    cfg = config.read_config()
+    deploy_cfg = cfg[DEPLOYCFG]
+    deploy_permission = deploy_cfg.get(DEPLOY_PERMISSION, '')
     log(f"{funcname}(): deploy permission '{deploy_permission}'")
 
     labeler = event_info['raw_request_body']['sender']['login']
+
+    # verify that the GH account that set label bot:deploy has the
+    # permission to trigger the deployment
     if labeler not in deploy_permission.split():
         log(f"{funcname}(): GH account '{labeler}' is not authorized to deploy")
         # TODO update PR comments for this bot instance?
@@ -409,7 +411,7 @@ def deploy_built_artefacts(pr, event_info):
         log(f"{funcname}(): GH account '{labeler}' is authorized to deploy")
 
     # get upload policy from config
-    upload_policy = deploycfg.get(UPLOAD_POLICY)
+    upload_policy = deploy_cfg.get(UPLOAD_POLICY)
     log(f"{funcname}(): upload policy '{upload_policy}'")
 
     if upload_policy == "none":

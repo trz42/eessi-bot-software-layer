@@ -117,7 +117,9 @@ class EESSIBotSoftwareLayer(PyGHee):
 def main():
     """Main function."""
     opts = event_handler_parse()
-    config.read_file("app.cfg")
+
+    # config is read to raise an exception early when the event_handler starts.
+    config.read_config()
     github.connect()
 
     if opts.file:

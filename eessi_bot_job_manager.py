@@ -571,7 +571,9 @@ def main():
     """Main function."""
 
     opts = job_manager_parse()
-    config.read_file("app.cfg")
+
+    # config is read to raise an exception early when the job_manager runs.
+    config.read_config()
     github.connect()
 
     job_manager = EESSIBotSoftwareLayerJobManager()
@@ -608,7 +610,8 @@ def main():
     poll_interval = 0
     job_manager.scontrol_command = ""
     if max_iter != 0:
-        job_mgr = config.get_section("job_manager")
+        cfg = config.read_config()
+        job_mgr = cfg["job_manager"]
         job_manager.job_ids_dir = job_mgr.get("job_ids_dir")
         job_manager.submitted_jobs_dir = os.path.join(
             job_manager.job_ids_dir, "submitted"
