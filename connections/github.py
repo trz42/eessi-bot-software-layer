@@ -39,14 +39,16 @@ def get_token():
             # Note that installation access tokens last only for 1 hour,
             # you will need to regenerate them after they expire.
             _token = github_integration.get_access_token(installation_id)
+            break
         except NotImplementedError as err:
             if i < tries - 1:
-                time.sleep(0.8)
+                n = 0.8
+                t = n*(i+1)
+                time.sleep(t)
                 continue
             else:
                 logging.error(err)
                 _token = None
-        break
 
     return _token
 
