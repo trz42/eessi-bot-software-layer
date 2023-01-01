@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 from pyghee.utils import log, error
 from tools import config, run_cmd
 
+BUILDENV = "buildenv"
 BUILD_JOB_SCRIPT = "build_job_script"
 CVMFS_CUSTOMIZATIONS = "cvmfs_customizations"
 HTTP_PROXY = "http_proxy"
@@ -31,6 +32,7 @@ LOCAL_TMP = "local_tmp"
 SLURM_PARAMS = "slurm_params"
 SUBMIT_COMMAND = "submit_command"
 BUILD_PERMISSION = "build_permission"
+ARCHITECTURE_TARGETS = "architecturetargets"
 
 
 def get_build_env_cfg():
@@ -39,7 +41,8 @@ def get_build_env_cfg():
     Returns:
          dict(str, dict): dictionary of configuration data
     """
-    buildenv = config.get_section('buildenv')
+    cfg = config.read_config()
+    buildenv = cfg[BUILDENV]
 
     jobs_base_dir = buildenv.get(JOBS_BASE_DIR)
     log("jobs_base_dir '%s'" % jobs_base_dir)
@@ -99,7 +102,9 @@ def get_architecturetargets():
         dict(str, dict): dictionary of arch_target_map which contains entries of the format
                          OS/SUBDIR : ADDITIONAL_SBATCH_PARAMETERS
     """
-    architecturetargets = config.get_section('architecturetargets')
+    cfg = config.read_config()
+    architecturetargets = cfg[ARCHITECTURE_TARGETS]
+
     arch_target_map = json.loads(architecturetargets.get('arch_target_map'))
     log("arch target map '%s'" % json.dumps(arch_target_map))
     return arch_target_map
@@ -355,7 +360,9 @@ def submit_build_jobs(pr, event_info):
     """
     # retrieving some settings from 'app.cfg' in bot directory
     # [github]
-    app_name = config.get_section('github').get('app_name')
+
+    cfg = config.read_config()
+    app_name = cfg['github'].get('app_name')
 
     # [buildenv]
     build_env_cfg = get_build_env_cfg()
@@ -395,7 +402,9 @@ def check_build_permission(pr, event_info):
 
     log(f"{funcname}(): build for PR {pr.number}")
 
-    buildenv = config.get_section('buildenv')
+    cfg = config.read_config()
+
+    buildenv = cfg[BUILDENV]
 
     # verify that the GH account that set label bot:build has the
     # permission to trigger the build

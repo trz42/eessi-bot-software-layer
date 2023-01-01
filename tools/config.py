@@ -13,21 +13,6 @@ import sys
 
 from .logging import error
 
-_config = {}
-
-
-def read_file(path):
-    """
-    Read a given configuration file.
-    """
-    global _config
-    try:
-        _config = configparser.ConfigParser()
-        _config.read(path)
-    except Exception as e:
-        print(e)
-        error(f'Unable to read configuration file {path}!')
-
 
 def read_config(path='app.cfg'):
     """Read the config file
@@ -43,8 +28,6 @@ def read_config(path='app.cfg'):
         config.read(path)
     except Exception:
         error(f"{fn}(): Unable to read configuration file {path}!")
-
-    return config
 
 
 def get_section(name):

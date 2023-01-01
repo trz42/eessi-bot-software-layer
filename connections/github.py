@@ -20,9 +20,11 @@ _gh = None
 
 def get_token():
     global _token
-    app_id = config.get_section('github').get('app_id')
-    installation_id = config.get_section('github').get('installation_id')
-    private_key_path = config.get_section('github').get('private_key')
+    cfg = config.read_config()
+    github_cfg = cfg['github']
+    app_id = github_cfg.get('app_id')
+    installation_id = github_cfg.get('installation_id')
+    private_key_path = github_cfg.get('private_key')
     private_key = ''
 
     with open(private_key_path, 'r') as private_key_file:
