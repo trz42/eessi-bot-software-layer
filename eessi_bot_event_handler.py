@@ -26,10 +26,18 @@ from pyghee.utils import log
 
 
 class EESSIBotSoftwareLayer(PyGHee):
-    def log(self, msg):
+    def __init__(self):
+        super().__init__()
         cfg = config.read_config()
         event_handler_cfg = cfg['event_handler']
         self.logfile = event_handler_cfg.get('log_path')
+
+    def log(self, msg):
+        """this log method will pass values (message and log file location) to PYGHEE log method
+
+        Args:
+            msg (string): message to log in the eessi_bot_event_handler.log
+        """
         log(msg, log_file=self.logfile)
 
     def handle_issue_comment_event(self, event_info, log_file=None):

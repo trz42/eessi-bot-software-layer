@@ -29,9 +29,4 @@ def read_config(path='app.cfg'):
     except Exception:
         error(f"{fn}(): Unable to read configuration file {path}!")
 
-
-def get_section(name):
-    if name in _config:
-        return _config[name]
-    else:
-        return {}
+    return config
