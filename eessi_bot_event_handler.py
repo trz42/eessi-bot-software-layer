@@ -14,6 +14,7 @@
 # license: GPLv2
 #
 import waitress
+import sys
 
 from connections import github
 from tools import config
@@ -38,6 +39,8 @@ class EESSIBotSoftwareLayer(PyGHee):
         Args:
             msg (string): message to log in the eessi_bot_event_handler.log
         """
+        funcname = sys._getframe().f_back.f_code.co_name
+        msg = "the method: %s logged: %s" % (funcname, msg)
         log(msg, log_file=self.logfile)
 
     def handle_issue_comment_event(self, event_info, log_file=None):
