@@ -34,8 +34,8 @@ class EESSIBotSoftwareLayer(PyGHee):
         """
         super(EESSIBotSoftwareLayer, self).__init__(*args, **kwargs)
 
-        cfg = config.read_config()
-        event_handler_cfg = cfg['event_handler']
+        self.cfg = config.read_config()
+        event_handler_cfg = self.cfg['event_handler']
         self.logfile = event_handler_cfg.get('log_path')
 
     def log(self, msg):
@@ -128,8 +128,8 @@ class EESSIBotSoftwareLayer(PyGHee):
         port_info = "app is listening on port %s" % port
         print(port_info)
         self.log(port_info)
-        cfg = config.read_config()
-        event_handler_cfg = cfg['event_handler']
+
+        event_handler_cfg = self.cfg['event_handler']
         my_logfile = event_handler_cfg.get('log_path')
         log_file_info = "logging in to %s" % my_logfile
         print(log_file_info)
