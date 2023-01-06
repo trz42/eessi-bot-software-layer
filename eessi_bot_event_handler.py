@@ -27,8 +27,13 @@ from pyghee.utils import log
 
 
 class EESSIBotSoftwareLayer(PyGHee):
-    def __init__(self):
-        super().__init__()
+
+    def __init__(self, *args, **kwargs):
+        """
+        EESSIBotSoftwareLayer constructor.
+        """
+        super(EESSIBotSoftwareLayer, self).__init__(*args, **kwargs)
+
         cfg = config.read_config()
         event_handler_cfg = cfg['event_handler']
         self.logfile = event_handler_cfg.get('log_path')
