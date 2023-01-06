@@ -38,14 +38,18 @@ class EESSIBotSoftwareLayer(PyGHee):
         event_handler_cfg = self.cfg['event_handler']
         self.logfile = event_handler_cfg.get('log_path')
 
-    def log(self, msg):
-        """this log method will pass values (message and log file location) to PYGHEE log method
+    def log(self, msg, *args):
+        """
+        Logs a message incl the caller's function name by passing msg and *args to PyGHee's log method.
 
         Args:
-            msg (string): message to log in the eessi_bot_event_handler.log
+            msg (string): message (format) to log to event handler log
+            *args (any): any values to be substituted into msg
         """
         funcname = sys._getframe().f_back.f_code.co_name
-        msg = "the method: %s logged: %s" % (funcname, msg)
+        if args:
+            msg = msg % args
+        msg = "[%s]: %s" % (funcname, msg)
         log(msg, log_file=self.logfile)
 
     def handle_issue_comment_event(self, event_info, log_file=None):
@@ -56,7 +60,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         issue_url = request_body['issue']['url']
         comment_author = request_body['comment']['user']['login']
         comment_txt = request_body['comment']['body']
-        self.log("Comment posted in %s by @%s: %s" % (issue_url, comment_author, comment_txt))
+        self.log("Comment posted in %s by @%s: %s", issue_url, comment_author, comment_txt)
         self.log("issue_comment event handled!")
 
     def handle_installation_event(self, event_info, log_file=None):
@@ -67,7 +71,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         user = request_body['sender']['login']
         action = request_body['action']
         # repo_name = request_body['repositories'][0]['full_name'] # not every action has that attribute
-        self.log("App installation event by user %s with action '%s'" % (user, action))
+        self.log("App installation event by user %s with action '%s'", user, action)
         self.log("installation event handled!")
 
     def handle_pull_request_labeled_event(self, event_info, pr):
@@ -77,7 +81,7 @@ class EESSIBotSoftwareLayer(PyGHee):
 
         # determine label
         label = event_info['raw_request_body']['label']['name']
-        self.log("Process PR labeled event: PR#%s, label '%s'" % (pr.number, label))
+        self.log("Process PR labeled event: PR#%s, label '%s'", pr.number, label)
 
         if label == "bot:build":
             # run function to build software stack
@@ -88,7 +92,7 @@ class EESSIBotSoftwareLayer(PyGHee):
             # run function to deploy built artefacts
             deploy_built_artefacts(pr, event_info)
         else:
-            self.log("handle_pull_request_labeled_event: no handler for label '%s'" % label)
+            self.log("handle_pull_request_labeled_event: no handler for label '%s'", label)
 
     def handle_pull_request_opened_event(self, event_info, pr):
         """
@@ -102,18 +106,18 @@ class EESSIBotSoftwareLayer(PyGHee):
         """
         action = event_info['action']
         gh = github.get_instance()
-        self.log("repository: '%s'" % event_info['raw_request_body']['repository']['full_name'])
+        self.log("repository: '%s'", event_info['raw_request_body']['repository']['full_name'])
         pr = gh.get_repo(event_info['raw_request_body']['repository']
                          ['full_name']).get_pull(event_info['raw_request_body']['pull_request']['number'])
-        self.log("PR data: %s" % pr)
+        self.log("PR data: %s", pr)
 
         handler_name = 'handle_pull_request_%s_event' % action
         if hasattr(self, handler_name):
             handler = getattr(self, handler_name)
-            self.log("Handling PR action '%s' for PR #%d..." % (action, pr.number))
+            self.log("Handling PR action '%s' for PR #%d...", action, pr.number)
             handler(event_info, pr)
         else:
-            self.log("No handler for PR action '%s'" % action)
+            self.log("No handler for PR action '%s'", action)
 
     def start(self, app, port=3000):
         """starts the app and log information in the log file
