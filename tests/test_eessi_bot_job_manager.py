@@ -11,6 +11,7 @@
 #
 import os
 import pytest
+import shutil
 import subprocess
 
 from eessi_bot_job_manager import EESSIBotSoftwareLayerJobManager
