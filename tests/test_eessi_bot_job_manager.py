@@ -10,23 +10,34 @@
 # license: GPLv2
 #
 import os
+import pytest
+import subprocess
+
 from eessi_bot_job_manager import EESSIBotSoftwareLayerJobManager
 
 # from eessi_bot_job_manager import ESSIBotSoftwareLayerJobManager.read_job_pr_metadata
 
+@pytest.fixture
+def provide_app_cfg():
+    # return path to app.cfg?
+    return 1
 
-def test_read_job_pr_metadata(tmpdir):
+
+def test_read_job_pr_metadata(tmpdir, provide_app_cfg):
+    # show contents of current directory
+    subprocess.run(["ls", "-l"])
+
     # if metadata file does not exist, we should get None as return value
-    read_job = EESSIBotSoftwareLayerJobManager()
+    job_manager = EESSIBotSoftwareLayerJobManager()
     path = os.path.join(tmpdir, 'test.metadata')
-    assert read_job.read_job_pr_metadata(path) is None
+    assert job_manager.read_job_pr_metadata(path) is None
 
     with open(path, 'w') as fp:
         fp.write('''[PR]
         repo=test
         pr_number=12345''')
 
-    metadata_pr = read_job.read_job_pr_metadata(path)
+    metadata_pr = job_manager.read_job_pr_metadata(path)
     expected = {
         "repo": "test",
         "pr_number": "12345",
