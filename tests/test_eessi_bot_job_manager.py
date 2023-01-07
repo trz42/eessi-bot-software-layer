@@ -17,6 +17,7 @@ from eessi_bot_job_manager import EESSIBotSoftwareLayerJobManager
 
 # from eessi_bot_job_manager import ESSIBotSoftwareLayerJobManager.read_job_pr_metadata
 
+
 @pytest.fixture
 def provide_app_cfg():
     # return path to app.cfg?
@@ -24,6 +25,9 @@ def provide_app_cfg():
 
 
 def test_read_job_pr_metadata(tmpdir, provide_app_cfg):
+    # copy needed app.cfg from tests directory
+    shutil.copyfile("tests/app.cfg", "app.cfg")
+
     # show contents of current directory
     subprocess.run(["ls", "-l"])
 
