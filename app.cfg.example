@@ -112,7 +112,16 @@ deploy_permission = trz42
 arch_target_map = { "linux/x86_64/generic" : "--constraint shape=c4.2xlarge", "linux/x86_64/amd/zen2": "--constraint shape=c5a.2xlarge" }
 
 
+# configuration for event handler which receives events from a GitHub repository.
+[event_handler]
+# path to the log file to log messages for event handler
+log_path = /path/to/eessi_bot_event_handler.log
+
+
 [job_manager]
+# path to the log file to log messages for job manager
+log_path = /path/to/eessi_bot_job_manager.log
+
 # directory where job manager stores information about jobs to be tracked
 #   e.g. as symbolic link JOBID -> directory to job
 job_ids_dir = $HOME/jobs/ids

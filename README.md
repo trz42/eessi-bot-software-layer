@@ -394,8 +394,21 @@ Note, if you do not have to specify additional parameters to `sbatch` to request
 arch_target_map = { "linux/x86_64/generic" : "" }
 ```
 
+### Section `[event_handler]`
+The section contains information needed by the event handler
+```
+log_path = /path/to/eessi_bot_event_handler.log
+```
+Path to the event handler log. 
+
 ### Section `[job_manager]`
 The section `[job_manager]` contains information needed by the job manager.
+```
+
+log_path = /path/to/eessi_bot_job_manager.log
+```
+Path to the log file to log messages for job manager
+
 ```
 job_ids_dir = /home/USER/jobs/ids
 ```
