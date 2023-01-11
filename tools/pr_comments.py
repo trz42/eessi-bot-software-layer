@@ -37,8 +37,7 @@ def get_comment(pr, search_pattern):
 
     return None
 
-
-@retry(Exception, tries=3, delay=1)
+# Note, no @retry decorator used here because it is already used with get_comment.
 def get_submitted_job_comment(pr, job_id):
     """get comment of the submitted job id
 
