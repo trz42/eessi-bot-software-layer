@@ -178,8 +178,8 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
     curl_cmd = f'curl -L https://github.com/{repo_name}/pull/{pr.number}.diff > {pr.number}.diff'
     curl_output, curl_error, curl_exit_code = run_cmd(curl_cmd, "Obtain patch", arch_job_dir)
 
-    git_am_cmd = f'git am {pr.number}.diff'
-    git_am_output, git_am_error, git_am_exit_code = run_cmd(git_am_cmd, "Apply patch", arch_job_dir)
+    git_apply_cmd = f'git apply {pr.number}.diff'
+    git_apply_output, git_apply_error, git_apply_exit_code = run_cmd(git_apply_cmd, "Apply patch", arch_job_dir)
 
 
 def apply_cvmfs_customizations(cvmfs_customizations, arch_job_dir):
