@@ -26,7 +26,7 @@ def read_config(path='app.cfg'):
     try:
         config = configparser.ConfigParser()
         config.read(path)
-    except Exception:
-        error(f"{fn}(): Unable to read configuration file {path}!")
+    except Exception as err:
+        error(f"{fn}(): Unable to read configuration file {path}!\n{err}")
 
     return config
