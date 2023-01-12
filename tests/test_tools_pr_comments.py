@@ -117,6 +117,7 @@ def test_get_submitted_job_comment_exception(raise_exception):
         actual = get_submitted_job_comment(raise_exception, 42)
         assert expected == actual
 
+
 # test cases:
 #  - comment exists, update is added once to body
 #  - comment exists, update is added multiple times to body
