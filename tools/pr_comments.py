@@ -17,7 +17,7 @@ from pyghee.utils import log
 from retry import retry
 
 
-@retry(Exception, tries=2, delay=1, backoff=1, max_delay=30)
+@retry(Exception, tries=5, delay=1, backoff=2, max_delay=30)
 def get_comment(pr, search_pattern):
     """get comment using the search pattern
 
@@ -61,7 +61,7 @@ def get_submitted_job_comment(pr, job_id):
     return get_comment(pr, job_search_pattern)
 
 
-@retry(Exception, tries=3, delay=1, backoff=1, max_delay=30)
+@retry(Exception, tries=5, delay=1, backoff=2, max_delay=30)
 def update_comment(cmnt_id, pr, update, log_file=None):
     """update comment of the job
 
