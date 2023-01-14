@@ -166,7 +166,6 @@ def test_get_issue_comment_succeeds_one_comment(tmpdir):
 
 def test_get_issue_comment_fails(tmpdir):
     log_file = os.path.join(tmpdir, "log.txt")
-    comment_to_update = MockIssueComment("__ORG-comment__")
     with patch('github.PullRequest.PullRequest') as mock_pr:
         instance = mock_pr.return_value
         instance.get_issue_comment.side_effect = GetIssueCommentException
