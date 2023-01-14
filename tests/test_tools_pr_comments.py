@@ -5,16 +5,18 @@
 # EESSI software layer, see https://github.com/EESSI/software-layer
 #
 # author: Thomas Roeblitz (@trz42)
+# author: Kenneth Hoste (@boegel)
 #
 # license: GPLv2
 #
 
 # Standard library imports
 import os
+import re
+from unittest.mock import patch
 
 # Third party imports (anything installed into the local Python environment)
 import pytest
-from unittest.mock import patch
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
 from tools.pr_comments import get_comment, get_submitted_job_comment, update_comment
@@ -31,11 +33,22 @@ class MockIssueComment:
         self.body = body
 
 
+class GetIssueCommentException(Exception):
+    "Raised when pr.get_issue_comment fails in a test."
+    pass
+
+
+class EditIssueCommentException(Exception):
+    "Raised when issue_comment.edit fails in a test."
+    pass
+
+
 @pytest.fixture
 def get_issue_comments_raise_exception():
     with patch('github.PullRequest.PullRequest') as mock_pr:
         instance = mock_pr.return_value
-        instance.get_issue_comments.side_effect = Exception()
+        instance.get_issue_comments.side_effect = GetIssueCommentException()
+        instance.get_issue_comments.return_value = ()
         yield instance
 
 
@@ -56,6 +69,54 @@ def pr_single_comment():
         # always returns first element. can this depend on the argument
         # provided to the function get_issue_comment?
         instance.get_issue_comment.return_value = instance._issue_comments[0]
+        yield instance
+
+
+@pytest.fixture
+def pr_single_comment_failing():
+
+    issue_comments = [MockIssueComment("foo")]
+
+    def should_raise_exception():
+        """
+        Determine whether or not an exception should be raised, based on value of $TEST_RAISE_EXCEPTION
+        """
+        should_raise = False
+
+        test_raise_exception = os.getenv('TEST_RAISE_EXCEPTION')
+        count_regex = re.compile('^[0-9]+$')
+
+        if test_raise_exception == 'always_raise':
+            should_raise = True
+        # if $TEST_RAISE_EXCEPTION is a number, eaise exception when > 0 and decrement with 1
+        elif count_regex.match(test_raise_exception):
+            test_raise_exception = int(test_raise_exception)
+            if test_raise_exception > 0:
+                should_raise = True
+                os.environ['TEST_RAISE_EXCEPTION'] = str(test_raise_exception - 1)
+
+        return should_raise
+
+    def get_issue_comments_maybe_raise_exception():
+        if should_raise_exception():
+            raise GetIssueCommentException
+
+        return issue_comments
+
+    def get_issue_comment_maybe_raise_exception():
+        if should_raise_exception():
+            raise GetIssueCommentException
+
+        # always returns first element. can this depend on the argument
+        # provided to the function get_issue_comment?
+        return issue_comments[0]
+
+    with patch('github.PullRequest.PullRequest') as mock_pr:
+        instance = mock_pr.return_value
+        instance._issue_comments = [MockIssueComment("foo")]
+        instance.get_issue_comments.side_effect = get_issue_comments_maybe_raise_exception
+        instance.get_issue_comment.side_effect = get_issue_comment_maybe_raise_exception
+
         yield instance
 
 
@@ -92,6 +153,30 @@ def test_get_submitted_job_comment_exception(get_issue_comments_raise_exception)
         get_submitted_job_comment(get_issue_comments_raise_exception, 42)
 
 
+def test_get_comment_retry(pr_single_comment_failing):
+    expected = MockIssueComment("foo").body
+
+    # test whether get_comment retries multiple times when problems occur when getting the comment;
+    # start with specifying that getting the comment should always fail
+    os.environ['TEST_RAISE_EXCEPTION'] = 'always_raise'
+    with pytest.raises(Exception) as err:
+        get_comment(pr_single_comment_failing, "foo")
+    assert err.type == GetIssueCommentException
+
+    # getting comment should succeed on 2nd try (fail once)
+    os.environ['TEST_RAISE_EXCEPTION'] = '1'
+    expected = "foo"
+    actual = get_comment(pr_single_comment_failing, "foo").body
+    assert expected == actual
+
+    # getting comment should fail 3 times, and get_comment only retries twice,
+    # so get_comment should fail with exception
+    os.environ['TEST_RAISE_EXCEPTION'] = '3'
+    with pytest.raises(Exception) as err:
+        get_comment(pr_single_comment_failing, "foo")
+    assert err.type == GetIssueCommentException
+
+
 # test cases:
 #  - pr.get_issue_comment(cmnt_id) succeeds
 #    C1: returns obj with edit & body -> edit is called (and succeeds, see C4)
@@ -111,14 +196,6 @@ def test_get_submitted_job_comment_exception(get_issue_comments_raise_exception)
 #    C6.1 - not implemented yet
 #    C6.n
 #
-class GetIssueCommentException(Exception):
-    "Raised when pr.get_issue_comment fails in a test."
-    pass
-
-
-class EditIssueCommentException(Exception):
-    "Raised when issue_comment.edit fails in a test."
-    pass
 
 
 def test_get_issue_comment_succeeds_none(tmpdir):
