@@ -12,10 +12,12 @@
 # license: GPLv2
 #
 import re
+
+from pyghee.utils import log
 from retry import retry
 
 
-@retry(Exception, tries=3, delay=1)
+@retry(Exception, tries=2, delay=1, backoff=1, max_delay=30)
 def get_comment(pr, search_pattern):
     """get comment using the search pattern
 
@@ -59,14 +61,18 @@ def get_submitted_job_comment(pr, job_id):
     return get_comment(pr, job_search_pattern)
 
 
-@retry(Exception, tries=3, delay=1)
-def update_comment(cmnt_id, pr, update):
+@retry(Exception, tries=3, delay=1, backoff=1, max_delay=30)
+def update_comment(cmnt_id, pr, update, log_file=None):
     """update comment of the job
 
     Args:
         cmnt_id (int): comment id for the submitted job
         pr (object): data of pr
         update (string): updated comment
+        log_file (string): path to log file
     """
     issue_comment = pr.get_issue_comment(cmnt_id)
-    issue_comment.edit(issue_comment.body + update)
+    if issue_comment:
+        issue_comment.edit(issue_comment.body + update)
+    else:
+        log(f"no comment with id {cmnt_id}, skipping update '{update}'", log_file=log_file)
