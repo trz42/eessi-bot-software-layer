@@ -21,10 +21,13 @@ from tools.pr_comments import get_comment, get_submitted_job_comment, update_com
 
 
 class MockIssueComment:
-    def __init__(self, body):
+    def __init__(self, body, edit_raises=None):
         self.body = body
+        self.edit_raises = edit_raises
 
     def edit(self, body):
+        if self.edit_raises:
+            raise self.edit_raises
         self.body = body
 
 
@@ -33,7 +36,6 @@ def get_issue_comments_raise_exception():
     with patch('github.PullRequest.PullRequest') as mock_pr:
         instance = mock_pr.return_value
         instance.get_issue_comments.side_effect = Exception()
-        instance.get_issue_comments.return_value = ()
         yield instance
 
 
@@ -82,16 +84,12 @@ def test_get_comment_not_found(pr_single_comment):
 
 def test_get_comment_exception(get_issue_comments_raise_exception):
     with pytest.raises(Exception):
-        expected = None
-        actual = get_comment(get_issue_comments_raise_exception, "bar")
-        assert expected == actual
+        get_comment(get_issue_comments_raise_exception, "bar")
 
 
 def test_get_submitted_job_comment_exception(get_issue_comments_raise_exception):
     with pytest.raises(Exception):
-        expected = None
-        actual = get_submitted_job_comment(get_issue_comments_raise_exception, 42)
-        assert expected == actual
+        get_submitted_job_comment(get_issue_comments_raise_exception, 42)
 
 
 # test cases:
@@ -175,72 +173,66 @@ def test_get_issue_comment_fails(tmpdir):
         with pytest.raises(Exception):
             update_comment(cmnt_id, instance, update, log_file=log_file)
 
-            # log_file should not exists
-            assert not os.path.exists(log_file)
+        # log_file should not exists
+        assert not os.path.exists(log_file)
 
-            # check if function was retried x times
-            expected = 3
-            actual = instance.get_issue_comment.call_count
-            assert expected == actual
+        # check if function was retried x times
+        expected = 3
+        actual = instance.get_issue_comment.call_count
+        assert expected == actual
 
 
 def test_issue_comment_edit_fails_exception(tmpdir):
     log_file = os.path.join(tmpdir, "log.txt")
-    comment_to_update = MockIssueComment("__ORG-comment__")
-    with patch('github.PullRequest.PullRequest') as mock_pr, \
-            patch('tests.test_tools_pr_comments.MockIssueComment') as mock_ic:
+    comment_to_update = MockIssueComment(
+                            "__ORG-comment__",
+                            edit_raises=EditIssueCommentException
+                        )
+    with patch('github.PullRequest.PullRequest') as mock_pr:
         instance_pr = mock_pr.return_value
         instance_pr.get_issue_comment.return_value = comment_to_update
-        instance_ic = mock_ic.return_value
-        instance_ic.edit.side_effect = EditIssueCommentException
 
         cmnt_id = 0
         update = "raise EditIssueCommentException"
         with pytest.raises(Exception):
             update_comment(cmnt_id, instance_pr, update, log_file=log_file)
 
-            # log_file should not exists
-            assert not os.path.exists(log_file)
+        # log_file should not exists
+        assert not os.path.exists(log_file)
 
-            # check that body has not been updated
-            expected = "__ORG-comment__"
-            actual = comment_to_update.body
-            assert expected == actual
+        # check that body has not been updated
+        expected = "__ORG-comment__"
+        actual = comment_to_update.body
+        assert expected == actual
 
-            # check if function was retried x times
-            expected = 3
-            actual = instance_pr.get_issue_comment.call_count
-            assert expected == actual
-
-            # check if function was retried x times
-            expected = 3
-            actual = instance_ic.edit.call_count
-            assert expected == actual
+        # check if function was retried x times
+        expected = 3
+        actual = instance_pr.get_issue_comment.call_count
+        assert expected == actual
 
 
 def test_issue_comment_edit_fails_args(tmpdir):
     log_file = os.path.join(tmpdir, "log.txt")
     comment_to_update = MockIssueComment("__ORG-comment__")
-    with patch('github.PullRequest.PullRequest') as mock_pr, \
-            patch('tests.test_tools_pr_comments.MockIssueComment') as mock_ic:
+    with patch('github.PullRequest.PullRequest') as mock_pr:
         instance_pr = mock_pr.return_value
         instance_pr.get_issue_comment.return_value = comment_to_update
-        instance_ic = mock_ic.return_value
+        # instance_ic = mock_ic.return_value
 
         cmnt_id = 0
         update = 42
         with pytest.raises(Exception):
             update_comment(cmnt_id, instance_pr, update, log_file=log_file)
 
-            # log_file should not exists
-            assert not os.path.exists(log_file)
+        # log_file should not exists
+        assert not os.path.exists(log_file)
 
-            # check that body has not been updated
-            expected = "__ORG-comment__"
-            actual = comment_to_update.body
-            assert expected == actual
+        # check that body has not been updated
+        expected = "__ORG-comment__"
+        actual = comment_to_update.body
+        assert expected == actual
 
-            # check if function was retried x times
-            expected = 3
-            actual = instance_ic.edit.call_count
-            assert expected == actual
+        # check if function was retried x times
+        expected = 3
+        actual = instance_pr.get_issue_comment.call_count
+        assert expected == actual
