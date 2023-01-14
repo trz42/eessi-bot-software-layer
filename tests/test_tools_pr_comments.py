@@ -284,11 +284,6 @@ def test_get_submitted_job_comment_retry(pr_single_job_comment_failing):
     assert err.type == GetCommentException
 
 
-#def test_get_submitted_job_comment_exception(get_issue_comments_raise_exception):
-#    with pytest.raises(Exception):
-#        get_submitted_job_comment(get_issue_comments_raise_exception, 42)
-#
-#
 # tests for update_comment
 # cases:
 #  - pr.get_issue_comment(cmnt_id) succeeds
