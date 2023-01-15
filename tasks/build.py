@@ -16,6 +16,7 @@ import json
 import os
 import sys
 
+from collections import namedtuple
 from connections import github
 from datetime import datetime, timezone
 from pyghee.utils import log, error
@@ -33,6 +34,8 @@ SLURM_PARAMS = "slurm_params"
 SUBMIT_COMMAND = "submit_command"
 BUILD_PERMISSION = "build_permission"
 ARCHITECTURE_TARGETS = "architecturetargets"
+
+Job = namedtuple('Job', ('working_dir', 'arch_target', 'slurm_opts'))
 
 
 def get_build_env_cfg():
@@ -237,7 +240,8 @@ def setup_pr_in_arch_job_dir(pr, arch_target_map, run_dir, cvmfs_customizations)
         #   is cvmfs_customizations defined? yes, apply it
         apply_cvmfs_customizations(cvmfs_customizations, arch_job_dir)
         # enlist jobs to proceed
-        jobs.append([arch_job_dir, arch_target, slurm_opt])
+        job = Job(arch_job_dir, arch_target, slurm_opt)
+        jobs.append(job)
     log("  %d jobs to proceed after applying white list" % len(jobs))
     if jobs:
         log(json.dumps(jobs, indent=4))
@@ -263,7 +267,7 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
     command_line = ' '.join([
         build_env_cfg[SUBMIT_COMMAND],
         build_env_cfg[SLURM_PARAMS],
-        job[2],
+        job.slurm_opts,
         build_env_cfg[BUILD_JOB_SCRIPT],
         '--tmpdir', build_env_cfg[LOCAL_TMP],
     ])
@@ -273,16 +277,17 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
         command_line += f' --https-proxy {build_env_cfg[HTTPS_PROXY]}'
     if build_env_cfg[LOAD_MODULES]:
         command_line += f' --load-modules {build_env_cfg[LOAD_MODULES]}'
+
     # TODO the handling of generic targets requires a bit knowledge about
     #      the internals of building the software layer, maybe ok for now,
     #      but it might be good to think about an alternative
     # if target contains generic, add ' --generic' to command line
-
-    if "generic" in job[1]:
+    if "generic" in job.arch_target:
         command_line += ' --generic'
 
     cmdline_output, cmdline_error, cmdline_exit_code = run_cmd(command_line,
-                                                               "submit job for target '%s'" % job[1], job[0])
+                                                               "submit job for target '%s'" % job.arch_target,
+                                                               working_dir=job.working_dir)
 
     # sbatch output is 'Submitted batch job JOBID'
     #   parse job id & add it to array of submitted jobs PLUS create a symlink from main pr_<ID> dir to job dir (job[0])
@@ -311,7 +316,7 @@ def create_metadata(job, repo_name, pr, job_id):
     # create _bot_job<jobid>.metadata file in submission directory
     bot_jobfile = configparser.ConfigParser()
     bot_jobfile['PR'] = {'repo': repo_name, 'pr_number': pr.number}
-    bot_jobfile_path = os.path.join(job[0], f'_bot_job{job_id}.metadata')
+    bot_jobfile_path = os.path.join(job.working_dir, f'_bot_job{job_id}.metadata')
     with open(bot_jobfile_path, 'w') as bjf:
         bot_jobfile.write(bjf)
 
@@ -329,8 +334,8 @@ def create_pr_comments(job, job_id, app_name, job_comment, pr, repo_name, gh, sy
         gh (object):github instance
         symlink(string): symlink from main pr_<ID> dir to job dir
     """
-    # obtain arch from job[1] which has the format OS/ARCH
-    arch_name = '-'.join(job[1].split('/')[1:])
+    # obtain arch from job.arch_target which has the format OS/ARCH
+    arch_name = '-'.join(job.arch_target.split('/')[1:])
 
     # get current data/time
     dt = datetime.now(timezone.utc)
