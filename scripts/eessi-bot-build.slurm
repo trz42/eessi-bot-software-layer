@@ -131,6 +131,11 @@ fi
 
 source init/minimal_eessi_env  # for $EESSI_PILOT_VERSION and $EESSI_OS_TYPE
 
+# $CPU_TARGET is set by event handler when job is submitted;
+# $EESSI_SOFTWARE_SUBDIR_OVERRIDE is picked up by eessi_software_subdir.py,
+# and is also passed to the install script by build_container.sh & co
+export EESSI_SOFTWARE_SUBDIR_OVERRIDE=${CPU_TARGET}
+
 software_subdir=
 for i in {1..9};
 do
