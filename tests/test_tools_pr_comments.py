@@ -19,8 +19,8 @@ from unittest.mock import patch
 import pytest
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
-from tools.pr_comments import (get_comment, get_submitted_job_comment,
-    update_comment)
+from tools.pr_comments import (
+    get_comment, get_submitted_job_comment, update_comment)
 
 
 class MockIssueComment:
@@ -126,7 +126,7 @@ def pr_get_issue_comments_failing():
         print(f"sleeping {delay} seconds (not really though - mocked)")
 
     with patch('github.PullRequest.PullRequest') as mock_pr, \
-        patch('retry.api.time.sleep') as mock_sleep:
+            patch('retry.api.time.sleep') as mock_sleep:
         instance = mock_pr.return_value
         instance._issue_comments = [MockIssueComment("foo")]
         instance.get_issue_comments.side_effect = get_issue_comments_maybe_raise_exception
@@ -173,7 +173,7 @@ def pr_single_job_comment_failing():
         print(f"sleeping {delay} seconds (not really though - mocked)")
 
     with patch('github.PullRequest.PullRequest') as mock_pr, \
-        patch('retry.api.time.sleep') as mock_sleep:
+            patch('retry.api.time.sleep') as mock_sleep:
         instance = mock_pr.return_value
         instance._issue_comments = [MockIssueComment("submitted ... job id `42`")]
         instance.get_issue_comments.side_effect = get_comment_maybe_raise_exception
@@ -332,7 +332,7 @@ def test_update_comment_get_issue_comment_succeeds_one_comment(tmpdir):
         print(f"sleeping {delay} seconds (not really though - mocked)")
 
     with patch('github.PullRequest.PullRequest') as mock_pr, \
-        patch('retry.api.time.sleep') as mock_sleep:
+            patch('retry.api.time.sleep') as mock_sleep:
         instance = mock_pr.return_value
         instance.get_issue_comment.return_value = comment_to_update
         mock_sleep.side_effect = do_not_sleep_really
@@ -359,7 +359,7 @@ def test_update_comment_get_issue_comment_succeeds_no_comment(tmpdir):
         print(f"sleeping {delay} seconds (not really though - mocked)")
 
     with patch('github.PullRequest.PullRequest') as mock_pr, \
-        patch('retry.api.time.sleep') as mock_sleep:
+            patch('retry.api.time.sleep') as mock_sleep:
         instance = mock_pr.return_value
         instance.get_issue_comment.return_value = None
         mock_sleep.side_effect = do_not_sleep_really
@@ -391,7 +391,7 @@ def test_update_comment_get_issue_comment_fails(tmpdir):
         print(f"sleeping {delay} seconds (not really though - mocked)")
 
     with patch('github.PullRequest.PullRequest') as mock_pr, \
-        patch('retry.api.time.sleep') as mock_sleep:
+            patch('retry.api.time.sleep') as mock_sleep:
         instance = mock_pr.return_value
         instance.get_issue_comment.side_effect = GetIssueCommentException
         mock_sleep.side_effect = do_not_sleep_really
@@ -427,7 +427,7 @@ def test_update_comment_issue_comment_edit_fails_exception(tmpdir):
         print(f"sleeping {delay} seconds (not really though - mocked)")
 
     with patch('github.PullRequest.PullRequest') as mock_pr, \
-        patch('retry.api.time.sleep') as mock_sleep:
+            patch('retry.api.time.sleep') as mock_sleep:
         instance = mock_pr.return_value
         instance.get_issue_comment.return_value = comment_to_update
         mock_sleep.side_effect = do_not_sleep_really
@@ -462,7 +462,7 @@ def test_update_comment_issue_comment_edit_fails_args(tmpdir):
         print(f"sleeping {delay} seconds (not really though - mocked)")
 
     with patch('github.PullRequest.PullRequest') as mock_pr, \
-        patch('retry.api.time.sleep') as mock_sleep:
+            patch('retry.api.time.sleep') as mock_sleep:
         instance = mock_pr.return_value
         instance.get_issue_comment.return_value = comment_to_update
         mock_sleep.side_effect = do_not_sleep_really
