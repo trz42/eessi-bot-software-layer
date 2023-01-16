@@ -19,7 +19,8 @@ from unittest.mock import patch
 import pytest
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
-from tools.pr_comments import get_comment, get_submitted_job_comment, update_comment
+from tools.pr_comments import (get_comment, get_submitted_job_comment,
+    update_comment)
 
 
 class MockIssueComment:
@@ -33,8 +34,8 @@ class MockIssueComment:
         self.body = body
 
 
-class GetCommentException(Exception):
-    "Raised when get_comment fails in a test."
+class GetIssueCommentsException(Exception):
+    "Raised when pr.get_issue_comments fails in a test."
     pass
 
 
@@ -43,22 +44,13 @@ class GetIssueCommentException(Exception):
     pass
 
 
-class EditIssueCommentException(Exception):
+class IssueCommentEditException(Exception):
     "Raised when issue_comment.edit fails in a test."
     pass
 
 
 @pytest.fixture
-def get_issue_comments_raise_exception():
-    with patch('github.PullRequest.PullRequest') as mock_pr:
-        instance = mock_pr.return_value
-        instance.get_issue_comments.side_effect = GetIssueCommentException()
-        instance.get_issue_comments.return_value = ()
-        yield instance
-
-
-@pytest.fixture
-def pr_no_comments():
+def pr_with_no_comments():
     with patch('github.PullRequest.PullRequest') as mock_pr:
         instance = mock_pr.return_value
         instance.get_issue_comments.return_value = ()
@@ -66,7 +58,7 @@ def pr_no_comments():
 
 
 @pytest.fixture
-def pr_single_comment():
+def pr_with_single_comment():
     with patch('github.PullRequest.PullRequest') as mock_pr:
         instance = mock_pr.return_value
         instance._issue_comments = [MockIssueComment("foo")]
@@ -78,7 +70,7 @@ def pr_single_comment():
 
 
 @pytest.fixture
-def pr_single_job_comment():
+def pr_with_single_job_comment():
     with patch('github.PullRequest.PullRequest') as mock_pr:
         instance = mock_pr.return_value
         instance._issue_comments = [MockIssueComment("submitted ... job id `42`")]
@@ -90,13 +82,14 @@ def pr_single_job_comment():
 
 
 @pytest.fixture
-def pr_single_comment_failing():
+def pr_get_issue_comments_failing():
 
     issue_comments = [MockIssueComment("foo")]
 
     def should_raise_exception():
         """
-        Determine whether or not an exception should be raised, based on value of $TEST_RAISE_EXCEPTION
+        Determine whether or not an exception should be raised, based on value
+        of $TEST_RAISE_EXCEPTION
         """
         should_raise = False
 
@@ -105,7 +98,8 @@ def pr_single_comment_failing():
 
         if test_raise_exception == 'always_raise':
             should_raise = True
-        # if $TEST_RAISE_EXCEPTION is a number, eaise exception when > 0 and decrement with 1
+        # if $TEST_RAISE_EXCEPTION is a number, raise exception when > 0 and
+        # decrement with 1
         elif count_regex.match(test_raise_exception):
             test_raise_exception = int(test_raise_exception)
             if test_raise_exception > 0:
@@ -116,7 +110,7 @@ def pr_single_comment_failing():
 
     def get_issue_comments_maybe_raise_exception():
         if should_raise_exception():
-            raise GetIssueCommentException
+            raise GetIssueCommentsException
 
         return issue_comments
 
@@ -128,11 +122,16 @@ def pr_single_comment_failing():
         # provided to the function get_issue_comment?
         return issue_comments[0]
 
-    with patch('github.PullRequest.PullRequest') as mock_pr:
+    def do_not_sleep_really(delay):
+        print(f"sleeping {delay} seconds (not really though - mocked)")
+
+    with patch('github.PullRequest.PullRequest') as mock_pr, \
+        patch('retry.api.time.sleep') as mock_sleep:
         instance = mock_pr.return_value
         instance._issue_comments = [MockIssueComment("foo")]
         instance.get_issue_comments.side_effect = get_issue_comments_maybe_raise_exception
         instance.get_issue_comment.side_effect = get_issue_comment_maybe_raise_exception
+        mock_sleep.side_effect = do_not_sleep_really
 
         yield instance
 
@@ -144,7 +143,8 @@ def pr_single_job_comment_failing():
 
     def should_raise_exception():
         """
-        Determine whether or not an exception should be raised, based on value of $TEST_RAISE_EXCEPTION
+        Determine whether or not an exception should be raised, based on value
+        of $TEST_RAISE_EXCEPTION
         """
         should_raise = False
 
@@ -153,7 +153,8 @@ def pr_single_job_comment_failing():
 
         if test_raise_exception == 'always_raise':
             should_raise = True
-        # if $TEST_RAISE_EXCEPTION is a number, eaise exception when > 0 and decrement with 1
+        # if $TEST_RAISE_EXCEPTION is a number, raise exception when > 0 and
+        # decrement with 1
         elif count_regex.match(test_raise_exception):
             test_raise_exception = int(test_raise_exception)
             if test_raise_exception > 0:
@@ -164,14 +165,19 @@ def pr_single_job_comment_failing():
 
     def get_comment_maybe_raise_exception():
         if should_raise_exception():
-            raise GetCommentException
+            raise GetIssueCommentsException
 
         return issue_comments
 
-    with patch('github.PullRequest.PullRequest') as mock_pr:
+    def do_not_sleep_really(delay):
+        print(f"sleeping {delay} seconds (not really though - mocked)")
+
+    with patch('github.PullRequest.PullRequest') as mock_pr, \
+        patch('retry.api.time.sleep') as mock_sleep:
         instance = mock_pr.return_value
         instance._issue_comments = [MockIssueComment("submitted ... job id `42`")]
         instance.get_issue_comments.side_effect = get_comment_maybe_raise_exception
+        mock_sleep.side_effect = do_not_sleep_really
 
         yield instance
 
@@ -185,48 +191,50 @@ def pr_single_job_comment_failing():
 
 
 # case A1: no comment exist
-def test_get_comment_no_comment(pr_no_comments):
+def test_get_comment_no_comment(pr_with_no_comments):
     expected = None
-    actual = get_comment(pr_no_comments, "foo")
+    actual = get_comment(pr_with_no_comments, "foo")
     assert expected == actual
 
 
 # case A2: search string should be found
-def test_get_comment_found(pr_single_comment):
+def test_get_comment_found(pr_with_single_comment):
     expected = MockIssueComment("foo").body
-    actual = get_comment(pr_single_comment, "foo").body
+    actual = get_comment(pr_with_single_comment, "foo").body
     assert expected == actual
 
 
 # case A3: search string should not be found
-def test_get_comment_not_found(pr_single_comment):
+def test_get_comment_not_found(pr_with_single_comment):
     expected = None
-    actual = get_comment(pr_single_comment, "bar")
+    actual = get_comment(pr_with_single_comment, "bar")
     assert expected == actual
 
 
 # case A4: calling get_issue_comments raises an Exception
-#   sub cases: always raises exception, raises exception ones, raises exception N times (N > tries)
-def test_get_comment_retry(pr_single_comment_failing):
-    # test whether get_comment retries multiple times when problems occur when getting the comment;
+#   sub cases: always raises exception, raises exception ones,
+#              raises exception N times (N > tries)
+def test_get_comment_retry(pr_get_issue_comments_failing):
+    # test whether get_comment retries multiple times when problems occur
+    #   when getting the comment;
     # start with specifying that getting the comment should always fail
     os.environ['TEST_RAISE_EXCEPTION'] = 'always_raise'
     with pytest.raises(Exception) as err:
-        get_comment(pr_single_comment_failing, "foo")
-    assert err.type == GetIssueCommentException
+        get_comment(pr_get_issue_comments_failing, "foo")
+    assert err.type == GetIssueCommentsException
 
     # getting comment should succeed on 2nd try (fail once)
     os.environ['TEST_RAISE_EXCEPTION'] = '1'
     expected = "foo"
-    actual = get_comment(pr_single_comment_failing, "foo").body
+    actual = get_comment(pr_get_issue_comments_failing, "foo").body
     assert expected == actual
 
     # getting comment should fail 5 times, and get_comment only retries twice,
     # so get_comment should fail with exception
     os.environ['TEST_RAISE_EXCEPTION'] = '5'
     with pytest.raises(Exception) as err:
-        get_comment(pr_single_comment_failing, "foo")
-    assert err.type == GetIssueCommentException
+        get_comment(pr_get_issue_comments_failing, "foo")
+    assert err.type == GetIssueCommentsException
 
 
 # tests for get_submitted_job_comment
@@ -240,35 +248,37 @@ def test_get_comment_retry(pr_single_comment_failing):
 
 
 # case B1: no comment exist
-def test_get_submitted_job_comment_no_comment(pr_no_comments):
+def test_get_submitted_job_comment_no_comment(pr_with_no_comments):
     expected = None
-    actual = get_submitted_job_comment(pr_no_comments, -1)
+    actual = get_submitted_job_comment(pr_with_no_comments, -1)
     assert expected == actual
 
 
 # case B2: searched jobid should be found
-def test_get_submitted_job_comment_found(pr_single_job_comment):
+def test_get_submitted_job_comment_found(pr_with_single_job_comment):
     expected = MockIssueComment("submitted ... job id `42`").body
-    actual = get_submitted_job_comment(pr_single_job_comment, 42).body
+    actual = get_submitted_job_comment(pr_with_single_job_comment, 42).body
     assert expected == actual
 
 
 # case B3: searched jobid should not be found
-def test_get_submitted_job_comment_not_found(pr_single_job_comment):
+def test_get_submitted_job_comment_not_found(pr_with_single_job_comment):
     expected = None
-    actual = get_submitted_job_comment(pr_single_job_comment, 33)
+    actual = get_submitted_job_comment(pr_with_single_job_comment, 33)
     assert expected == actual
 
 
 # case B4: calling get_comment raises an Exception
-#   sub cases: always raises exception, raises exception ones, raises exception N times (N > tries)
+#   sub cases: always raises exception, raises exception ones,
+#              raises exception N times (N > tries)
 def test_get_submitted_job_comment_retry(pr_single_job_comment_failing):
-    # test whether get_comment retries multiple times when problems occur when getting the comment;
+    # test whether get_comment retries multiple times when problems occur
+    #   when getting the comment;
     # start with specifying that getting the comment should always fail
     os.environ['TEST_RAISE_EXCEPTION'] = 'always_raise'
     with pytest.raises(Exception) as err:
         get_submitted_job_comment(pr_single_job_comment_failing, 42)
-    assert err.type == GetCommentException
+    assert err.type == GetIssueCommentsException
 
     # getting comment should succeed on 2nd try (fail once)
     os.environ['TEST_RAISE_EXCEPTION'] = '1'
@@ -281,7 +291,7 @@ def test_get_submitted_job_comment_retry(pr_single_job_comment_failing):
     os.environ['TEST_RAISE_EXCEPTION'] = '5'
     with pytest.raises(Exception) as err:
         get_submitted_job_comment(pr_single_job_comment_failing, 42)
-    assert err.type == GetCommentException
+    assert err.type == GetIssueCommentsException
 
 
 # tests for update_comment
@@ -289,20 +299,26 @@ def test_get_submitted_job_comment_retry(pr_single_job_comment_failing):
 #  - pr.get_issue_comment(cmnt_id) succeeds
 #    C1: returns obj with edit & body -> edit is called (and succeeds, see C4)
 #    C2: returns None -> edit is not called, log message is written
+#
 #  - pr.get_issue_comment(cmnt_id) fails (e.g., connection error)
-#    . fails 1,...,n times (n > tries) --> should it raise a specific Exception (to indicate
-#      that the first command failed)?
-#    C3.1 - not implemented yet
-#    C3.n
+#    C3.1 - fails once, then succeeds --> returns the comment
+#    C3.n - fails n(==maxtries) times --> results in an Exception
+#    C3.x - fails always --> results in an Exception
+#
 #  - issue_comment.edit(...) succeeds (side effect: body is changed)
 #    C4: included in C1
-#  - issue_comment.edit(...) fails (connection error, called with incompatible types)
-#    . fails 1,...,n times (n > tries) --> should it raise a specific Exception (to indicate
-#      that the second command failed)?
-#    C5.1 - not implemented yet
-#    C5.n
-#    C6.1 - not implemented yet
-#    C6.n
+#
+#  - issue_comment.edit(...) fails
+#    connection error
+#    C5.1 - fails once (IssueCommentEditException), then succeeds
+#           --> edits the comment
+#    C5.n - fails n(==maxtries) times --> results in an IssueCommentEditException
+#    C5.x - fails always --> results in an IssueCommentEditException
+#    incompatible args
+#    C6.1 - fails once (TypeError), then succeeds
+#           --> edits the comment
+#    C6.n - fails n(==maxtries) times --> results in a TypeError
+#    C6.x - fails always --> results in a TypeError
 #
 
 
@@ -311,9 +327,15 @@ def test_get_submitted_job_comment_retry(pr_single_job_comment_failing):
 def test_update_comment_get_issue_comment_succeeds_one_comment(tmpdir):
     log_file = os.path.join(tmpdir, "log.txt")
     comment_to_update = MockIssueComment("__ORG-comment__")
-    with patch('github.PullRequest.PullRequest') as mock_pr:
+
+    def do_not_sleep_really(delay):
+        print(f"sleeping {delay} seconds (not really though - mocked)")
+
+    with patch('github.PullRequest.PullRequest') as mock_pr, \
+        patch('retry.api.time.sleep') as mock_sleep:
         instance = mock_pr.return_value
         instance.get_issue_comment.return_value = comment_to_update
+        mock_sleep.side_effect = do_not_sleep_really
 
         cmnt_id = 0
         update = "body-0"
@@ -332,9 +354,15 @@ def test_update_comment_get_issue_comment_succeeds_one_comment(tmpdir):
 #   C2: returns None -> edit is not called, log message is written
 def test_update_comment_get_issue_comment_succeeds_no_comment(tmpdir):
     log_file = os.path.join(tmpdir, "log.txt")
-    with patch('github.PullRequest.PullRequest') as mock_pr:
+
+    def do_not_sleep_really(delay):
+        print(f"sleeping {delay} seconds (not really though - mocked)")
+
+    with patch('github.PullRequest.PullRequest') as mock_pr, \
+        patch('retry.api.time.sleep') as mock_sleep:
         instance = mock_pr.return_value
         instance.get_issue_comment.return_value = None
+        mock_sleep.side_effect = do_not_sleep_really
 
         cmnt_id = 0
         update = "body-0"
@@ -352,13 +380,21 @@ def test_update_comment_get_issue_comment_succeeds_no_comment(tmpdir):
 
 
 #  - pr.get_issue_comment(cmnt_id) fails (e.g., connection error)
-#    . fails 1,...,n times (n > tries) --> raises GetIssueCommentException
-#    C3.n
+#    C3.1 - fails once (GetIssueCommentException), then succeeds
+#           --> returns the comment
+#    C3.n - fails n(==maxtries) times --> results in a GetIssueCommentException
+#    C3.x - fails always --> results in a GetIssueCommentException
 def test_update_comment_get_issue_comment_fails(tmpdir):
     log_file = os.path.join(tmpdir, "log.txt")
-    with patch('github.PullRequest.PullRequest') as mock_pr:
+
+    def do_not_sleep_really(delay):
+        print(f"sleeping {delay} seconds (not really though - mocked)")
+
+    with patch('github.PullRequest.PullRequest') as mock_pr, \
+        patch('retry.api.time.sleep') as mock_sleep:
         instance = mock_pr.return_value
         instance.get_issue_comment.side_effect = GetIssueCommentException
+        mock_sleep.side_effect = do_not_sleep_really
 
         cmnt_id = -1
         update = "raise GetIssueCommentException"
@@ -374,24 +410,32 @@ def test_update_comment_get_issue_comment_fails(tmpdir):
         assert expected == actual
 
 
-#  - issue_comment.edit(...) fails (connection error, called with incompatible types)
-#    . fails 1,...,n times (n > tries) --> should it raise a specific Exception (to indicate
-#      that the second command failed)?
-#    C5.n connection error raising EditIssueCommentException
+#  - issue_comment.edit(...) fails
+#    connection error
+#    C5.1 - fails once (IssueCommentEditException), then succeeds
+#           --> edits the comment
+#    C5.n - fails n(==maxtries) times --> results in an IssueCommentEditException
+#    C5.x - fails always --> results in an IssueCommentEditException
 def test_update_comment_issue_comment_edit_fails_exception(tmpdir):
     log_file = os.path.join(tmpdir, "log.txt")
     comment_to_update = MockIssueComment(
                             "__ORG-comment__",
-                            edit_raises=EditIssueCommentException
+                            edit_raises=IssueCommentEditException
                         )
-    with patch('github.PullRequest.PullRequest') as mock_pr:
-        instance_pr = mock_pr.return_value
-        instance_pr.get_issue_comment.return_value = comment_to_update
+
+    def do_not_sleep_really(delay):
+        print(f"sleeping {delay} seconds (not really though - mocked)")
+
+    with patch('github.PullRequest.PullRequest') as mock_pr, \
+        patch('retry.api.time.sleep') as mock_sleep:
+        instance = mock_pr.return_value
+        instance.get_issue_comment.return_value = comment_to_update
+        mock_sleep.side_effect = do_not_sleep_really
 
         cmnt_id = 0
-        update = "raise EditIssueCommentException"
+        update = "raise IssueCommentEditException"
         with pytest.raises(Exception):
-            update_comment(cmnt_id, instance_pr, update, log_file=log_file)
+            update_comment(cmnt_id, instance, update, log_file=log_file)
 
         # log_file should not exists
         assert not os.path.exists(log_file)
@@ -403,7 +447,7 @@ def test_update_comment_issue_comment_edit_fails_exception(tmpdir):
 
         # check if function was called 5 times
         expected = 5
-        actual = instance_pr.get_issue_comment.call_count
+        actual = instance.get_issue_comment.call_count
         assert expected == actual
 
 
@@ -413,14 +457,20 @@ def test_update_comment_issue_comment_edit_fails_exception(tmpdir):
 def test_update_comment_issue_comment_edit_fails_args(tmpdir):
     log_file = os.path.join(tmpdir, "log.txt")
     comment_to_update = MockIssueComment("__ORG-comment__")
-    with patch('github.PullRequest.PullRequest') as mock_pr:
-        instance_pr = mock_pr.return_value
-        instance_pr.get_issue_comment.return_value = comment_to_update
+
+    def do_not_sleep_really(delay):
+        print(f"sleeping {delay} seconds (not really though - mocked)")
+
+    with patch('github.PullRequest.PullRequest') as mock_pr, \
+        patch('retry.api.time.sleep') as mock_sleep:
+        instance = mock_pr.return_value
+        instance.get_issue_comment.return_value = comment_to_update
+        mock_sleep.side_effect = do_not_sleep_really
 
         cmnt_id = 0
         update = 42
         with pytest.raises(Exception):
-            update_comment(cmnt_id, instance_pr, update, log_file=log_file)
+            update_comment(cmnt_id, instance, update, log_file=log_file)
 
         # log_file should not exists
         assert not os.path.exists(log_file)
@@ -432,5 +482,5 @@ def test_update_comment_issue_comment_edit_fails_args(tmpdir):
 
         # check if function was called 5 times
         expected = 5
-        actual = instance_pr.get_issue_comment.call_count
+        actual = instance.get_issue_comment.call_count
         assert expected == actual
