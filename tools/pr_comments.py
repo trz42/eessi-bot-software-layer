@@ -75,4 +75,5 @@ def update_comment(cmnt_id, pr, update, log_file=None):
     if issue_comment:
         issue_comment.edit(issue_comment.body + update)
     else:
-        log(f"no comment with id {cmnt_id}, skipping update '{update}'", log_file=log_file)
+        log(f"no comment with id {cmnt_id}, skipping update '{update}'",
+            log_file=log_file)
