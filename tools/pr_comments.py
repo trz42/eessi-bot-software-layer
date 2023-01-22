@@ -29,8 +29,6 @@ def get_comment(pr, search_pattern):
     Returns:
         comment (string): comment for the submitted job
     """
-    # If the config keys are not set, get_access_token will raise a NotImplementedError
-    # Returning NoneType token will stop the connection in get_instance
     comments = pr.get_issue_comments()
     for comment in comments:
         cms = f".*{search_pattern}.*"
