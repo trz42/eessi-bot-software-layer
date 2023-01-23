@@ -69,23 +69,11 @@ def update_comment(cmnt_id, pr, update, log_file=None):
         update (string): updated comment
         log_file (string): path to log file
     """
-    issue_comment = retry_call(
-                                pr.get_issue_comment,
-                                fargs=[cmnt_id],
-                                exceptions=Exception,
-                                tries=5,
-                                delay=1,
-                                backoff=2,
-                                max_delay=30)
+    issue_comment = retry_call(pr.get_issue_comment, fargs=[cmnt_id], exceptions=Exception,
+                               tries=5, delay=1, backoff=2, max_delay=30)
     if issue_comment:
-        retry_call(
-                    issue_comment.edit,
-                    fargs=[issue_comment.body + update],
-                    exceptions=Exception,
-                    tries=5,
-                    delay=1,
-                    backoff=2,
-                    max_delay=30)
+        retry_call(issue_comment.edit, fargs=[issue_comment.body + update], exceptions=Exception,
+                   tries=5, delay=1, backoff=2, max_delay=30)
     else:
         log(f"no comment with id {cmnt_id}, skipping update '{update}'",
             log_file=log_file)
