@@ -13,7 +13,12 @@
 #
 import re
 
+from pyghee.utils import log
+from retry import retry
+from retry.api import retry_call
 
+
+@retry(Exception, tries=5, delay=1, backoff=2, max_delay=30)
 def get_comment(pr, search_pattern):
     """get comment using the search pattern
 
@@ -26,16 +31,15 @@ def get_comment(pr, search_pattern):
     """
     comments = pr.get_issue_comments()
     for comment in comments:
-
         cms = f".*{search_pattern}.*"
-
         comment_match = re.search(cms, comment.body)
-
         if comment_match:
             return comment
+
     return None
 
 
+# Note, no @retry decorator used here because it is already used with get_comment.
 def get_submitted_job_comment(pr, job_id):
     """get comment of the submitted job id
 
@@ -56,13 +60,20 @@ def get_submitted_job_comment(pr, job_id):
     return get_comment(pr, job_search_pattern)
 
 
-def update_comment(cmnt_id, pr, update):
+def update_comment(cmnt_id, pr, update, log_file=None):
     """update comment of the job
 
     Args:
         cmnt_id (int): comment id for the submitted job
         pr (object): data of pr
         update (string): updated comment
+        log_file (string): path to log file
     """
-    issue_comment = pr.get_issue_comment(cmnt_id)
-    issue_comment.edit(issue_comment.body + update)
+    issue_comment = retry_call(pr.get_issue_comment, fargs=[cmnt_id], exceptions=Exception,
+                               tries=5, delay=1, backoff=2, max_delay=30)
+    if issue_comment:
+        retry_call(issue_comment.edit, fargs=[issue_comment.body + update], exceptions=Exception,
+                   tries=5, delay=1, backoff=2, max_delay=30)
+    else:
+        log(f"no comment with id {cmnt_id}, skipping update '{update}'",
+            log_file=log_file)
