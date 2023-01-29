@@ -36,7 +36,7 @@ BUILD_PERMISSION = "build_permission"
 ARCHITECTURE_TARGETS = "architecturetargets"
 REPO_TARGETS = "repo_targets"
 REPO_TARGET_MAP = "repo_target_map"
-REPOS_CFG_FILE_PATH = "repos_cfg_file_path"
+REPOS_CFG_DIR = "repos_cfg_dir"
 REPOS_REPO_NAME = "repo_name"
 REPOS_REPO_VERSION = "repo_version"
 REPOS_CONFIG_BUNDLE = "config_bundle"
@@ -135,8 +135,11 @@ def get_architecturetargets():
     return arch_target_map
 
 
-def get_repo_cfg():
+def get_repo_cfg(cfg):
     """get repository config settings
+
+    Args:
+        cfg: config read in with config.read_config()
 
     Returns:
         dict: dictionary with config entries
@@ -147,12 +150,13 @@ def get_repo_cfg():
     if len(repo_cfg) > 0:
         return repo_cfg
 
-    cfg = config.read_config()
-    repo_cfg = cfg[REPO_TARGETS]
+    repo_cfg_org = cfg[REPO_TARGETS]
+    repo_cfg = {}
+    repo_cfg[REPOS_CFG_DIR] = repo_cfg_org.get(REPOS_CFG_DIR)
 
     repo_map = {}
     try:
-        repo_map_str = repo_cfg.get(REPO_TARGET_MAP)
+        repo_map_str = repo_cfg_org.get(REPO_TARGET_MAP)
         log(f"{fn}(): repo_map '{repo_map_str}'")
 
         if repo_map_str is not None:
@@ -165,29 +169,38 @@ def get_repo_cfg():
 
     repo_cfg[REPO_TARGET_MAP] = repo_map
 
-    if repo_cfg[REPOS_CFG_FILE_PATH] is not None:
+    if repo_cfg[REPOS_CFG_DIR] is None:
         return repo_cfg
 
     # add entries for sections from repos.cfg (one dictionary per section)
+    repos_cfg_file = os.path.join(repo_cfg[REPOS_CFG_DIR], 'repos.cfg')
+    log(f"{fn}(): repos_cfg_file '{repos_cfg_file}'")
     try:
-        config = config.ConfigParser()
-        config.read(repo_cfg[REPOS_CFG_FILE_PATH])
+        repos_cfg = configparser.ConfigParser()
+        repos_cfg.read(repos_cfg_file)
     except Exception as err:
-        error(f"{fn}(): Unable to read repos config file {repo_cfg[REPOS_CFG_FILE_PATH]}!\n{err}")
-    for repo_id in config.keys():
-        if repo_cfg[repo_id]:
-            error(f"{fn}(): repo id '{repo_id}' in '{repo_cfg[REPOS_CFG_FILE_PATH]}' clashes with bot config")
-        repo_cfg[repo_id] = config[repo_id]
+        error(f"{fn}(): Unable to read repos config file {repos_cfg_file}!\n{err}")
+
+    for repo_id in repos_cfg.sections():
+        log(f"{fn}(): process repos.cfg section '{repo_id}'") 
+        if repo_id in repo_cfg:
+            error(f"{fn}(): repo id '{repo_id}' in '{repos_cfg_file}' clashes with bot config")
+
+        # repo_cfg[repo_id] = repos_cfg[repo_id]
+        for (key, val) in repos_cfg.items(repo_id):
+            repo_cfg[repo_id] = { key : val }
+            log(f"{fn}(): add ({key}:{val}) to repo_cfg[{repo_id}]")
+
         config_map = {}
         try:
-            config_map_str = config[repo_id].get(REPOS_CONFIG_MAP)
+            config_map_str = repos_cfg[repo_id].get(REPOS_CONFIG_MAP)
             log(f"{fn}(): config_map '{config_map_str}'")
 
             if config_map_str is not None:
                 config_map = json.loads(config_map_str)
 
             log(f"{fn}(): config_map '{json.dumps(config_map)}'")
-        except:
+        except Exception as err:
             print(err)
             error(f"{fn}(): Value for config_map ({config_map_str}) could not be decoded.")
 
