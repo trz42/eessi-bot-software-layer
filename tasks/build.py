@@ -51,7 +51,7 @@ JOB_LOAD_MODULES = "load_modules"
 JOB_REPOSITORY = "repository"
 JOB_CONTAINER = "container"
 JOB_REPO_ID = "repo_id"
-JOB_REPOS_CFG_FILE = "repos_cfg_file"
+JOB_REPOS_CFG_DIR = "repos_cfg_dir"
 JOB_ARCHITECTURE = "architecture"
 JOB_SOFTWARE_SUBDIR = "software_subdir"
 
@@ -367,20 +367,25 @@ def prepare_job_cfg(job_dir, build_env_cfg, repo_cfg, software_subdir):
     #   .repository.container, .repository.repo_id, .repository.repos_cfg_file,
     #   .architecture.software_subdir
     job_cfg = {}
-    if build_env_cfg[LOCAL_TMP]:
+    job_cfg[JOB_SITECONFIG] = {}
+    if LOCAL_TMP in build_env_cfg:
         job_cfg[JOB_SITECONFIG][JOB_LOCAL_TMP] = build_env_cfg[LOCAL_TMP]
-    if build_env_cfg[HTTP_PROXY]:
+    if HTTP_PROXY in build_env_cfg:
         job_cfg[JOB_SITECONFIG][JOB_HTTP_PROXY] = build_env_cfg[HTTP_PROXY]
-    if build_env_cfg[HTTPS_PROXY]:
+    if HTTPS_PROXY in build_env_cfg:
         job_cfg[JOB_SITECONFIG][JOB_HTTPS_PROXY] = build_env_cfg[HTTPS_PROXY]
-    if build_env_cfg[LOAD_MODULES]:
+    if LOAD_MODULES in build_env_cfg:
         job_cfg[JOB_SITECONFIG][JOB_LOAD_MODULES] = build_env_cfg[LOAD_MODULES]
-    if repo_cfg[CONTAINER]:
+
+    job_cfg[JOB_REPOSITORY] = {}
+    if CONTAINER in repo_cfg:
         job_cfg[JOB_REPOSITORY][JOB_CONTAINER] = repo_cfg[CONTAINER]
-    if repo_cfg[REPO_ID]:
+    if REPO_ID in repo_cfg:
         job_cfg[JOB_REPOSITORY][JOB_REPO_ID] = repo_cfg[REPO_ID]
-    if repo_cfg[REPOS_CFG_FILE]:
-        job_cfg[JOB_REPOSITORY][JOB_REPOS_CFG_FILE] = repo_cfg[REPOS_CFG_FILE]
+    if REPOS_CFG_DIR in repo_cfg:
+        job_cfg[JOB_REPOSITORY][JOB_REPOS_CFG_DIR] = repo_cfg[REPOS_CFG_DIR]
+
+    job_cfg[JOB_ARCHITECTURE] = {}
     job_cfg[JOB_ARCHITECTURE][JOB_SOFTWARE_SUBDIR] = software_subdir
 
     json_data = json.dumps(job_cfg, indent=4)
@@ -531,7 +536,7 @@ def submit_build_jobs(pr, event_info):
     ym, pr_id, run_dir = create_pr_dir(pr, build_env_cfg[JOBS_BASE_DIR], event_info)
     gh = github.get_instance()
 
-    repocfg = get_repo_cfg()
+    repocfg = get_repo_cfg(cfg)
 
     # setup job directories (one per elem in product of architecture % repositories)
     jobs = prepare_jobs(pr, run_dir, build_env_cfg, arch_target_map, repocfg)
