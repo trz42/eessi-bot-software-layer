@@ -37,6 +37,7 @@ ARCHITECTURE_TARGETS = "architecturetargets"
 REPO_TARGETS = "repo_targets"
 REPO_TARGET_MAP = "repo_target_map"
 REPOS_CFG_DIR = "repos_cfg_dir"
+REPOS_ID = "repo_id"
 REPOS_REPO_NAME = "repo_name"
 REPOS_REPO_VERSION = "repo_version"
 REPOS_CONFIG_BUNDLE = "config_bundle"
@@ -337,7 +338,7 @@ def prepare_jobs(pr, event_dir, build_env_cfg, arch_map, repocfg):
 
             # prepare ./cfg/job.cfg
             cpu_target = '/'.join(arch.split('/')[1:])
-            prepare_job_cfg(job_dir, build_env_cfg, repocfg[repo_id], cpu_target)
+            prepare_job_cfg(job_dir, build_env_cfg, repocfg, repo_id, cpu_target)
  
             # enlist jobs to proceed
             job = Job(job_dir, arch, repo_id, slurm_opt)
@@ -350,13 +351,14 @@ def prepare_jobs(pr, event_dir, build_env_cfg, arch_map, repocfg):
     return jobs
 
 
-def prepare_job_cfg(job_dir, build_env_cfg, repo_cfg, software_subdir):
+def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir):
     """setup cfg/job.cfg
 
     Args:
         job_dir (string): directory of job
         build_env_cfg (dictionary): build environment configuration
-        repo_cfg (dictionary):  configuration of the repository to build for
+        repos_cfg (dictionary):  configuration settings for all repositories
+        repo_id (string):  identifier of the repository to build for
         software_subdir (string): software subdirectory to build for (CPU arch)
     """
     jobcfg_dir = os.path.join(job_dir, 'cfg')
@@ -378,10 +380,10 @@ def prepare_job_cfg(job_dir, build_env_cfg, repo_cfg, software_subdir):
         job_cfg[JOB_SITECONFIG][JOB_LOAD_MODULES] = build_env_cfg[LOAD_MODULES]
 
     job_cfg[JOB_REPOSITORY] = {}
-    if CONTAINER in repo_cfg:
-        job_cfg[JOB_REPOSITORY][JOB_CONTAINER] = repo_cfg[CONTAINER]
-    if REPO_ID in repo_cfg:
-        job_cfg[JOB_REPOSITORY][JOB_REPO_ID] = repo_cfg[REPO_ID]
+    repo_cfg = repos_cfg[repo_id]
+    if REPOS_CONTAINER in repo_cfg:
+        job_cfg[JOB_REPOSITORY][JOB_CONTAINER] = repo_cfg[REPOS_CONTAINER]
+    job_cfg[JOB_REPOSITORY][JOB_REPO_ID] = repo_id
     if REPOS_CFG_DIR in repo_cfg:
         job_cfg[JOB_REPOSITORY][JOB_REPOS_CFG_DIR] = repo_cfg[REPOS_CFG_DIR]
 
@@ -394,6 +396,7 @@ def prepare_job_cfg(job_dir, build_env_cfg, repo_cfg, software_subdir):
     with open(jobcfg_file, "w") as jcf:
         jcf.write(json_data)
 
+    # copy repository config bundle to directory cfg
 
 def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
     """Parse job id and submit jobs from directory
@@ -412,35 +415,35 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
     """
 
     # determine CPU target to use: job.arch_target, but without the linux/ part
-    cpu_target = '/'.join(job.arch_target.split('/')[1:])
+    #cpu_target = '/'.join(job.arch_target.split('/')[1:])
 
     command_line = ' '.join([
         build_env_cfg[SUBMIT_COMMAND],
         build_env_cfg[SLURM_PARAMS],
         job.slurm_opts,
         # set $CPU_TARGET in job environment, which can be picked up by build job script;
-        '--export=ALL,CPU_TARGET=%s' % cpu_target,
+        #'--export=ALL,CPU_TARGET=%s' % cpu_target,
         build_env_cfg[BUILD_JOB_SCRIPT],
-        '--tmpdir', build_env_cfg[LOCAL_TMP],
+        #'--tmpdir', build_env_cfg[LOCAL_TMP],
     ])
-    if build_env_cfg[HTTP_PROXY]:
-        command_line += f' --http-proxy {build_env_cfg[HTTP_PROXY]}'
-    if build_env_cfg[HTTPS_PROXY]:
-        command_line += f' --https-proxy {build_env_cfg[HTTPS_PROXY]}'
-    if build_env_cfg[LOAD_MODULES]:
-        command_line += f' --load-modules {build_env_cfg[LOAD_MODULES]}'
+    #if build_env_cfg[HTTP_PROXY]:
+    #    command_line += f' --http-proxy {build_env_cfg[HTTP_PROXY]}'
+    #if build_env_cfg[HTTPS_PROXY]:
+    #    command_line += f' --https-proxy {build_env_cfg[HTTPS_PROXY]}'
+    #if build_env_cfg[LOAD_MODULES]:
+    #    command_line += f' --load-modules {build_env_cfg[LOAD_MODULES]}'
 
     # TODO the handling of generic targets requires a bit knowledge about
     #      the internals of building the software layer, maybe ok for now,
     #      but it might be good to think about an alternative
     # if target contains generic, add ' --generic' to command line
-    if cpu_target.endswith("generic"):
-        command_line += ' --generic'
+    #if cpu_target.endswith("generic"):
+    #    command_line += ' --generic'
 
     # to make sure that correct $CPU_TARGET value is passed into job,
     # we need to also set it in the submission environment;
     # cfr. documentation for sbatch --export option, see https://slurm.schedmd.com/sbatch.html
-    os.environ['CPU_TARGET'] = cpu_target
+    #os.environ['CPU_TARGET'] = cpu_target
 
     cmdline_output, cmdline_error, cmdline_exit_code = run_cmd(command_line,
                                                                "submit job for target '%s'" % job.arch_target,
