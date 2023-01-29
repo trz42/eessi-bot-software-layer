@@ -99,16 +99,16 @@ class EESSIBotSoftwareLayer(PyGHee):
         Handle opening of a pull request.
         """
         self.log("PR opened: waiting for label bot:build")
-        app_name = self.cfg['app_name']
+        app_name = self.cfg['github']['app_name']
         # TODO check if PR already has a comment with arch targets and
         # repositories
-        repo_cfg = get_repo_cfg()
+        repo_cfg = get_repo_cfg(self.cfg)
         comment = f"Instance `{app_name}` is configured to build:"
-        comment += f"\n|architecture|repository|status/action|"
-        comment += f"\n|------------|----------|-------------|"
         for arch in repo_cfg['repo_target_map'].keys():
             for repo_id in repo_cfg['repo_target_map'][arch]:
-                comment += f"\n|`{arch}`|`{repo_id}`|- [x] enabled|"
+                comment += f"\n- [x] arch `{'/'.join(arch.split('/')[1:])}` for repo `{repo_id}`"
+
+        self.log(f"PR opened: comment '{comment}'")
 
         # create comment to pull request
         repo_name = pr.base.repo.full_name
