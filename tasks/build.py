@@ -106,15 +106,15 @@ def get_build_env_cfg():
 
     config_data[CVMFS_CUSTOMIZATIONS] = cvmfs_customizations
 
-    http_proxy = buildenv.get(HTTP_PROXY) or ''
+    http_proxy = buildenv.get(HTTP_PROXY, None)
     log("http_proxy '%s'" % http_proxy)
     config_data[HTTP_PROXY] = http_proxy
 
-    https_proxy = buildenv.get(HTTPS_PROXY) or ''
+    https_proxy = buildenv.get(HTTPS_PROXY, None)
     log("https_proxy '%s'" % https_proxy)
     config_data[HTTPS_PROXY] = https_proxy
 
-    load_modules = buildenv.get(LOAD_MODULES) or ''
+    load_modules = buildenv.get(LOAD_MODULES, None)
     log("load_modules '%s'" % load_modules)
     config_data[LOAD_MODULES] = load_modules
 
@@ -370,13 +370,13 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir)
     #   .architecture.software_subdir
     job_cfg = {}
     job_cfg[JOB_SITECONFIG] = {}
-    if LOCAL_TMP in build_env_cfg:
+    if build_env_cfg[LOCAL_TMP]:
         job_cfg[JOB_SITECONFIG][JOB_LOCAL_TMP] = build_env_cfg[LOCAL_TMP]
-    if HTTP_PROXY in build_env_cfg:
+    if build_env_cfg[HTTP_PROXY]:
         job_cfg[JOB_SITECONFIG][JOB_HTTP_PROXY] = build_env_cfg[HTTP_PROXY]
-    if HTTPS_PROXY in build_env_cfg:
+    if build_env_cfg[HTTPS_PROXY]:
         job_cfg[JOB_SITECONFIG][JOB_HTTPS_PROXY] = build_env_cfg[HTTPS_PROXY]
-    if LOAD_MODULES in build_env_cfg:
+    if build_env_cfg[LOAD_MODULES]:
         job_cfg[JOB_SITECONFIG][JOB_LOAD_MODULES] = build_env_cfg[LOAD_MODULES]
 
     job_cfg[JOB_REPOSITORY] = {}
@@ -503,6 +503,7 @@ def create_pr_comments(job, job_id, app_name, job_comment, pr, repo_name, gh, sy
     # construct initial job comment
     job_comment = (f"New job on instance `{app_name}`"
                    f" for architecture `{arch_name}`"
+                   f" for repository `{job.repo_id}`"
                    f" in job dir `{symlink}`\n"
                    f"|date|job status|comment|\n"
                    f"|----------|----------|------------------------|\n"
