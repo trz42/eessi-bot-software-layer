@@ -404,7 +404,7 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir)
     # TODO verify that app.cfg defines 'repos_cfg_dir'
     # copy repos_cfg[REPOS_CFG_DIR]/repos.cfg to jobcfg_dir
     # copy repos_cfg[REPOS_CFG_DIR]/*.tgz to jobcfg_dir
-    copy_tree(repos_cfg[REPOS_CFG], jobcfg_dir)
+    copy_tree(repos_cfg[REPOS_CFG_DIR], jobcfg_dir)
 
 
 def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
