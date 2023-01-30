@@ -19,6 +19,7 @@ import sys
 from collections import namedtuple
 from connections import github
 from datetime import datetime, timezone
+from distutils.dir_util import copy_tree
 from pyghee.utils import log, error
 from tools import config, run_cmd
 
@@ -153,7 +154,7 @@ def get_repo_cfg(cfg):
 
     repo_cfg_org = cfg[REPO_TARGETS]
     repo_cfg = {}
-    repo_cfg[REPOS_CFG_DIR] = repo_cfg_org.get(REPOS_CFG_DIR)
+    repo_cfg[REPOS_CFG_DIR] = repo_cfg_org.get(REPOS_CFG_DIR, None)
 
     repo_map = {}
     try:
@@ -366,7 +367,7 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir)
     # create json file job.cfg with entries:
     #   .site_config.local_tmp, .site_config.http_proxy, .site_config.https_proxy,
     #   .site_config.load_modules,
-    #   .repository.container, .repository.repo_id, .repository.repos_cfg_file,
+    #   .repository.container, .repository.repo_id, .repository.repos_cfg_dir,
     #   .architecture.software_subdir
     job_cfg = {}
     job_cfg[JOB_SITECONFIG] = {}
@@ -384,8 +385,11 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir)
     if REPOS_CONTAINER in repo_cfg:
         job_cfg[JOB_REPOSITORY][JOB_CONTAINER] = repo_cfg[REPOS_CONTAINER]
     job_cfg[JOB_REPOSITORY][JOB_REPO_ID] = repo_id
-    if REPOS_CFG_DIR in repo_cfg:
-        job_cfg[JOB_REPOSITORY][JOB_REPOS_CFG_DIR] = repo_cfg[REPOS_CFG_DIR]
+    # note REPOS_CFG_DIR is a global cfg for all repositories, hence it is stored
+    # in repos_cfg (not in config for a specific repository, i.e., repo_cfg)
+    if REPOS_CFG_DIR in repos_cfg:
+        #job_cfg[JOB_REPOSITORY][JOB_REPOS_CFG_DIR] = repos_cfg[REPOS_CFG_DIR]
+        job_cfg[JOB_REPOSITORY][JOB_REPOS_CFG_DIR] = jobcfg_dir
 
     job_cfg[JOB_ARCHITECTURE] = {}
     job_cfg[JOB_ARCHITECTURE][JOB_SOFTWARE_SUBDIR] = software_subdir
@@ -397,6 +401,11 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir)
         jcf.write(json_data)
 
     # copy repository config bundle to directory cfg
+    # TODO verify that app.cfg defines 'repos_cfg_dir'
+    # copy repos_cfg[REPOS_CFG_DIR]/repos.cfg to jobcfg_dir
+    # copy repos_cfg[REPOS_CFG_DIR]/*.tgz to jobcfg_dir
+    copy_tree(repos_cfg[REPOS_CFG], jobcfg_dir)
+
 
 def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
     """Parse job id and submit jobs from directory
