@@ -371,6 +371,8 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
         software_subdir (string): software subdirectory to build for (CPU arch)
         os_type (string): type of the os (e.g., linux)
     """
+    fn = sys._getframe().f_code.co_name
+
     jobcfg_dir = os.path.join(job_dir, 'cfg')
     os.makedirs(jobcfg_dir, exist_ok=True)
     # create json file job.cfg with entries:
