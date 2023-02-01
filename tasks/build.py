@@ -211,6 +211,9 @@ def get_repo_cfg(cfg):
 
         repo_cfg[repo_id][REPOS_CONFIG_MAP] = config_map
 
+    # print full repo_cfg for debugging purposes
+    log(f"{fn}(): complete repo_cfg that was just read: {json.dumps(repo_cfg)}")
+
     return repo_cfg
 
 
