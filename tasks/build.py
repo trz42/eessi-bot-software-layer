@@ -386,18 +386,21 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
         job_cfg[JOB_SITECONFIG][JOB_LOAD_MODULES] = build_env_cfg[LOAD_MODULES]
 
     job_cfg[JOB_REPOSITORY] = {}
-    repo_cfg = repos_cfg[repo_id]
-    if REPOS_CONTAINER in repo_cfg:
-        job_cfg[JOB_REPOSITORY][JOB_CONTAINER] = repo_cfg[REPOS_CONTAINER]
-    job_cfg[JOB_REPOSITORY][JOB_REPO_ID] = repo_id
+    # directory for repos.cfg
     # note REPOS_CFG_DIR is a global cfg for all repositories, hence it is stored
     # in repos_cfg (not in config for a specific repository, i.e., repo_cfg)
-    if REPOS_CFG_DIR in repos_cfg:
-        #job_cfg[JOB_REPOSITORY][JOB_REPOS_CFG_DIR] = repos_cfg[REPOS_CFG_DIR]
+    if repos_cfg[REPOS_CFG_DIR]:
         job_cfg[JOB_REPOSITORY][JOB_REPOS_CFG_DIR] = jobcfg_dir
-    if REPOS_REPO_NAME in repo_cfg:
+    # repo id
+    job_cfg[JOB_REPOSITORY][JOB_REPO_ID] = repo_id
+
+    # settings for specific repo
+    repo_cfg = repos_cfg[repo_id]
+    if repo_cfg[REPOS_CONTAINER]:
+        job_cfg[JOB_REPOSITORY][JOB_CONTAINER] = repo_cfg[REPOS_CONTAINER]
+    if repo_cfg[REPOS_REPO_NAME]:
         job_cfg[JOB_REPOSITORY][JOB_REPO_NAME] = repo_cfg[REPOS_REPO_NAME]
-    if REPOS_REPO_VERSION in repo_cfg:
+    if repo_cfg[REPOS_REPO_VERSION]:
         job_cfg[JOB_REPOSITORY][JOB_REPO_VERSION] = repo_cfg[REPOS_REPO_VERSION]
 
     job_cfg[JOB_ARCHITECTURE] = {}
