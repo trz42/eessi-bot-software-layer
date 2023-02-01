@@ -192,6 +192,7 @@ def get_repo_cfg(cfg):
             error(f"{fn}(): repo id '{repo_id}' in '{repos_cfg_file}' clashes with bot config")
 
         # repo_cfg[repo_id] = repos_cfg[repo_id]
+        repo_cfg[repo_id] = {}
         for (key, val) in repos_cfg.items(repo_id):
             repo_cfg[repo_id][key] = val
             log(f"{fn}(): add ({key}:{val}) to repo_cfg[{repo_id}]")
