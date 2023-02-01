@@ -53,9 +53,12 @@ JOB_LOAD_MODULES = "load_modules"
 JOB_REPOSITORY = "repository"
 JOB_CONTAINER = "container"
 JOB_REPO_ID = "repo_id"
+JOB_REPO_NAME = "repo_name"
+JOB_REPO_VERSION = "repo_version"
 JOB_REPOS_CFG_DIR = "repos_cfg_dir"
 JOB_ARCHITECTURE = "architecture"
 JOB_SOFTWARE_SUBDIR = "software_subdir"
+JOB_OS_TYPE = "os_type"
 
 Job = namedtuple('Job', ('working_dir', 'arch_target', 'repo_id', 'slurm_opts'))
 
@@ -339,7 +342,8 @@ def prepare_jobs(pr, event_dir, build_env_cfg, arch_map, repocfg):
 
             # prepare ./cfg/job.cfg
             cpu_target = '/'.join(arch.split('/')[1:])
-            prepare_job_cfg(job_dir, build_env_cfg, repocfg, repo_id, cpu_target)
+            os_type = arch.split('/')[0]
+            prepare_job_cfg(job_dir, build_env_cfg, repocfg, repo_id, cpu_target, os_type)
  
             # enlist jobs to proceed
             job = Job(job_dir, arch, repo_id, slurm_opt)
@@ -352,7 +356,7 @@ def prepare_jobs(pr, event_dir, build_env_cfg, arch_map, repocfg):
     return jobs
 
 
-def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir):
+def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir, os_type):
     """setup cfg/job.cfg
 
     Args:
@@ -361,6 +365,7 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir)
         repos_cfg (dictionary):  configuration settings for all repositories
         repo_id (string):  identifier of the repository to build for
         software_subdir (string): software subdirectory to build for (CPU arch)
+        os_type (string): type of the os (e.g., linux)
     """
     jobcfg_dir = os.path.join(job_dir, 'cfg')
     os.makedirs(jobcfg_dir, exist_ok=True)
@@ -390,9 +395,14 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir)
     if REPOS_CFG_DIR in repos_cfg:
         #job_cfg[JOB_REPOSITORY][JOB_REPOS_CFG_DIR] = repos_cfg[REPOS_CFG_DIR]
         job_cfg[JOB_REPOSITORY][JOB_REPOS_CFG_DIR] = jobcfg_dir
+    if REPOS_REPO_NAME in repo_cfg:
+        job_cfg[JOB_REPOSITORY][JOB_REPO_NAME] = repo_cfg[REPOS_REPO_NAME]
+    if REPOS_REPO_VERSION in repo_cfg:
+        job_cfg[JOB_REPOSITORY][JOB_REPO_VERSION] = repo_cfg[REPOS_REPO_VERSION]
 
     job_cfg[JOB_ARCHITECTURE] = {}
     job_cfg[JOB_ARCHITECTURE][JOB_SOFTWARE_SUBDIR] = software_subdir
+    job_cfg[JOB_ARCHITECTURE][JOB_OS_TYPE] = os_type
 
     json_data = json.dumps(job_cfg, indent=4)
 
