@@ -193,7 +193,7 @@ def get_repo_cfg(cfg):
 
         # repo_cfg[repo_id] = repos_cfg[repo_id]
         for (key, val) in repos_cfg.items(repo_id):
-            repo_cfg[repo_id] = { key : val }
+            repo_cfg[repo_id][key] = val
             log(f"{fn}(): add ({key}:{val}) to repo_cfg[{repo_id}]")
 
         config_map = {}
@@ -212,7 +212,7 @@ def get_repo_cfg(cfg):
         repo_cfg[repo_id][REPOS_CONFIG_MAP] = config_map
 
     # print full repo_cfg for debugging purposes
-    log(f"{fn}(): complete repo_cfg that was just read: {json.dumps(repo_cfg)}")
+    log(f"{fn}(): complete repo_cfg that was just read: {json.dumps(repo_cfg, indent=4)}")
 
     return repo_cfg
 
@@ -415,6 +415,8 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
     jobcfg_file = os.path.join(jobcfg_dir, 'job.cfg')
     with open(jobcfg_file, "w") as jcf:
         jcf.write(json_data)
+
+    log(f"{fn}(): created {jobcfg_file} with '{json_data}'")
 
     # copy repository config bundle to directory cfg
     # TODO verify that app.cfg defines 'repos_cfg_dir'
