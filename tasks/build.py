@@ -25,6 +25,7 @@ from tools import config, run_cmd
 
 BUILDENV = "buildenv"
 BUILD_JOB_SCRIPT = "build_job_script"
+CONTAINER_CACHEDIR = "container_cachedir"
 CVMFS_CUSTOMIZATIONS = "cvmfs_customizations"
 HTTP_PROXY = "http_proxy"
 HTTPS_PROXY = "https_proxy"
@@ -94,6 +95,10 @@ def get_build_env_cfg():
     slurm_params += ' --hold'
     log("slurm_params '%s'" % slurm_params)
     config_data[SLURM_PARAMS] = slurm_params
+
+    container_cachedir = buildenv.get(CONTAINER_CACHEDIR)
+    log("container_cachedir '%s'" % container_cachedir)
+    config_data[CONTAINER_CACHEDIR] = container_cachedir
 
     cvmfs_customizations = {}
     try:
@@ -377,11 +382,13 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
     os.makedirs(jobcfg_dir, exist_ok=True)
     # create json file job.cfg with entries:
     #   .site_config.local_tmp, .site_config.http_proxy, .site_config.https_proxy,
-    #   .site_config.load_modules,
+    #   .site_config.load_modules, .site_config.container_cachedir,
     #   .repository.container, .repository.repo_id, .repository.repos_cfg_dir,
     #   .architecture.software_subdir
     job_cfg = {}
     job_cfg[JOB_SITECONFIG] = {}
+    if build_env_cfg[CONTAINER_CACHEDIR]:
+        job_cfg[JOB_SITECONFIG][CONTAINER_CACHEDIR] = build_env_cfg[CONTAINER_CACHEDIR]
     if build_env_cfg[LOCAL_TMP]:
         job_cfg[JOB_SITECONFIG][JOB_LOCAL_TMP] = build_env_cfg[LOCAL_TMP]
     if build_env_cfg[HTTP_PROXY]:
