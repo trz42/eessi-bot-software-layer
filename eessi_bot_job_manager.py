@@ -94,21 +94,19 @@ class EESSIBotSoftwareLayerJobManager:
 
         return current_jobs
 
-    def determine_running_jobs(self, known_jobs, current_jobs):
+    def determine_running_jobs(self, current_jobs):
         """ determine which jobs are in running state
 
         Args:
-            known_jobs (dict): dictionary containing data of known jobs
             current_jobs (dict): dictionary containing data of current jobs
 
         Returns:
-            running_jobs (dict): dictionary containing data of ruuning jobs
+            running_jobs (list): list containing ids of running jobs
         """
         running_jobs = []
-        for rkey in current_jobs:
-            if rkey in known_jobs:
-                running_jobs.append(rkey)
-
+        for job in current_jobs.values(): 
+            if job["state"] == "RUNNING":
+                running_jobs.append(job["jobid"])
         return running_jobs
 
     # known_jobs = job_manager.get_known_jobs()
@@ -668,7 +666,7 @@ def main():
             #        " %s due to parameter '--jobs %s'" % (
             #          nj,opts.jobs), job_manager.logfile)
 
-        running_jobs = job_manager.determine_running_jobs(known_jobs, current_jobs)
+        running_jobs = job_manager.determine_running_jobs(current_jobs)
         log(
             "job manager main loop: running_jobs='%s'" %
             ",".join(running_jobs),
