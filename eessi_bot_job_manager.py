@@ -104,7 +104,7 @@ class EESSIBotSoftwareLayerJobManager:
             running_jobs (list): list containing ids of running jobs
         """
         running_jobs = []
-        for job in current_jobs.values(): 
+        for job in current_jobs.values():
             if job["state"] == "RUNNING":
                 running_jobs.append(job["jobid"])
         return running_jobs
