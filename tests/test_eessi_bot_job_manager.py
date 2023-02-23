@@ -35,3 +35,47 @@ def test_read_job_pr_metadata(tmpdir):
         "pr_number": "12345",
     }
     assert metadata_pr == expected
+
+
+def test_determine_running_jobs():
+    job_manager = EESSIBotSoftwareLayerJobManager()
+
+    assert job_manager.determine_running_jobs({}) == []
+
+    current_jobs_all_pending = {
+        '0': {
+            'jobid': '0',
+            'state': 'PENDING',
+            'reason': 'c11-59'
+        },
+        '1': {
+            'jobid': '1',
+            'state': 'PENDING',
+            'reason': 'c5-57'
+        },
+        '2': {
+            'jobid': '2',
+            'state': 'PENDING',
+            'reason': 'c5-56'
+        }
+    }
+    assert job_manager.determine_running_jobs(current_jobs_all_pending) == []
+
+    current_jobs_some_running = {
+        '0': {
+            'jobid': '0',
+            'state': 'RUNNING',
+            'reason': 'c11-59'
+        },
+        '1': {
+            'jobid': '1',
+            'state': 'PENDING',
+            'reason': 'c5-57'
+        },
+        '2': {
+            'jobid': '2',
+            'state': 'RUNNING',
+            'reason': 'c5-56'
+        }
+    }
+    assert job_manager.determine_running_jobs(current_jobs_some_running) == ["0", "2"]
