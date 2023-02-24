@@ -381,11 +381,20 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
 
     jobcfg_dir = os.path.join(job_dir, 'cfg')
     os.makedirs(jobcfg_dir, exist_ok=True)
-    # create json file job.cfg with entries:
-    #   .site_config.local_tmp, .site_config.http_proxy, .site_config.https_proxy,
-    #   .site_config.load_modules, .site_config.container_cachedir,
-    #   .repository.container, .repository.repo_id, .repository.repos_cfg_dir,
-    #   .architecture.software_subdir
+    # create ini file job.cfg with entries:
+    # [site_config]
+    # local_tmp = LOCAL_TMP_VALUE
+    #
+    # [repository]
+    # repos_cfg_dir = JOB_CFG_DIR
+    # repo_id = REPO_ID
+    # container = CONTAINER
+    # repo_name = REPO_NAME
+    # repo_version = REPO_VERSION
+    #
+    # [architecture]
+    # software_subdir = SOFTWARE_SUBDIR
+    # os_type = OS_TYPE
     job_cfg = configparser.ConfigParser()
     job_cfg[JOB_SITECONFIG] = {}
     if build_env_cfg[CONTAINER_CACHEDIR]:
