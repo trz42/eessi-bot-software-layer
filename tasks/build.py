@@ -428,7 +428,7 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
     with open(jobcfg_file, "w") as jcf:
         job_cfg.write(jcf)
 
-    log(f"{fn}(): created {jobcfg_file} with '{config_data.read()}'")
+    log(f"{fn}(): created {jobcfg_file} with '{config_data.getvalue()}'")
 
     # copy repository config bundle to directory cfg
     # TODO verify that app.cfg defines 'repos_cfg_dir'
