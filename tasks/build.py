@@ -20,6 +20,7 @@ from collections import namedtuple
 from connections import github
 from datetime import datetime, timezone
 from distutils.dir_util import copy_tree
+from io import StringIO
 from pyghee.utils import log, error
 from tools import config, run_cmd
 
@@ -420,12 +421,14 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
     job_cfg[JOB_ARCHITECTURE][JOB_SOFTWARE_SUBDIR] = software_subdir
     job_cfg[JOB_ARCHITECTURE][JOB_OS_TYPE] = os_type
 
+    config_data = StringIO()
+    job_cfg.write(config_data)
+
     jobcfg_file = os.path.join(jobcfg_dir, 'job.cfg')
     with open(jobcfg_file, "w") as jcf:
         job_cfg.write(jcf)
 
-    config_data = {section: dict(job_cfg[section]) for section in job_cfg.sections()}
-    log(f"{fn}(): created {jobcfg_file} with '{config_data}'")
+    log(f"{fn}(): created {jobcfg_file} with '{config_data.read()}'")
 
     # copy repository config bundle to directory cfg
     # TODO verify that app.cfg defines 'repos_cfg_dir'
