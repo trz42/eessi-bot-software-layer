@@ -385,7 +385,7 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
     #   .site_config.load_modules, .site_config.container_cachedir,
     #   .repository.container, .repository.repo_id, .repository.repos_cfg_dir,
     #   .architecture.software_subdir
-    job_cfg = {}
+    job_cfg = configparser.ConfigParser()
     job_cfg[JOB_SITECONFIG] = {}
     if build_env_cfg[CONTAINER_CACHEDIR]:
         job_cfg[JOB_SITECONFIG][CONTAINER_CACHEDIR] = build_env_cfg[CONTAINER_CACHEDIR]
@@ -420,13 +420,12 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
     job_cfg[JOB_ARCHITECTURE][JOB_SOFTWARE_SUBDIR] = software_subdir
     job_cfg[JOB_ARCHITECTURE][JOB_OS_TYPE] = os_type
 
-    json_data = json.dumps(job_cfg, indent=4)
-
     jobcfg_file = os.path.join(jobcfg_dir, 'job.cfg')
     with open(jobcfg_file, "w") as jcf:
-        jcf.write(json_data)
+        job_cfg.write(jcf)
 
-    log(f"{fn}(): created {jobcfg_file} with '{json_data}'")
+    config_data = {section: dict(job_cfg[section]) for section in job_cfg.sections()}
+    log(f"{fn}(): created {jobcfg_file} with '{config_data}'")
 
     # copy repository config bundle to directory cfg
     # TODO verify that app.cfg defines 'repos_cfg_dir'
