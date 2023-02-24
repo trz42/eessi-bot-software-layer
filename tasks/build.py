@@ -463,36 +463,12 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
             - symlink(string): symlink from main pr_<ID> dir to job dir (job[0])
     """
 
-    # determine CPU target to use: job.arch_target, but without the 'linux/' prefix
-    # cpu_target = '/'.join(job.arch_target.split('/')[1:])
-
     command_line = ' '.join([
         build_env_cfg[SUBMIT_COMMAND],
         build_env_cfg[SLURM_PARAMS],
         job.slurm_opts,
-        # set $CPU_TARGET in job environment, which can be picked up by build job script;
-        # '--export=ALL,CPU_TARGET=%s' % cpu_target,
         build_env_cfg[BUILD_JOB_SCRIPT],
-        # '--tmpdir', build_env_cfg[LOCAL_TMP],
     ])
-    # if build_env_cfg[HTTP_PROXY]:
-    #    command_line += f' --http-proxy {build_env_cfg[HTTP_PROXY]}'
-    # if build_env_cfg[HTTPS_PROXY]:
-    #    command_line += f' --https-proxy {build_env_cfg[HTTPS_PROXY]}'
-    # if build_env_cfg[LOAD_MODULES]:
-    #    command_line += f' --load-modules {build_env_cfg[LOAD_MODULES]}'
-
-    # TODO the handling of generic targets requires a bit knowledge about
-    #      the internals of building the software layer, maybe ok for now,
-    #      but it might be good to think about an alternative
-    # if target contains generic, add ' --generic' to command line
-    # if cpu_target.endswith("generic"):
-    #    command_line += ' --generic'
-
-    # to make sure that correct $CPU_TARGET value is passed into job,
-    # we need to also set it in the submission environment;
-    # cfr. documentation for sbatch --export option, see https://slurm.schedmd.com/sbatch.html
-    # os.environ['CPU_TARGET'] = cpu_target
 
     cmdline_output, cmdline_error, cmdline_exit_code = run_cmd(command_line,
                                                                "submit job for target '%s'" % job.arch_target,
