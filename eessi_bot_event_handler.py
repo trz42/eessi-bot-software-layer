@@ -117,7 +117,6 @@ class EESSIBotSoftwareLayer(PyGHee):
         pull_request = repo.get_pull(pr.number)
         pull_request.create_issue_comment(comment)
 
-
     def handle_pull_request_event(self, event_info, log_file=None):
         """
         Handle 'pull_request' event
