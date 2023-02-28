@@ -267,7 +267,7 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
 
     # Add a default time limit of 24h to the command if nothing else is specified by the user
     if "--time=" not in build_env_cfg[SLURM_PARAMS]:
-        time_limit= "--time=24:00:00"
+        time_limit = "--time=24:00:00"
     else:
         time_limit = ""
 
