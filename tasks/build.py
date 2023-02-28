@@ -265,12 +265,19 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
             - symlink(string): symlink from main pr_<ID> dir to job dir (job[0])
     """
 
+    # Add a default time limit of 24h to the command if nothing else is specified by the user
+    if "--time=" not in build_env_cfg[SLURM_PARAMS]:
+        time_limit= "--time=24:00:00"
+    else:
+        time_limit = ""
+
     # determine CPU target to use: job.arch_target, but without the linux/ part
     cpu_target = '/'.join(job.arch_target.split('/')[1:])
 
     command_line = ' '.join([
         build_env_cfg[SUBMIT_COMMAND],
         build_env_cfg[SLURM_PARAMS],
+        time_limit,
         job.slurm_opts,
         # set $CPU_TARGET in job environment, which can be picked up by build job script;
         '--export=ALL,CPU_TARGET=%s' % cpu_target,
