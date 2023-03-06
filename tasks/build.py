@@ -24,6 +24,7 @@ from tools import config, run_cmd
 
 BUILDENV = "buildenv"
 BUILD_JOB_SCRIPT = "build_job_script"
+DEFAULT_JOB_TIME_LIMIT="24:00:00"
 CVMFS_CUSTOMIZATIONS = "cvmfs_customizations"
 HTTP_PROXY = "http_proxy"
 HTTPS_PROXY = "https_proxy"
@@ -264,15 +265,15 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
             - job_id(string):  job_id of submitted job
             - symlink(string): symlink from main pr_<ID> dir to job dir (job[0])
     """
-
-    # Add a default time limit of 24h to the command if nothing else is specified by the user
-    if "--time=" not in build_env_cfg[SLURM_PARAMS]:
-        time_limit = "--time=24:00:00"
-    else:
-        time_limit = ""
-
     # determine CPU target to use: job.arch_target, but without the linux/ part
     cpu_target = '/'.join(job.arch_target.split('/')[1:])
+
+    # Add a default time limit of 24h to the command if nothing else is specified by the user
+    all_opts = " ".join([build_env_cfg[SLURM_PARAMS], job.slurm_opts, '--export=ALL,CPU_TARGET=%s' % cpu_target])
+    if ("--time" in all_opts) or ("-t" in all_opts):
+        time_limit = ""
+    else:
+        time_limit = f"--time={DEFAULT_JOB_TIME_LIMIT}"
 
     command_line = ' '.join([
         build_env_cfg[SUBMIT_COMMAND],
