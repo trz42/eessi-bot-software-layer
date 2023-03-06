@@ -24,7 +24,7 @@ from tools import config, run_cmd
 
 BUILDENV = "buildenv"
 BUILD_JOB_SCRIPT = "build_job_script"
-DEFAULT_JOB_TIME_LIMIT="24:00:00"
+DEFAULT_JOB_TIME_LIMIT = "24:00:00"
 CVMFS_CUSTOMIZATIONS = "cvmfs_customizations"
 HTTP_PROXY = "http_proxy"
 HTTPS_PROXY = "https_proxy"
