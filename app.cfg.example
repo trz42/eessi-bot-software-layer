@@ -74,8 +74,8 @@ submit_command = /usr/bin/sbatch
 build_permission = Hafsa-Naeem
 
 [deploycfg]
-# script for uploading built software packages to S3 bucket
-upload_to_s3_script = PATH_TO_EESSI_BOT/scripts/eessi-upload-to-staging
+# script for uploading built software packages
+tarball_upload_script = PATH_TO_EESSI_BOT/scripts/eessi-upload-to-staging
 
 # URL to S3/minio bucket
 #   if attribute is set, bucket_base will be constructed as follows

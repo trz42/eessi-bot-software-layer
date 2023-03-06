@@ -21,7 +21,7 @@ from tools import config, run_cmd
 
 JOBS_BASE_DIR = "jobs_base_dir"
 DEPLOYCFG = "deploycfg"
-UPLOAD_TO_S3_SCRIPT = "upload_to_s3_script"
+TARBALL_UPLOAD_SCRIPT = "tarball_upload_script"
 ENDPOINT_URL = "endpoint_url"
 BUCKET_NAME = "bucket_name"
 UPLOAD_POLICY = "upload_policy"
@@ -213,7 +213,7 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number):
     # obtain config settings
     cfg = config.read_config()
     deploycfg = cfg[DEPLOYCFG]
-    upload_to_s3_script = deploycfg.get(UPLOAD_TO_S3_SCRIPT)
+    tarball_upload_script = deploycfg.get(TARBALL_UPLOAD_SCRIPT)
     endpoint_url = deploycfg.get(ENDPOINT_URL) or ''
     bucket_name = deploycfg.get(BUCKET_NAME)
 
@@ -223,7 +223,7 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number):
     #     bucket_name = 'eessi-staging'
     #     if endpoint_url not set use EESSI S3 bucket
     # (2) run command
-    cmd_args = [upload_to_s3_script, ]
+    cmd_args = [tarball_upload_script, ]
     if len(bucket_name) > 0:
         cmd_args.extend(['--bucket-name', bucket_name])
     if len(endpoint_url) > 0:

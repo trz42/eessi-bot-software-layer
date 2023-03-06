@@ -348,9 +348,9 @@ submit_command = /usr/bin/sbatch
 This is the full path to the Slurm command used for submitting batch jobs. You may want to verify if `sbatch` is provided at that path or determine its actual location (`which sbatch`).
 
 ### Section `[deploycfg]`
-The section `[deploycfg]` defines settings for uploading built artefacts (tarballs) to an S3 bucket.
+The section `[deploycfg]` defines settings for uploading built artefacts (tarballs).
 ```
-upload_to_s3_script = PATH_TO_EESSI_BOT/scripts/eessi-upload-to-staging
+tarball_upload_script = PATH_TO_EESSI_BOT/scripts/eessi-upload-to-staging
 ```
 Provides the location for the script used for uploading built software packages to an S3 bucket.
 
