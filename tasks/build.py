@@ -269,7 +269,7 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
     cpu_target = '/'.join(job.arch_target.split('/')[1:])
 
     # Add a default time limit of 24h to the command if nothing else is specified by the user
-    all_opts_str = " ".join([build_env_cfg[SLURM_PARAMS], job.slurm_opts, '--export=ALL,CPU_TARGET=%s' % cpu_target])
+    all_opts_str = " ".join([build_env_cfg[SLURM_PARAMS], job.slurm_opts])
     all_opts_list = all_opts_str.split(" ")
     if any([(opt.startswith("--time") or opt.startswith("-t")) for opt in all_opts_list]):
         time_limit = ""
