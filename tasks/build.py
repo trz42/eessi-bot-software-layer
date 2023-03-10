@@ -27,6 +27,7 @@ from tools import config, run_cmd
 BUILDENV = "buildenv"
 BUILD_JOB_SCRIPT = "build_job_script"
 CONTAINER_CACHEDIR = "container_cachedir"
+DEFAULT_JOB_TIME_LIMIT = "24:00:00"
 CVMFS_CUSTOMIZATIONS = "cvmfs_customizations"
 HTTP_PROXY = "http_proxy"
 HTTPS_PROXY = "https_proxy"
@@ -462,10 +463,18 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
             - job_id(string):  job_id of submitted job
             - symlink(string): symlink from main pr_<ID> dir to job dir (job[0])
     """
+    # Add a default time limit of 24h to the command if nothing else is specified by the user
+    all_opts_str = " ".join([build_env_cfg[SLURM_PARAMS], job.slurm_opts])
+    all_opts_list = all_opts_str.split(" ")
+    if any([(opt.startswith("--time") or opt.startswith("-t")) for opt in all_opts_list]):
+        time_limit = ""
+    else:
+        time_limit = f"--time={DEFAULT_JOB_TIME_LIMIT}"
 
     command_line = ' '.join([
         build_env_cfg[SUBMIT_COMMAND],
         build_env_cfg[SLURM_PARAMS],
+        time_limit,
         job.slurm_opts,
         build_env_cfg[BUILD_JOB_SCRIPT],
     ])
