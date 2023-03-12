@@ -29,10 +29,10 @@ class EESSIBotPRComment:
         self.read_key_information = False
         self.issue = {}
         self.sections = {
-            'header_config' : { "instance" : "", "targets" : [] },
-            'human_readable_log' : [ { "short" : [] }, "full" : [] } ],
-            'machine_readable_log' : [],
-            'control_room' : [],
+            "header_config": {"instance": "", "targets": []},
+            "human_readable_log": [{"short": []}, {"full": []}],
+            "machine_readable_log": [],
+            "control_room": [],
         }
 
     def log(self, msg, *args):
@@ -76,4 +76,3 @@ class EESSIBotPRComment:
         if self.read_key_information is False and self.read_all_information is False:
             self.log(f"missing key information to check if comment concerns me (instance {self.instance_name})")
             raise Exception
-
