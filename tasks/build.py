@@ -325,7 +325,7 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
     return job_id, symlink
 
 
-def create_metadata(job, job_id, repo_name, pr_number, pr_comment_id):
+def create_metadata_file(job, job_id, repo_name, pr_number, pr_comment_id):
     """Create metadata file in submission dir.
 
     Args:
@@ -425,7 +425,7 @@ def submit_build_jobs(pr, event_info):
         pr_comment_id = create_pr_comment(job, job_id, app_name, int(pr.number), repo_name, gh, symlink)
 
         # create _bot_job<jobid>.metadata file in submission directory
-        create_metadata(job, job_id, repo_name, int(pr.number), pr_comment_id)
+        create_metadata_file(job, job_id, repo_name, int(pr.number), pr_comment_id)
 
 
 def check_build_permission(pr, event_info):
