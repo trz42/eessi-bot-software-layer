@@ -12,12 +12,20 @@
 # license: GPLv2
 #
 
+# Standard library imports
 import filecmp
 import os
+from unittest.mock import patch
+
+# Third party imports (anything installed into the local Python environment)
 import pytest
 
+# Local application imports (anything from EESSI/eessi-bot-software-layer)
 from tools import run_cmd, run_subprocess
-from tasks.build import Job, create_metadata_file
+from tasks.build import Job, create_metadata_file, create_pr_comment
+
+# Local tests imports (reusing code from other tests)
+from tests.test_tools_pr_comments import MockIssueComment
 
 
 def test_run_cmd(tmpdir):
@@ -96,8 +104,63 @@ def test_run_subprocess(tmpdir):
         assert "test in file" in fp.read()
 
 
-# def test_create_pr_comment(tmpdir):
-#     """Tests for function create_pr_comment."""
+class CreateIssueCommentException(Exception):
+    "Raised when pr.create_issue_comment fails in a test."
+    pass
+
+
+class MockRepository:
+    def __init__(self, repo_name):
+        self.repo_name = repo_name
+
+    def get_pull(self, pr_number):
+        return MockPullRequest(pr_number)
+
+
+class MockPullRequest:
+    def __init__(self, pr_number):
+        self.pr_number = pr_number
+
+    def create_issue_comment(self, body):
+        return MockIssueComment("empty")
+
+
+@pytest.fixture
+def mocked_github():
+    def mocked_get_repo(repo_name):
+        return MockRepository(repo_name)
+
+    with patch('github.MainClass.Github') as mock_gh:
+        instance = mock_gh.return_value
+        instance.get_repo.side_effect = mocked_get_repo
+        yield instance
+
+
+def test_create_pr_comment(mocked_github, tmpdir):
+    """Tests for function create_pr_comment."""
+    # cases
+    # - create_issue_comment succeeds immediately
+    #   - returns !None --> issue_comment.id is as in MockIssueComment
+    #   - returns None
+    # - create_issue_comment fails once, then succeeds
+    #   - returns !None --> issue_comment.id is as in MockIssueComment
+    # - create_issue_comment always fails
+    # - create_issue_comment fails 3 times
+    #   - symptoms of failure: exception raised or return value of tested func -1
+
+    # patch gh.get_repo(repo_name) --> returns a MockRepository
+    # MockRepository provides repo.get_pull(pr_number) --> returns a MockPullRequest
+    # MockPullRequest provides pull_request.create_issue_comment
+
+    # just foo case
+    job = Job(tmpdir, "test/architecture", "--speed-up")
+    job_id = "123"
+    app_name = "pytest"
+    pr_number = 1
+    repo_name = "e2s2i/no_name"
+    symlink = "/symlink"
+    comment_id = create_pr_comment(job, job_id, app_name, pr_number, repo_name, mocked_github, symlink)
+    assert comment_id == 1
 
 
 def test_create_metadata_file(tmpdir):
