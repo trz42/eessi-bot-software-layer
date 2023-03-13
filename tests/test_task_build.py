@@ -21,8 +21,9 @@ from unittest.mock import patch
 import pytest
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
-from tools import run_cmd, run_subprocess
 from tasks.build import Job, create_metadata_file, create_pr_comment
+from tools import run_cmd, run_subprocess
+from tools.pr_comments import get_submitted_job_comment
 
 # Local tests imports (reusing code from other tests)
 from tests.test_tools_pr_comments import MockIssueComment
@@ -109,58 +110,139 @@ class CreateIssueCommentException(Exception):
     pass
 
 
+# cases for testing create_pr_comment (essentially testing create_issue_comment)
+# - create_issue_comment succeeds immediately
+#   - returns !None --> create_pr_comment returns 1
+#   - returns None --> create_pr_comment returns -1
+# - create_issue_comment fails once, then succeeds
+#   - returns !None --> create_pr_comment returns 1
+# - create_issue_comment always fails
+# - create_issue_comment fails 3 times
+#   - symptoms of failure: exception raised or return value of tested func -1
+
+# overall course of creating mocked objects
+# patch gh.get_repo(repo_name) --> returns a MockRepository
+# MockRepository provides repo.get_pull(pr_number) --> returns a MockPullRequest
+# MockPullRequest provides pull_request.create_issue_comment
+
+class CreateRepositoryException(Exception):
+    "Raised when gh.create_repo fails in a test, i.e., if repository already exists."
+    pass
+
+
+class MockGitHub:
+    def __init__(self):
+        self.repos = {}
+
+    def create_repo(self, repo_name):
+        if repo_name in self.repos:
+            raise CreateRepositoryException
+        else:
+            self.repos[repo_name] = MockRepository(repo_name)
+            return self.repos[repo_name]
+
+    def get_repo(self, repo_name):
+        repo = self.repos[repo_name]
+        return repo
+
+
 class MockRepository:
     def __init__(self, repo_name):
         self.repo_name = repo_name
+        self.pull_requests = {}
+
+    def create_pr(self, pr_number, create_fails=False):
+        if pr_number in self.pull_requests:
+            raise CreatePullRequestException
+        else:
+            self.pull_requests[pr_number] = MockPullRequest(pr_number, create_fails)
+            return self.pull_requests[pr_number]
 
     def get_pull(self, pr_number):
-        return MockPullRequest(pr_number)
+        pr = self.pull_requests[pr_number]
+        return pr
 
 
 class MockPullRequest:
-    def __init__(self, pr_number):
+    def __init__(self, pr_number, create_fails=False):
         self.pr_number = pr_number
+        self.issue_comments = []
+        self.create_fails = create_fails
 
     def create_issue_comment(self, body):
-        return MockIssueComment("empty")
+        if self.create_fails:
+            return None
+        self.issue_comments.append(MockIssueComment(body))
+        return self.issue_comments[-1]
+
+    def get_issue_comments(self):
+        return self.issue_comments
 
 
 @pytest.fixture
-def mocked_github():
-    def mocked_get_repo(repo_name):
-        return MockRepository(repo_name)
+def mocked_github(request):
+    mock_gh = MockGitHub()
 
-    with patch('github.MainClass.Github') as mock_gh:
-        instance = mock_gh.return_value
-        instance.get_repo.side_effect = mocked_get_repo
-        yield instance
+    repo_name = "e2s2i/no_name"
+    marker1 = request.node.get_closest_marker("repo_name")
+    if marker1:
+        repo_name = marker1.args[0]
+    mock_repo = mock_gh.create_repo(repo_name)
+
+    pr_number = 1
+    marker2 = request.node.get_closest_marker("pr_number")
+    if marker2:
+        pr_number = marker2.args[0]
+    create_fails = False
+    marker3 = request.node.get_closest_marker("create_fails")
+    if marker3:
+        create_fails = marker3.args[0]
+    mock_repo.create_pr(pr_number, create_fails=create_fails)
+
+    yield mock_gh
 
 
-def test_create_pr_comment(mocked_github, tmpdir):
+# case 1: create_issue_comment succeeds immediately
+#         returns !None --> create_pr_comment returns 1
+@pytest.mark.repo_name("EESSI/software-layer")
+@pytest.mark.pr_number(1)
+def test_create_pr_comment_succeeds(mocked_github, tmpdir):
     """Tests for function create_pr_comment."""
-    # cases
-    # - create_issue_comment succeeds immediately
-    #   - returns !None --> issue_comment.id is as in MockIssueComment
-    #   - returns None
-    # - create_issue_comment fails once, then succeeds
-    #   - returns !None --> issue_comment.id is as in MockIssueComment
-    # - create_issue_comment always fails
-    # - create_issue_comment fails 3 times
-    #   - symptoms of failure: exception raised or return value of tested func -1
-
-    # patch gh.get_repo(repo_name) --> returns a MockRepository
-    # MockRepository provides repo.get_pull(pr_number) --> returns a MockPullRequest
-    # MockPullRequest provides pull_request.create_issue_comment
-
-    # just foo case
+    # creating a PR comment
+    print(f"CREATING PR COMMENT")
     job = Job(tmpdir, "test/architecture", "--speed-up")
     job_id = "123"
     app_name = "pytest"
     pr_number = 1
-    repo_name = "e2s2i/no_name"
+    repo_name = "EESSI/software-layer"
     symlink = "/symlink"
     comment_id = create_pr_comment(job, job_id, app_name, pr_number, repo_name, mocked_github, symlink)
     assert comment_id == 1
+    # check if created comment includes jobid?
+    print(f"VERIFYING PR COMMENT")
+    repo = mocked_github.get_repo(repo_name)
+    pr = repo.get_pull(pr_number)
+    comment = get_submitted_job_comment(pr, job_id)
+    assert job_id in comment.body
+
+
+# case 2: create_issue_comment succeeds immediately
+#         returns None --> create_pr_comment returns -1
+@pytest.mark.repo_name("EESSI/software-layer")
+@pytest.mark.pr_number(1)
+@pytest.mark.create_fails(True)
+def test_create_pr_comment_succeeds_none(mocked_github, tmpdir):
+    """Tests for function create_pr_comment."""
+    # creating a PR comment
+    print(f"CREATING PR COMMENT")
+    job = Job(tmpdir, "test/architecture", "--speed-up")
+    job_id = "123"
+    app_name = "pytest"
+    pr_number = 1
+    repo_name = "EESSI/software-layer"
+    symlink = "/symlink"
+    comment_id = create_pr_comment(job, job_id, app_name, pr_number, repo_name, mocked_github, symlink)
+    assert comment_id == -1
 
 
 def test_create_metadata_file(tmpdir):
