@@ -19,5 +19,8 @@ def pytest_configure(config):
         "markers", "pr_number(num): parametrize test function with a PR number"
     )
     config.addinivalue_line(
+        "markers", "create_raises(string): define function behaviour"
+    )
+    config.addinivalue_line(
         "markers", "create_fails(bool): let function create_issue_comment return None"
     )
