@@ -15,7 +15,6 @@
 # Standard library imports
 import filecmp
 import os
-from unittest.mock import patch
 
 # Third party imports (anything installed into the local Python environment)
 import pytest
@@ -130,6 +129,11 @@ class CreateRepositoryException(Exception):
     pass
 
 
+class CreatePullRequestException(Exception):
+    "Raised when repo.create_pr fails in a test, i.e., if pull request already exists."
+    pass
+
+
 class MockGitHub:
     def __init__(self):
         self.repos = {}
@@ -209,7 +213,7 @@ def mocked_github(request):
 def test_create_pr_comment_succeeds(mocked_github, tmpdir):
     """Tests for function create_pr_comment."""
     # creating a PR comment
-    print(f"CREATING PR COMMENT")
+    print("CREATING PR COMMENT")
     job = Job(tmpdir, "test/architecture", "--speed-up")
     job_id = "123"
     app_name = "pytest"
@@ -219,7 +223,7 @@ def test_create_pr_comment_succeeds(mocked_github, tmpdir):
     comment_id = create_pr_comment(job, job_id, app_name, pr_number, repo_name, mocked_github, symlink)
     assert comment_id == 1
     # check if created comment includes jobid?
-    print(f"VERIFYING PR COMMENT")
+    print("VERIFYING PR COMMENT")
     repo = mocked_github.get_repo(repo_name)
     pr = repo.get_pull(pr_number)
     comment = get_submitted_job_comment(pr, job_id)
@@ -234,7 +238,7 @@ def test_create_pr_comment_succeeds(mocked_github, tmpdir):
 def test_create_pr_comment_succeeds_none(mocked_github, tmpdir):
     """Tests for function create_pr_comment."""
     # creating a PR comment
-    print(f"CREATING PR COMMENT")
+    print("CREATING PR COMMENT")
     job = Job(tmpdir, "test/architecture", "--speed-up")
     job_id = "123"
     app_name = "pytest"
