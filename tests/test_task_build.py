@@ -337,7 +337,7 @@ def test_create_pr_comment_always_raises(mocked_github, tmpdir):
     repo_name = "EESSI/software-layer"
     symlink = "/symlink"
     with pytest.raises(Exception) as err:
-        comment_id = create_pr_comment(job, job_id, app_name, pr_number, repo_name, mocked_github, symlink)
+        create_pr_comment(job, job_id, app_name, pr_number, repo_name, mocked_github, symlink)
     assert err.type == CreateIssueCommentException
     repo = mocked_github.get_repo(repo_name)
     pr = repo.get_pull(pr_number)
@@ -359,7 +359,7 @@ def test_create_pr_comment_three_raises(mocked_github, tmpdir):
     repo_name = "EESSI/software-layer"
     symlink = "/symlink"
     with pytest.raises(Exception) as err:
-        comment_id = create_pr_comment(job, job_id, app_name, pr_number, repo_name, mocked_github, symlink)
+        create_pr_comment(job, job_id, app_name, pr_number, repo_name, mocked_github, symlink)
     assert err.type == CreateIssueCommentException
     repo = mocked_github.get_repo(repo_name)
     pr = repo.get_pull(pr_number)
