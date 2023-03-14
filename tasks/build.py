@@ -344,7 +344,16 @@ def prepare_jobs(pr, event_dir, build_env_cfg, arch_map, repocfg):
     for arch, slurm_opt in arch_map.items():
         # TODO check if arch in repos_map
         arch_dir = arch.replace('/', '_')
+        # check if repo_target_map contains an entry for {arch}
+        if arch not in repocfg[REPO_TARGET_MAP]:
+            log(f"{fn}(): skipping arch {arch} because repo target map does not define repositories to build for")
+            continue
         for repo_id in repocfg[REPO_TARGET_MAP][arch]:
+            # ensure repocfg contains information about the repository repo_id if repo_id != EESSI-pilot
+            # Note, EESSI-pilot is a bad/misleading name, it should be more like AS_IN_CONTAINER
+            if repo_id != "EESSI-pilot" and repo_id not in repocfg:
+                log(f"{fn}(): skipping repo {repo_id}, it is not defined in repo config {repocfg[REPOS_CFG_DIR]}")
+                continue
             job_dir = os.path.join(event_dir, arch_dir, repo_id)
             os.makedirs(job_dir, exist_ok=True)
             log(f"{fn}(): job_dir '{job_dir}'")
@@ -414,19 +423,20 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
     # directory for repos.cfg
     # note REPOS_CFG_DIR is a global cfg for all repositories, hence it is stored
     # in repos_cfg (not in config for a specific repository, i.e., repo_cfg)
-    if repos_cfg[REPOS_CFG_DIR]:
+    if REPOS_CFG_DIR in repos_cfg and repos_cfg[REPOS_CFG_DIR]:
         job_cfg[JOB_REPOSITORY][JOB_REPOS_CFG_DIR] = jobcfg_dir
     # repo id
     job_cfg[JOB_REPOSITORY][JOB_REPO_ID] = repo_id
 
     # settings for specific repo
-    repo_cfg = repos_cfg[repo_id]
-    if repo_cfg[REPOS_CONTAINER]:
-        job_cfg[JOB_REPOSITORY][JOB_CONTAINER] = repo_cfg[REPOS_CONTAINER]
-    if repo_cfg[REPOS_REPO_NAME]:
-        job_cfg[JOB_REPOSITORY][JOB_REPO_NAME] = repo_cfg[REPOS_REPO_NAME]
-    if repo_cfg[REPOS_REPO_VERSION]:
-        job_cfg[JOB_REPOSITORY][JOB_REPO_VERSION] = repo_cfg[REPOS_REPO_VERSION]
+    if repo_id in repos_cfg:
+        repo_cfg = repos_cfg[repo_id]
+        if repo_cfg[REPOS_CONTAINER]:
+            job_cfg[JOB_REPOSITORY][JOB_CONTAINER] = repo_cfg[REPOS_CONTAINER]
+        if repo_cfg[REPOS_REPO_NAME]:
+            job_cfg[JOB_REPOSITORY][JOB_REPO_NAME] = repo_cfg[REPOS_REPO_NAME]
+        if repo_cfg[REPOS_REPO_VERSION]:
+            job_cfg[JOB_REPOSITORY][JOB_REPO_VERSION] = repo_cfg[REPOS_REPO_VERSION]
 
     job_cfg[JOB_ARCHITECTURE] = {}
     job_cfg[JOB_ARCHITECTURE][JOB_SOFTWARE_SUBDIR] = software_subdir
@@ -445,7 +455,8 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
     # TODO verify that app.cfg defines 'repos_cfg_dir'
     # copy repos_cfg[REPOS_CFG_DIR]/repos.cfg to jobcfg_dir
     # copy repos_cfg[REPOS_CFG_DIR]/*.tgz to jobcfg_dir
-    copy_tree(repos_cfg[REPOS_CFG_DIR], jobcfg_dir)
+    if REPOS_CFG_DIR in repos_cfg and repos_cfg[REPOS_CFG_DIR] and os.path.isdir(repos_cfg[REPOS_CFG_DIR]):
+        copy_tree(repos_cfg[REPOS_CFG_DIR], jobcfg_dir)
 
 
 def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
