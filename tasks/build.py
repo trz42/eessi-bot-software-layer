@@ -20,7 +20,6 @@ import sys
 from collections import namedtuple
 from connections import github
 from datetime import datetime, timezone
-from io import StringIO
 from pyghee.utils import log, error
 from tools import config, run_cmd
 
@@ -112,7 +111,7 @@ def get_build_env_cfg():
             cvmfs_customizations = json.loads(cvmfs_customizations_str)
 
         log("cvmfs_customizations '%s'" % json.dumps(cvmfs_customizations))
-    except json.decoder.JSONDecodeError as e:
+    except json.JSONDecodeError as e:
         print(e)
         error(f'Value for cvmfs_customizations ({cvmfs_customizations_str}) could not be decoded.')
 
@@ -178,7 +177,7 @@ def get_repo_cfg(cfg):
             repo_map = json.loads(repo_map_str)
 
         log(f"{fn}(): repo_map '{json.dumps(repo_map)}'")
-    except json.decoder.JSONDecodeError as err:
+    except json.JSONDecodeError as err:
         print(err)
         error(f"{fn}(): Value for repo_map ({repo_map_str}) could not be decoded.")
 
@@ -216,7 +215,7 @@ def get_repo_cfg(cfg):
                 config_map = json.loads(config_map_str)
 
             log(f"{fn}(): config_map '{json.dumps(config_map)}'")
-        except Exception as err:
+        except json.JSONDecodeError as err:
             print(err)
             error(f"{fn}(): Value for config_map ({config_map_str}) could not be decoded.")
 
