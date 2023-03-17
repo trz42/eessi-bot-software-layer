@@ -22,30 +22,6 @@
 #  - the directory may contain any additional files references in job.cfg,
 #    for example, repos.cfg and configuration file bundles for repositories
 
-display_help() {
-  echo "usage: $0 [OPTIONS]"
-  echo "  -h | --help             -  display this usage information"
-}
-
-POSITIONAL_ARGS=()
-
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    -h|--help)
-      display_help
-      exit 0
-      ;;
-    -*|--*)
-      echo "Error: Unknown option: $1" >&2
-      exit 1
-      ;;
-    *)
-      POSITIONAL_ARGS+=("$1")
-      shift
-      ;;
-  esac
-done
-
 echo "Starting bot-build.slurm"
 if [ -f bot/build.sh ]; then
     echo "bot/build.sh script found in '${PWD}', so running it!"
