@@ -160,7 +160,9 @@ def get_repo_cfg(cfg):
     fn = sys._getframe().f_code.co_name
 
     global repo_cfg
-    if len(repo_cfg) > 0:
+
+    # if repo_cfg has already been initialized, just return it rather than reading it again
+    if repo_cfg:
         return repo_cfg
 
     repo_cfg_org = cfg[REPO_TARGETS]
