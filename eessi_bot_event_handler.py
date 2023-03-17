@@ -19,7 +19,7 @@ import sys
 from connections import github
 from tools import config
 from tools.args import event_handler_parse
-from tasks.build import check_build_permission, submit_build_jobs
+from tasks.build import check_build_permission, submit_build_jobs, get_repo_cfg
 from tasks.deploy import deploy_built_artefacts
 
 from pyghee.lib import PyGHee, create_app, get_event_info, read_event_from_json
@@ -99,6 +99,23 @@ class EESSIBotSoftwareLayer(PyGHee):
         Handle opening of a pull request.
         """
         self.log("PR opened: waiting for label bot:build")
+        app_name = self.cfg['github']['app_name']
+        # TODO check if PR already has a comment with arch targets and
+        # repositories
+        repo_cfg = get_repo_cfg(self.cfg)
+        comment = f"Instance `{app_name}` is configured to build:"
+        for arch in repo_cfg['repo_target_map'].keys():
+            for repo_id in repo_cfg['repo_target_map'][arch]:
+                comment += f"\n- arch `{'/'.join(arch.split('/')[1:])}` for repo `{repo_id}`"
+
+        self.log(f"PR opened: comment '{comment}'")
+
+        # create comment to pull request
+        repo_name = pr.base.repo.full_name
+        gh = github.get_instance()
+        repo = gh.get_repo(repo_name)
+        pull_request = repo.get_pull(pr.number)
+        pull_request.create_issue_comment(comment)
 
     def handle_pull_request_event(self, event_info, log_file=None):
         """

@@ -302,10 +302,16 @@ Replace `PATH_TO_PRIVATE_KEY` with the path you have noted in [Step 5.3](#step5.
 ### Section `[buildenv]`
 The section `[buildenv]` contains information about the build environment.
 ```
-build_job_script = PATH_TO_EESSI_BOT/scripts/eessi-bot-build.slurm
+build_job_script = PATH_TO_EESSI_BOT/scripts/bot-build.slurm
 ```
 This points to the job script which will be submitted by the event handler.
-The CVMFS configuration could be commented out unless there’s a need to customize the CVMFS configuration.
+
+```
+container_cachedir = PATH_TO_SHARED_DIRECTORY
+```
+The `container_cachedir` may be used to reuse downloaded container image files
+across jobs. Thus, jobs can more quickly launch containers.
+
 ```
 cvmfs_customizations = { "/etc/cvmfs/default.local": "CVMFS_HTTP_PROXY=\"http://PROXY_DNS_NAME:3128|http://PROXY_IP_ADDRESS:3128\"" }
 ```
@@ -313,6 +319,7 @@ It may happen that we need to customize the CVMFS configuration for the build
 job. The value of cvmfs_customizations is a dictionary which maps a file name
 to an entry that needs to be appended to that file. In the example line above, the
 configuration of `CVMFS_HTTP_PROXY` is appended to the file `/etc/cvmfs/default.local`.
+The CVMFS configuration could be commented out unless there is a need to customize the CVMFS configuration.
 ```
 http_proxy = http://PROXY_DNS:3128/
 https_proxy = http://PROXY_DNS:3128/
