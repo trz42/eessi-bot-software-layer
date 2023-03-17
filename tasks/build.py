@@ -343,7 +343,6 @@ def prepare_jobs(pr, event_dir, build_env_cfg, arch_map, repocfg):
 
     jobs = []
     for arch, slurm_opt in arch_map.items():
-        # TODO check if arch in repos_map
         arch_dir = arch.replace('/', '_')
         # check if repo_target_map contains an entry for {arch}
         if arch not in repocfg[REPO_TARGET_MAP]:
@@ -365,6 +364,7 @@ def prepare_jobs(pr, event_dir, build_env_cfg, arch_map, repocfg):
             # prepare ./cfg/job.cfg
             cpu_target = '/'.join(arch.split('/')[1:])
             os_type = arch.split('/')[0]
+            log(f"{fn}(): arch = '{arch}' => cpu_target = '{cpu_target}' , os_type = '{os_type}'")
             prepare_job_cfg(job_dir, build_env_cfg, repocfg, repo_id, cpu_target, os_type)
 
             # enlist jobs to proceed
@@ -379,7 +379,8 @@ def prepare_jobs(pr, event_dir, build_env_cfg, arch_map, repocfg):
 
 
 def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir, os_type):
-    """setup cfg/job.cfg
+    """
+    Set up job configuration file 'cfg/job.cfg'
 
     Args:
         job_dir (string): directory of job
