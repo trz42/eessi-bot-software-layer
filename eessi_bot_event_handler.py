@@ -106,7 +106,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         comment = f"Instance `{app_name}` is configured to build:"
         for arch in repo_cfg['repo_target_map'].keys():
             for repo_id in repo_cfg['repo_target_map'][arch]:
-                comment += f"\n- [x] arch `{'/'.join(arch.split('/')[1:])}` for repo `{repo_id}`"
+                comment += f"\n- arch `{'/'.join(arch.split('/')[1:])}` for repo `{repo_id}`"
 
         self.log(f"PR opened: comment '{comment}'")
 
