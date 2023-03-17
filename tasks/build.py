@@ -14,12 +14,12 @@
 import configparser
 import json
 import os
+import shutil
 import sys
 
 from collections import namedtuple
 from connections import github
 from datetime import datetime, timezone
-from distutils.dir_util import copy_tree
 from io import StringIO
 from pyghee.utils import log, error
 from tools import config, run_cmd
@@ -391,7 +391,6 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
     fn = sys._getframe().f_code.co_name
 
     jobcfg_dir = os.path.join(job_dir, 'cfg')
-    os.makedirs(jobcfg_dir, exist_ok=True)
     # create ini file job.cfg with entries:
     # [site_config]
     # local_tmp = LOCAL_TMP_VALUE
@@ -442,21 +441,26 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
     job_cfg[JOB_ARCHITECTURE][JOB_SOFTWARE_SUBDIR] = software_subdir
     job_cfg[JOB_ARCHITECTURE][JOB_OS_TYPE] = os_type
 
-    config_data = StringIO()
-    job_cfg.write(config_data)
-
-    jobcfg_file = os.path.join(jobcfg_dir, 'job.cfg')
-    with open(jobcfg_file, "w") as jcf:
-        job_cfg.write(jcf)
-
-    log(f"{fn}(): created {jobcfg_file} with '{config_data.getvalue()}'")
-
     # copy repository config bundle to directory cfg
     # TODO verify that app.cfg defines 'repos_cfg_dir'
     # copy repos_cfg[REPOS_CFG_DIR]/repos.cfg to jobcfg_dir
     # copy repos_cfg[REPOS_CFG_DIR]/*.tgz to jobcfg_dir
     if REPOS_CFG_DIR in repos_cfg and repos_cfg[REPOS_CFG_DIR] and os.path.isdir(repos_cfg[REPOS_CFG_DIR]):
-        copy_tree(repos_cfg[REPOS_CFG_DIR], jobcfg_dir)
+        src = repos_cfg[REPOS_CFG_DIR]
+        shutil.copytree(src, jobcfg_dir)
+        log(f"{fn}(): copied {src} to {jobcfg_dir}")
+
+    # make sure that job cfg dir exists
+    os.makedirs(jobcfg_dir, exist_ok=True)
+
+    jobcfg_file = os.path.join(jobcfg_dir, 'job.cfg')
+    with open(jobcfg_file, "w") as jcf:
+        job_cfg.write(jcf)
+
+    # read back job cfg file so we can log contents
+    with open(jobcfg_file, "r") as jcf:
+        jobcfg_txt = jcf.read()
+        log(f"{fn}(): created {jobcfg_file} with '{jobcfg_txt}'")
 
 
 def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
