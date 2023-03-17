@@ -314,7 +314,7 @@ def apply_cvmfs_customizations(cvmfs_customizations, arch_job_dir):
                 file_object.write(cvmfs_customizations[key]+'\n')
 
             # TODO (maybe) create mappings_file to be used by
-            #      eessi-bot-build.slurm to init SINGULARITY_BIND;
+            #      bot-build.slurm to init SINGULARITY_BIND;
             #      for now, only existing mappings may be customized
 
 

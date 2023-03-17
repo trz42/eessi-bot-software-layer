@@ -302,7 +302,7 @@ Replace `PATH_TO_PRIVATE_KEY` with the path you have noted in [Step 5.3](#step5.
 ### Section `[buildenv]`
 The section `[buildenv]` contains information about the build environment.
 ```
-build_job_script = PATH_TO_EESSI_BOT/scripts/eessi-bot-build.slurm
+build_job_script = PATH_TO_EESSI_BOT/scripts/bot-build.slurm
 ```
 This points to the job script which will be submitted by the event handler.
 
