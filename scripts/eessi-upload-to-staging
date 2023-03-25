@@ -105,9 +105,9 @@ bucket_name="eessi-staging"
 endpoint_url=
 
 # provided via command line arguments
-pr_comment_id=
-pull_request=
-repository=
+pr_comment_id="none"
+pull_request="none"
+repository="EESSI/software-layer"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
