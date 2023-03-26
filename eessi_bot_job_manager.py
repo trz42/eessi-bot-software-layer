@@ -291,9 +291,10 @@ class EESSIBotSoftwareLayerJobManager:
             # (c) add a row to the table
             # add row to status table if we found a comment
             if "comment_id" in new_job:
+                comments = config.read_config("pr_comments.cfg")["new_job"]
                 dt = datetime.now(timezone.utc)
                 update = "\n|%s|" % dt.strftime("%b %d %X %Z %Y")
-                update += "released|job awaits launch by Slurm scheduler|"
+                update += f"{comments['job_status']}|{comments['comment']}|"
                 update_comment(new_job["comment_id"], pr, update)
             else:
                 log(
@@ -363,12 +364,13 @@ class EESSIBotSoftwareLayerJobManager:
 
         if "comment_id" in running_job:
             dt = datetime.now(timezone.utc)
-            running_msg = "job %s is running" % running_job['jobid']
+            comments = config.read_config("pr_comments.cfg")["running_job"]
+            running_msg = comments['comment'].format(job_id=running_job['jobid'])
             if "comment_body" in running_job and running_msg in running_job["comment_body"]:
                 log("Not updating comment, '%s' already found" % running_msg)
             else:
-                update = "\n|%s|" % dt.strftime("%b %d %X %Z %Y")
-                update += "running|" + running_msg
+                update = f"\n|{dt.strftime('%b %d %X %Z %Y')}|"
+                update += f"{comments['job_status']}|{running_msg}|"
                 update_comment(running_job["comment_id"], pullrequest, update)
         else:
             log(
@@ -463,20 +465,18 @@ class EESSIBotSoftwareLayerJobManager:
 
         dt = datetime.now(timezone.utc)
 
+        comments = config.read_config("pr_comments.cfg")["finished_job"]
+        comment_update = f"\n|{dt.strftime('%b %d %X %Z %Y')}|"
+        comment_update += f"{comments['job_status']}|"
         if (no_missing_modules and targz_created and
                 len(eessi_tarballs) == 1):
             # We've got one tarball and slurm out messages are ok
             # Prepare a message with information such as
             #   (installation status, tarball name, tarball size)
-            comment_update = "\n|%s|finished|:grin: SUCCESS " % dt.strftime(
-                 "%b %d %X %Z %Y")
-
+            tarball_name = os.path.basename(eessi_tarballs[0])
             tarball_size = os.path.getsize(eessi_tarballs[0]) / 2**30
-            comment_update += "tarball <code>%s</code> (%.3f GiB) " % (
-                os.path.basename(eessi_tarballs[0]),
-                tarball_size,
-            )
-            comment_update += "in job dir|"
+            success_comment = comments["success"].format(tarball_name=tarball_name, tarball_size=tarball_size)
+            comment_update += f"{success_comment}|"
             # NOTE explicitly name repo in build job comment?
             # comment_update += '\nAwaiting approval to
             #  comment_update +=  ingest tarball into the repository.'
@@ -489,52 +489,33 @@ class EESSIBotSoftwareLayerJobManager:
             # prepare a message with details about the above conditions and
             # update PR with a comment
 
-            comment_update = "\n|%s|finished|:cry: FAILURE <ul>" % dt.strftime(
-                "%b %d %X %Z %Y"
-            )
+            comment_update += f"{comments['failure']} <ul>"
             found_slurm_out = os.path.exists(slurm_out)
 
             if not found_slurm_out:
-                # no slurm out ... something went wrong with the job
-                comment_update += (
-                    "<li>No slurm output <code>%s</code> in job dir</li>"
-                    % os.path.basename(slurm_out)
-                )
+                # no slurm out ... something went wrong with the job f"<li> {} </li>"
+                comment_update += f"<li> {comments['no_slurm_out'].format(slurm_out=os.path.basename(slurm_out))} </li>"
             else:
-                comment_update += (
-                    "<li>Found slurm output <code>%s</code> in job dir</li>"
-                    % os.path.basename(slurm_out)
-                )
+                comment_update += f"<li> {comments['slurm_out'].format(slurm_out=os.path.basename(slurm_out))} </li>"
 
             if found_slurm_out and not no_missing_modules:
                 # Found slurm out, but doesn't contain message 'No missing modules!'
-                comment_update += (
-                    '<li>Slurm output lacks message "No missing modules!".</li>'
-                )
+                comment_update += f"<li> {comments['missing_modules']} </li>"
 
             if found_slurm_out and not targz_created:
                 # Found slurm out, but doesn't contain message
                 #   'eessi-.*-software-.*.tar.gz created!'
-                comment_update += (
-                    "<li>Slurm output lacks message about created tarball.</li>"
-                )
+                comment_update += f"<li> {comments['no_tarball_message']} </li>"
 
             if len(eessi_tarballs) == 0:
                 # no luck, job just seemed to have failed ...
-                comment_update += (
-                    "<li>No tarball matching <code>%s</code> found in job dir.</li>"
-                    % tarball_pattern.replace(r"*", r"\*")
-                )
+                comment_update += f"<li> {comments['no_matching_tarball']} </li>".format(tarball_pattern=tarball_pattern.replace(r"*", r"\*"))
 
             if len(eessi_tarballs) > 1:
                 # something's fishy, we only expected a single tar.gz file
-                comment_update += (
-                    "<li>Found %d tarballs in job dir - only 1 "
-                    "matching <code>%s</code> expected.</li>"
-                    % (
-                        len(eessi_tarballs),
-                        tarball_pattern.replace(r"*", r"\*"),
-                    )
+                comment_update += f"<li> {comments['multiple_tarballs']} </li>".format(
+                    num_tarballs=len(eessi_tarballs),
+                    tarball_pattern=tarball_pattern.replace(r"*", r"\*")
                 )
             comment_update += "</ul>|"
             # comment_update += '\nAn admin may investigate what went wrong.

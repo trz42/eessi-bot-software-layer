@@ -361,13 +361,13 @@ def create_pr_comments(job, job_id, app_name, job_comment, pr, repo_name, gh, sy
     dt = datetime.now(timezone.utc)
 
     # construct initial job comment
-    job_comment = (f"New job on instance `{app_name}`"
-                   f" for architecture `{arch_name}`"
-                   f" in job dir `{symlink}`\n"
+    comments = config.read_config("pr_comments.cfg")["submitted_job"]
+    job_comment = (f"{comments['description']}\n"
                    f"|date|job status|comment|\n"
                    f"|----------|----------|------------------------|\n"
-                   f"|{dt.strftime('%b %d %X %Z %Y')}|submitted|"
-                   f"job id `{job_id}` awaits release by job manager|")
+                   f"|{dt.strftime('%b %d %X %Z %Y')}|"
+                   f"{comments['job_status']}|"
+                   f"{comments['comment']}|")
 
     # create comment to pull request
     repo = gh.get_repo(repo_name)
