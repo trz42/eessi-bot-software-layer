@@ -291,10 +291,10 @@ class EESSIBotSoftwareLayerJobManager:
             # (c) add a row to the table
             # add row to status table if we found a comment
             if "comment_id" in new_job:
-                comments = config.read_config("pr_comments.cfg")["new_job"]
+                comments = config.read_config()["new_job_comments"]
                 dt = datetime.now(timezone.utc)
-                update = "\n|%s|" % dt.strftime("%b %d %X %Z %Y")
-                update += f"{comments['job_status']}|{comments['comment']}|"
+                update = "\n|%s|released|" % dt.strftime("%b %d %X %Z %Y")
+                update += f"{comments['comment']}|"
                 update_comment(new_job["comment_id"], pr, update)
             else:
                 log(
@@ -364,13 +364,13 @@ class EESSIBotSoftwareLayerJobManager:
 
         if "comment_id" in running_job:
             dt = datetime.now(timezone.utc)
-            comments = config.read_config("pr_comments.cfg")["running_job"]
+            comments = config.read_config()["running_job_comments"]
             running_msg = comments['comment'].format(job_id=running_job['jobid'])
             if "comment_body" in running_job and running_msg in running_job["comment_body"]:
                 log("Not updating comment, '%s' already found" % running_msg)
             else:
-                update = f"\n|{dt.strftime('%b %d %X %Z %Y')}|"
-                update += f"{comments['job_status']}|{running_msg}|"
+                update = f"\n|{dt.strftime('%b %d %X %Z %Y')}|running|"
+                update += f"{running_msg}|"
                 update_comment(running_job["comment_id"], pullrequest, update)
         else:
             log(
@@ -465,9 +465,8 @@ class EESSIBotSoftwareLayerJobManager:
 
         dt = datetime.now(timezone.utc)
 
-        comments = config.read_config("pr_comments.cfg")["finished_job"]
-        comment_update = f"\n|{dt.strftime('%b %d %X %Z %Y')}|"
-        comment_update += f"{comments['job_status']}|"
+        comments = config.read_config()["finished_job_comments"]
+        comment_update = f"\n|{dt.strftime('%b %d %X %Z %Y')}|finished|"
         if (no_missing_modules and targz_created and
                 len(eessi_tarballs) == 1):
             # We've got one tarball and slurm out messages are ok
