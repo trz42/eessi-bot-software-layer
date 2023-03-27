@@ -137,7 +137,7 @@ scontrol_command = /usr/bin/scontrol
 
 
 [submitted_job_comments]
-description = New job on instance `{app_name}` for architecture `{arch_name}` in job dir `{symlink}` test
+description = New job on instance `{app_name}` for architecture `{arch_name}` in job dir `{symlink}` 
 comment = job id `{job_id}` awaits release by job manager 
 
 [new_job_comments]
