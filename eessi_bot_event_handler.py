@@ -94,8 +94,8 @@ class EESSIBotSoftwareLayer(PyGHee):
             match = re.search('^bot: (.*)$', line)
             if match:
                 self.log(f"found bot command: '{match.group(1)}'")
-                comment_update += "\n<hr/>\n- received bot command "
-                comment_update += f"`{match.group(1)}`\n"
+                comment_update += "\n- received bot command "
+                comment_update += f"`{match.group(1)}`"
         self.log(f"comment update: '{comment_update}'")
         if len(comment_update):
             repo_name = request_body['repository']['full_name']
