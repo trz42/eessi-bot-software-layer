@@ -74,19 +74,25 @@ class EESSIBotSoftwareLayer(PyGHee):
         #  - scan what's new for commands 'bot: COMMAND [ARGS*]'
         #  - process commands
         action = request_body['action']
+        self.log(f"comment action: {action}")
         comment_diff = ''
         if action == 'created':
             comment_diff = request_body['comment']['body']
+            self.log(f"comment created: '{comment_diff}'")
         elif action == 'edited':
             comment_old = request_body['changes']['body']['from']
             comment_new = request_body['comment']['body']
             comment_diff = comment_new.replace(comment_old, '')
+            self.log(f"comment edited: '{comment_diff}'")
         comment_update = ''
-        for new_line in comment_diff.split('\n'):
-            match = re.search('^bot: (.*)$', new_line)
+        for line in comment_diff.split('\n'):
+            self.log(f"searching line '{line}' for bot command")
+            match = re.search('^bot: (.*)$', line)
             if match:
+                self.log(f"found bot command: {match.group(1)}")
                 comment_update += "<hr/>\n received bot command "
                 comment_update += f"{match.group(1)}\n"
+        self.log(f"comment update: {comment_update}")
         if len(comment_update):
             repo_name = request_body['repository']['full_name']
             pr_number = int(request_body['issue']['number'])
