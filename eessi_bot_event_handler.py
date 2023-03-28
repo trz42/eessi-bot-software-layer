@@ -84,7 +84,7 @@ class EESSIBotSoftwareLayer(PyGHee):
             self.log(f"comment edited: OLD '{comment_old}'")
             comment_new = request_body['comment']['body']
             self.log(f"comment edited: NEW '{comment_new}'")
-            comment_diff = comment_new.replace(comment_old, '')
+            comment_diff = comment_new[len(comment_old):]
             self.log(f"comment edited: DIFF '{comment_diff}'")
         comment_update = ''
         for line in comment_diff.split('\n'):
