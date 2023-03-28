@@ -367,10 +367,10 @@ def create_pr_comments(job, job_id, app_name, job_comment, pr, repo_name, gh, sy
                    f"|----------|----------|------------------------|\n"
                    f"|{dt.strftime('%b %d %X %Z %Y')}|"
                    f"submitted|"
-                   f"{comments['comment']}|").format(app_name=app_name, 
-                                                     arch_name=arch_name, 
-                                                     symlink=symlink, 
-                                                     job_id=job_id)    
+                   f"{comments['comment']}|").format(app_name=app_name,
+                                                     arch_name=arch_name,
+                                                     symlink=symlink,
+                                                     job_id=job_id)
 
     # create comment to pull request
     repo = gh.get_repo(repo_name)
