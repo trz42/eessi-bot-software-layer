@@ -413,7 +413,7 @@ def deploy_built_artefacts(pr, event_info):
         pull_request = repo.get_pull(pr.number)
         pull_request.create_issue_comment(
             no_deploy_permission_comment.format(deploy_labeler=labeler,
-                                               deploy_permission_users=", ".join(deploy_permission.split()))
+                                                deploy_permission_users=", ".join(deploy_permission.split()))
         )
         return
     else:
