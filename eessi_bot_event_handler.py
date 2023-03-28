@@ -13,6 +13,7 @@
 #
 # license: GPLv2
 #
+import re
 import waitress
 import sys
 
@@ -61,6 +62,41 @@ class EESSIBotSoftwareLayer(PyGHee):
         comment_author = request_body['comment']['user']['login']
         comment_txt = request_body['comment']['body']
         self.log("Comment posted in %s by @%s: %s", issue_url, comment_author, comment_txt)
+        # check if addition to comment includes a command for the bot, e.g.,
+        #   bot: rebuild [arch:intel] [instance:AWS]
+        #   bot: cancel [job:jobid]
+        #   bot: disable [arch:generic]
+        # actions: created, edited
+        # created -> comment.body
+        # edited -> comment.body - changes.body.from
+        # procedure:
+        #  - determine what's new (assume new is at the end)
+        #  - scan what's new for commands 'bot: COMMAND [ARGS*]'
+        #  - process commands
+        action = request_body['action']
+        comment_diff = ''
+        if action == 'created':
+            comment_diff= request_body['comment']['body']
+        elif action == 'edited':
+            comment_old = request_body['changes']['body']['from'])
+            comment_new = request_body['comment']['body']
+            comment_diff = comment_new.replace(comment_old, '')
+        comment_update = ''
+        for new_line in comment_diff.split('\n'):
+            match = re.search('^bot: (.*)$', new_line)
+            if match:
+                comment_update += "<hr/>\n received bot command "
+                comment_update += f"{match.group(1)}\n"
+        if len(comment_update):
+            repo_name = request_body['repository']['full_name']
+            pr_number = int(request_body['issue']['number'])
+            issue_id = int(request_body['comment']['id'])
+            gh = github.get_instance()
+            repo = gh.get_repo(repo_name)
+            pull_request = repo.get_pull(pr_number)
+            issue_comment = pull_request.get_issue_comment(issue_id)
+            issue_comment.edit(comment_new + comment_update)
+
         self.log("issue_comment event handled!")
 
     def handle_installation_event(self, event_info, log_file=None):
