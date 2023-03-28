@@ -81,9 +81,11 @@ class EESSIBotSoftwareLayer(PyGHee):
             self.log(f"comment created: '{comment_diff}'")
         elif action == 'edited':
             comment_old = request_body['changes']['body']['from']
+            self.log(f"comment edited: OLD '{comment_old}'")
             comment_new = request_body['comment']['body']
+            self.log(f"comment edited: NEW '{comment_new}'")
             comment_diff = comment_new.replace(comment_old, '')
-            self.log(f"comment edited: '{comment_diff}'")
+            self.log(f"comment edited: DIFF '{comment_diff}'")
         comment_update = ''
         for line in comment_diff.split('\n'):
             self.log(f"searching line '{line}' for bot command")
