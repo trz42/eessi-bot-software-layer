@@ -76,9 +76,9 @@ class EESSIBotSoftwareLayer(PyGHee):
         action = request_body['action']
         comment_diff = ''
         if action == 'created':
-            comment_diff= request_body['comment']['body']
+            comment_diff = request_body['comment']['body']
         elif action == 'edited':
-            comment_old = request_body['changes']['body']['from'])
+            comment_old = request_body['changes']['body']['from']
             comment_new = request_body['comment']['body']
             comment_diff = comment_new.replace(comment_old, '')
         comment_update = ''

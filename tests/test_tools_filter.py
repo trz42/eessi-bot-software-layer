@@ -10,7 +10,6 @@
 #
 
 # Standard library imports
-import json
 
 # Third party imports (anything installed into the local Python environment)
 import pytest
@@ -89,9 +88,9 @@ def complex_filter():
 
 
 def test_create_complex_filter(complex_filter):
-    expected = f"architecture:.*intel.*\n"
-    expected += f"repository:nessi.no-2022.*\n"
-    expected += f"instance:[aA]\n"
+    expected = "architecture:.*intel.*\n"
+    expected += "repository:nessi.no-2022.*\n"
+    expected += "instance:[aA]\n"
     actual = complex_filter.to_string()
     assert expected == actual
 
