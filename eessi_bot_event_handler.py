@@ -86,7 +86,7 @@ class EESSIBotSoftwareLayer(PyGHee):
             self.log(f"comment edited: NEW '{comment_new}'")
             if len(comment_old) < len(comment_new):
                 comment_diff = comment_new[len(comment_old):]
-                self.log(f"comment edited: NEW shorter than OLD (assume cleanup -> no action)")
+                self.log("comment edited: NEW shorter than OLD (assume cleanup -> no action)")
             self.log(f"comment edited: DIFF '{comment_diff}'")
         comment_update = ''
         for line in comment_diff.split('\n'):
@@ -95,7 +95,7 @@ class EESSIBotSoftwareLayer(PyGHee):
             if match:
                 self.log(f"found bot command: '{match.group(1)}'")
                 comment_update += "\n- received bot command "
-                comment_update += f"`{match.group(1)}`"
+                comment_update += f"`{match.group(1).rstrip()}`"
         self.log(f"comment update: '{comment_update}'")
         if len(comment_update):
             repo_name = request_body['repository']['full_name']
