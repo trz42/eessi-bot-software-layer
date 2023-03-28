@@ -89,10 +89,10 @@ class EESSIBotSoftwareLayer(PyGHee):
             self.log(f"searching line '{line}' for bot command")
             match = re.search('^bot: (.*)$', line)
             if match:
-                self.log(f"found bot command: {match.group(1)}")
+                self.log(f"found bot command: '{match.group(1)}'")
                 comment_update += "<hr/>\n received bot command "
                 comment_update += f"{match.group(1)}\n"
-        self.log(f"comment update: {comment_update}")
+        self.log(f"comment update: '{comment_update}'")
         if len(comment_update):
             repo_name = request_body['repository']['full_name']
             pr_number = int(request_body['issue']['number'])
