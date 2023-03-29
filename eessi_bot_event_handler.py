@@ -105,6 +105,7 @@ class EESSIBotSoftwareLayer(PyGHee):
             self.log(f"comment edited: NEW '{comment_new}'")
             if len(comment_old) < len(comment_new):
                 comment_diff = comment_new[len(comment_old):]
+            else:
                 self.log("comment edited: NEW shorter than OLD (assume cleanup -> no action)")
             self.log(f"comment edited: DIFF '{comment_diff}'")
 
@@ -123,9 +124,9 @@ class EESSIBotSoftwareLayer(PyGHee):
             else:
                 self.log(f"`{line}` is not considered to contain a bot command")
                 # TODO keep the below for debugging purposes
-                comment_update += "\n- line `{line}` is not considered to contain a bot command"
-                comment_update += "\n  bot commands begin with `bot: `, make sure"
-                comment_update += "\n  there is no whitespace at the beginning of a line"
+                #comment_update += "\n- line <code>{line}</code> is not considered to contain a bot command"
+                #comment_update += "\n  bot commands begin with `bot: `, make sure"
+                #comment_update += "\n  there is no whitespace at the beginning of a line"
         self.log(f"comment update: '{comment_update}'")
         if comment_update == '':
             # no update to be added, just log and return
