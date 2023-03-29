@@ -64,7 +64,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         sender = request_body['sender']['login']
         owner = request_body['comment']['user']['login']
         txt = request_body['comment']['body']
-        self.log("Comment in {issue_url} {action} by @{sender} (owned by @{owner}): {txt}")
+        self.log(f"Comment in {issue_url} {action} by @{sender} (owned by @{owner}): {txt}")
         # check if addition to comment includes a command for the bot, e.g.,
         #   bot: rebuild [arch:intel] [instance:AWS]
         #   bot: cancel [job:jobid]
@@ -124,9 +124,9 @@ class EESSIBotSoftwareLayer(PyGHee):
             else:
                 self.log(f"'{line}' is not considered to contain a bot command")
                 # TODO keep the below for debugging purposes
-                #comment_update += "\n- line <code>{line}</code> is not considered to contain a bot command"
-                #comment_update += "\n  bot commands begin with `bot: `, make sure"
-                #comment_update += "\n  there is no whitespace at the beginning of a line"
+                # comment_update += "\n- line <code>{line}</code> is not considered to contain a bot command"
+                # comment_update += "\n  bot commands begin with `bot: `, make sure"
+                # comment_update += "\n  there is no whitespace at the beginning of a line"
         self.log(f"comment update: '{comment_update}'")
         if comment_update == '':
             # no update to be added, just log and return
