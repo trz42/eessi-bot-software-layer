@@ -38,9 +38,9 @@ def check_command_permission(account):
 
     log(f"{fn}(): command permission '{command_permission}'")
 
-    if account not in command_permission.split():
-        log(f"{fn}(): GH account '{account}' is not authorized to send commands to the bot instance")
-        return False
-    else:
+    if account in command_permission.split():
         log(f"{fn}(): GH account '{account}' is authorized to send commands")
         return True
+    else:
+        log(f"{fn}(): GH account '{account}' is not authorized to send commands to the bot instance")
+        return False
