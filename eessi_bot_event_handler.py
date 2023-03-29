@@ -60,9 +60,11 @@ class EESSIBotSoftwareLayer(PyGHee):
         """
         request_body = event_info['raw_request_body']
         issue_url = request_body['issue']['url']
-        comment_author = request_body['comment']['user']['login']
-        comment_txt = request_body['comment']['body']
-        self.log("Comment posted in %s by @%s: %s", issue_url, comment_author, comment_txt)
+        action = request_body['action']
+        sender = request_body['sender']['login']
+        owner = request_body['comment']['user']['login']
+        txt = request_body['comment']['body']
+        self.log("Comment in {issue_url} {action} by @{sender} (owned by @{owner}): {txt}")
         # check if addition to comment includes a command for the bot, e.g.,
         #   bot: rebuild [arch:intel] [instance:AWS]
         #   bot: cancel [job:jobid]
@@ -75,7 +77,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         #  - scan what's new for commands 'bot: COMMAND [ARGS*]'
         #  - process commands
 
-        # first check if comment_author is authorized to send any command
+        # first check if sender is authorized to send any command
         # - double purpose:
         #   1. check permission
         #   2. skip any comment updates that were done by the bot itself --> we
@@ -87,13 +89,11 @@ class EESSIBotSoftwareLayer(PyGHee):
         #      ... in order to prevent surprises we should be careful what the bot
         #      adds to comments, for example, before updating a comment it could
         #      run the update through the function checking for a bot command.
-        if check_command_permission(comment_author):
-            self.log(f"account `{comment_author}` has no permission to send commands to bot")
+        if check_command_permission(sender):
+            self.log(f"account `{sender}` has no permission to send commands to bot")
             return
 
         # determine what is new in comment
-        action = request_body['action']
-        self.log(f"comment action: {action}")
         comment_diff = ''
         if action == 'created':
             comment_diff = request_body['comment']['body']
@@ -120,9 +120,9 @@ class EESSIBotSoftwareLayer(PyGHee):
                 self.log(f"found bot command: '{bot_command}'")
                 comment_update += "\n- received bot command "
                 comment_update += f"`{bot_command}`"
-                comment_update += f" from `{comment_author}`"
+                comment_update += f" from `{sender}`"
             else:
-                self.log(f"`{line}` is not considered to contain a bot command")
+                self.log(f"'{line}' is not considered to contain a bot command")
                 # TODO keep the below for debugging purposes
                 #comment_update += "\n- line <code>{line}</code> is not considered to contain a bot command"
                 #comment_update += "\n  bot commands begin with `bot: `, make sure"
