@@ -135,6 +135,8 @@ class EESSIBotSoftwareLayer(PyGHee):
             self.log("update to comment is empty")
             return
 
+        comment_update += f"\n<!-- ADD NEW COMMENTS BELOW THIS LINE -->\n"
+
         if not any(map(get_bot_command, comment_update.split('\n'))):
             # the 'not any()' ensures that the update would not be considered a bot command itself
             # ... together with checking the sender of a comment update this aims
