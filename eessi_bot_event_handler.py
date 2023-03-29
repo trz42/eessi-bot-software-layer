@@ -19,6 +19,7 @@ import sys
 
 from connections import github
 from tools import config
+from tools.permissions import check_command_permission
 from tools.args import event_handler_parse
 from tasks.build import check_build_permission, submit_build_jobs, get_repo_cfg
 from tasks.deploy import deploy_built_artefacts
@@ -73,6 +74,24 @@ class EESSIBotSoftwareLayer(PyGHee):
         #  - determine what's new (assume new is at the end)
         #  - scan what's new for commands 'bot: COMMAND [ARGS*]'
         #  - process commands
+
+        # first check if comment_author is authorized to send any command
+        # - double purpose:
+        #   1. check permission
+        #   2. skip any comment updates that were done by the bot itself --> we
+        #      prevent the bot entering an endless loop where it reacts on
+        #      updates to comments it made itself
+        #      NOTE this assumes that the sender of the event is corresponding to
+        #      the bot if the bot updates comments itself and that the bot is not
+        #      given permission in the configuration setting 'command_permission'
+        #      ... in order to prevent surprises we should be careful what the bot
+        #      adds to comments, for example, before updating a comment it could
+        #      run the update through the function checking for a bot command.
+        if check_command_permission(comment_author):
+            self.log(f"account `{comment_author}` has no permission to send commands to bot")
+            return
+
+        # determine what is new in comment
         action = request_body['action']
         self.log(f"comment action: {action}")
         comment_diff = ''
@@ -88,6 +107,8 @@ class EESSIBotSoftwareLayer(PyGHee):
                 comment_diff = comment_new[len(comment_old):]
                 self.log("comment edited: NEW shorter than OLD (assume cleanup -> no action)")
             self.log(f"comment edited: DIFF '{comment_diff}'")
+
+        # search for commands in what is new in comment
         comment_update = ''
         for line in comment_diff.split('\n'):
             self.log(f"searching line '{line}' for bot command")
@@ -99,6 +120,7 @@ class EESSIBotSoftwareLayer(PyGHee):
                 comment_update += f" from `{comment_author}`"
             else:
                 self.log(f"`{line}` is not considered to contain a bot command")
+                # TODO keep the below for debugging purposes
                 comment_update += "\n- line `{line}` is not considered to contain a bot command"
                 comment_update += "\n  bot commands begin with `bot: `, make sure"
                 comment_update += "\n  there is no whitespace at the beginning of a line"

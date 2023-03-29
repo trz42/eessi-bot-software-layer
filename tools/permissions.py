@@ -17,17 +17,16 @@ BOT_CONTROL = "bot_control"
 COMMAND_PERMISSION = "command_permission"
 
 
-def check_command_permission(pr, event_info):
+def check_command_permission(account):
     """check if the GH account is authorized to send commands to the bot
 
     Args:
-        pr (object): pr details
-        event_info (string): event received by event_handler
+        account (string): account for which permissions shall be checked
 
     """
     fn = sys._getframe().f_code.co_name
 
-    log(f"{fn}(): checking permission for sending commands for PR {pr.number}")
+    log(f"{fn}(): checking permission for sending commands")
 
     cfg = config.read_config()
 
@@ -39,10 +38,9 @@ def check_command_permission(pr, event_info):
 
     log(f"{fn}(): command permission '{command_permission}'")
 
-    event_sender = event_info['raw_request_body']['sender']['login']
-    if event_sender not in command_permission.split():
-        log(f"{fn}(): GH account '{event_sender}' is not authorized to send commands to the bot instance")
+    if account not in command_permission.split():
+        log(f"{fn}(): GH account '{account}' is not authorized to send commands to the bot instance")
         return False
     else:
-        log(f"{fn}(): GH account '{event_sender}' is authorized to send commands")
+        log(f"{fn}(): GH account '{account}' is authorized to send commands")
         return True
