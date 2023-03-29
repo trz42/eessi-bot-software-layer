@@ -96,6 +96,9 @@ class EESSIBotSoftwareLayer(PyGHee):
                 self.log(f"found bot command: '{match.group(1)}'")
                 comment_update += "\n- received bot command "
                 comment_update += f"`{match.group(1).rstrip()}`"
+                comment_update += f" from `{comment_author}`"
+            else:
+                self.log(f"`{line}` is not considered to contain a bot command")
         self.log(f"comment update: '{comment_update}'")
         if len(comment_update):
             repo_name = request_body['repository']['full_name']
