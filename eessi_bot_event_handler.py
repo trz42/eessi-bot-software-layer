@@ -13,14 +13,14 @@
 #
 # license: GPLv2
 #
-import re
 import waitress
 import sys
 
 from connections import github
 from tools import config
-from tools.permissions import check_command_permission
 from tools.args import event_handler_parse
+from tools.commands import get_bot_command
+from tools.permissions import check_command_permission
 from tasks.build import check_build_permission, submit_build_jobs, get_repo_cfg
 from tasks.deploy import deploy_built_artefacts
 
@@ -109,14 +109,16 @@ class EESSIBotSoftwareLayer(PyGHee):
             self.log(f"comment edited: DIFF '{comment_diff}'")
 
         # search for commands in what is new in comment
+        # init comment_update with an empty string or later split would fail if
+        # it is None
         comment_update = ''
         for line in comment_diff.split('\n'):
             self.log(f"searching line '{line}' for bot command")
-            match = re.search('^bot: (.*)$', line)
-            if match:
-                self.log(f"found bot command: '{match.group(1)}'")
+            bot_command = get_bot_command(line)
+            if bot_command:
+                self.log(f"found bot command: '{bot_command}'")
                 comment_update += "\n- received bot command "
-                comment_update += f"`{match.group(1).rstrip()}`"
+                comment_update += f"`{bot_command}`"
                 comment_update += f" from `{comment_author}`"
             else:
                 self.log(f"`{line}` is not considered to contain a bot command")
@@ -125,7 +127,16 @@ class EESSIBotSoftwareLayer(PyGHee):
                 comment_update += "\n  bot commands begin with `bot: `, make sure"
                 comment_update += "\n  there is no whitespace at the beginning of a line"
         self.log(f"comment update: '{comment_update}'")
-        if len(comment_update):
+        if comment_update == '':
+            # no update to be added, just log and return
+            self.log("update to comment is empty")
+            return
+
+        if not any(map(get_bot_command, comment_update.split('\n'))):
+            # the 'not any()' ensures that the update would not be considered a bot command itself
+            # ... together with checking the sender of a comment update this aims
+            # at preventing the bot to enter an endless loop in commenting on its own
+            # comments
             repo_name = request_body['repository']['full_name']
             pr_number = int(request_body['issue']['number'])
             issue_id = int(request_body['comment']['id'])
@@ -134,6 +145,8 @@ class EESSIBotSoftwareLayer(PyGHee):
             pull_request = repo.get_pull(pr_number)
             issue_comment = pull_request.get_issue_comment(issue_id)
             issue_comment.edit(comment_new + comment_update)
+        else:
+            self.log(f"update '{comment_update}' is considered to contain bot command ... not updating PR comment")
 
         self.log("issue_comment event handled!")
 
