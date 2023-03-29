@@ -99,6 +99,9 @@ class EESSIBotSoftwareLayer(PyGHee):
                 comment_update += f" from `{comment_author}`"
             else:
                 self.log(f"`{line}` is not considered to contain a bot command")
+                comment_update += "\n- line `{line}` is not considered to contain a bot command"
+                comment_update += "\n  bot commands begin with `bot: `, make sure"
+                comment_update += "\n  there is no whitespace at the beginning of a line"
         self.log(f"comment update: '{comment_update}'")
         if len(comment_update):
             repo_name = request_body['repository']['full_name']
