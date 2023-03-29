@@ -508,7 +508,9 @@ class EESSIBotSoftwareLayerJobManager:
 
             if len(eessi_tarballs) == 0:
                 # no luck, job just seemed to have failed ...
-                comment_update += f"<li> {comments['no_matching_tarball']} </li>".format(tarball_pattern=tarball_pattern.replace(r"*", r"\*"))
+                comment_update += f"<li> {comments['no_matching_tarball']} </li>".format(
+                    tarball_pattern=tarball_pattern.replace(r"*", r"\*")
+                )
 
             if len(eessi_tarballs) > 1:
                 # something's fishy, we only expected a single tar.gz file

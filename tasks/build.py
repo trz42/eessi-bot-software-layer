@@ -553,11 +553,8 @@ def create_pr_comments(job, job_id, app_name, job_comment, pr, repo_name, gh, sy
 
     # construct initial job comment
     comments = config.read_config()["submitted_job_comments"]
-    job_comment = (f"New job on instance `{app_name}`"
-                   f" for architecture `{arch_name}`"
-                   f" for repository `{job.repo_id}`"
-                   f" in job dir `{symlink}`\n"
-                   f"|date|job status|comment|\n"
+    job_comment = (f"{comments['description']}"
+                   f"\n|date|job status|comment|\n"
                    f"|----------|----------|------------------------|\n"
                    f"|{dt.strftime('%b %d %X %Z %Y')}|"
                    f"submitted|"
