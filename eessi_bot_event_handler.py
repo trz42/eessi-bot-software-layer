@@ -64,7 +64,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         sender = request_body['sender']['login']
         owner = request_body['comment']['user']['login']
         txt = request_body['comment']['body']
-        self.log(f"Comment in {issue_url} {action} by @{sender} (owned by @{owner}): {txt}")
+        self.log(f"Comment in {issue_url} (owned by @{owner}) {action} by @{sender}: {txt}")
         # check if addition to comment includes a command for the bot, e.g.,
         #   bot: rebuild [arch:intel] [instance:AWS]
         #   bot: cancel [job:jobid]
@@ -96,7 +96,9 @@ class EESSIBotSoftwareLayer(PyGHee):
         # determine what is new in comment
         comment_diff = ''
         if action == 'created':
-            comment_diff = request_body['comment']['body']
+            comment_old = ''
+            comment_new = request_body['comment']['body']
+            comment_diff = comment_new[len(comment_old):]
             self.log(f"comment created: '{comment_diff}'")
         elif action == 'edited':
             comment_old = request_body['changes']['body']['from']
