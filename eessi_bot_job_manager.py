@@ -81,7 +81,7 @@ class EESSIBotSoftwareLayerJobManager:
         for i in range(2, len(lines)):
             # assume lines 2 to len(lines) contain jobs
             job = lines[i].rstrip().split()
-            if len(job) == 9:
+            if len(job) >= 9:
                 job_id = job[0]
                 state = job[4]
                 current_jobs[job_id] = {

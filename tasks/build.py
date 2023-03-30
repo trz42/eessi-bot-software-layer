@@ -14,6 +14,7 @@
 import configparser
 import json
 import os
+import shutil
 import sys
 
 from collections import namedtuple
@@ -25,6 +26,7 @@ from tools import config, run_cmd
 
 BUILDENV = "buildenv"
 BUILD_JOB_SCRIPT = "build_job_script"
+CONTAINER_CACHEDIR = "container_cachedir"
 DEFAULT_JOB_TIME_LIMIT = "24:00:00"
 CVMFS_CUSTOMIZATIONS = "cvmfs_customizations"
 HTTP_PROXY = "http_proxy"
@@ -36,8 +38,35 @@ SLURM_PARAMS = "slurm_params"
 SUBMIT_COMMAND = "submit_command"
 BUILD_PERMISSION = "build_permission"
 ARCHITECTURE_TARGETS = "architecturetargets"
+REPO_TARGETS = "repo_targets"
+REPO_TARGET_MAP = "repo_target_map"
+REPOS_CFG_DIR = "repos_cfg_dir"
+REPOS_ID = "repo_id"
+REPOS_REPO_NAME = "repo_name"
+REPOS_REPO_VERSION = "repo_version"
+REPOS_CONFIG_BUNDLE = "config_bundle"
+REPOS_CONFIG_MAP = "config_map"
+REPOS_CONTAINER = "container"
 
-Job = namedtuple('Job', ('working_dir', 'arch_target', 'slurm_opts'))
+JOB_SITECONFIG = "site_config"
+JOB_LOCAL_TMP = "local_tmp"
+JOB_HTTP_PROXY = "http_proxy"
+JOB_HTTPS_PROXY = "https_proxy"
+JOB_LOAD_MODULES = "load_modules"
+JOB_REPOSITORY = "repository"
+JOB_CONTAINER = "container"
+JOB_REPO_ID = "repo_id"
+JOB_REPO_NAME = "repo_name"
+JOB_REPO_VERSION = "repo_version"
+JOB_REPOS_CFG_DIR = "repos_cfg_dir"
+JOB_ARCHITECTURE = "architecture"
+JOB_SOFTWARE_SUBDIR = "software_subdir"
+JOB_OS_TYPE = "os_type"
+
+Job = namedtuple('Job', ('working_dir', 'arch_target', 'repo_id', 'slurm_opts'))
+
+# global repo_cfg
+repo_cfg = {}
 
 
 def get_build_env_cfg():
@@ -70,6 +99,10 @@ def get_build_env_cfg():
     log("slurm_params '%s'" % slurm_params)
     config_data[SLURM_PARAMS] = slurm_params
 
+    container_cachedir = buildenv.get(CONTAINER_CACHEDIR)
+    log("container_cachedir '%s'" % container_cachedir)
+    config_data[CONTAINER_CACHEDIR] = container_cachedir
+
     cvmfs_customizations = {}
     try:
         cvmfs_customizations_str = buildenv.get(CVMFS_CUSTOMIZATIONS)
@@ -79,21 +112,21 @@ def get_build_env_cfg():
             cvmfs_customizations = json.loads(cvmfs_customizations_str)
 
         log("cvmfs_customizations '%s'" % json.dumps(cvmfs_customizations))
-    except json.decoder.JSONDecodeError as e:
+    except json.JSONDecodeError as e:
         print(e)
         error(f'Value for cvmfs_customizations ({cvmfs_customizations_str}) could not be decoded.')
 
     config_data[CVMFS_CUSTOMIZATIONS] = cvmfs_customizations
 
-    http_proxy = buildenv.get(HTTP_PROXY) or ''
+    http_proxy = buildenv.get(HTTP_PROXY, None)
     log("http_proxy '%s'" % http_proxy)
     config_data[HTTP_PROXY] = http_proxy
 
-    https_proxy = buildenv.get(HTTPS_PROXY) or ''
+    https_proxy = buildenv.get(HTTPS_PROXY, None)
     log("https_proxy '%s'" % https_proxy)
     config_data[HTTPS_PROXY] = https_proxy
 
-    load_modules = buildenv.get(LOAD_MODULES) or ''
+    load_modules = buildenv.get(LOAD_MODULES, None)
     log("load_modules '%s'" % load_modules)
     config_data[LOAD_MODULES] = load_modules
 
@@ -113,6 +146,86 @@ def get_architecturetargets():
     arch_target_map = json.loads(architecturetargets.get('arch_target_map'))
     log("arch target map '%s'" % json.dumps(arch_target_map))
     return arch_target_map
+
+
+def get_repo_cfg(cfg):
+    """get repository config settings
+
+    Args:
+        cfg: config read in with config.read_config()
+
+    Returns:
+        dict: dictionary with config entries
+    """
+    fn = sys._getframe().f_code.co_name
+
+    global repo_cfg
+
+    # if repo_cfg has already been initialized, just return it rather than reading it again
+    if repo_cfg:
+        return repo_cfg
+
+    repo_cfg_org = cfg[REPO_TARGETS]
+    repo_cfg = {}
+    repo_cfg[REPOS_CFG_DIR] = repo_cfg_org.get(REPOS_CFG_DIR, None)
+
+    repo_map = {}
+    try:
+        repo_map_str = repo_cfg_org.get(REPO_TARGET_MAP)
+        log(f"{fn}(): repo_map '{repo_map_str}'")
+
+        if repo_map_str is not None:
+            repo_map = json.loads(repo_map_str)
+
+        log(f"{fn}(): repo_map '{json.dumps(repo_map)}'")
+    except json.JSONDecodeError as err:
+        print(err)
+        error(f"{fn}(): Value for repo_map ({repo_map_str}) could not be decoded.")
+
+    repo_cfg[REPO_TARGET_MAP] = repo_map
+
+    if repo_cfg[REPOS_CFG_DIR] is None:
+        return repo_cfg
+
+    # add entries for sections from repos.cfg (one dictionary per section)
+    repos_cfg_file = os.path.join(repo_cfg[REPOS_CFG_DIR], 'repos.cfg')
+    log(f"{fn}(): repos_cfg_file '{repos_cfg_file}'")
+    try:
+        repos_cfg = configparser.ConfigParser()
+        repos_cfg.read(repos_cfg_file)
+    except Exception as err:
+        error(f"{fn}(): Unable to read repos config file {repos_cfg_file}!\n{err}")
+
+    for repo_id in repos_cfg.sections():
+        log(f"{fn}(): process repos.cfg section '{repo_id}'")
+        if repo_id in repo_cfg:
+            error(f"{fn}(): repo id '{repo_id}' in '{repos_cfg_file}' clashes with bot config")
+
+        # repo_cfg[repo_id] = repos_cfg[repo_id]
+        repo_cfg[repo_id] = {}
+        for (key, val) in repos_cfg.items(repo_id):
+            repo_cfg[repo_id][key] = val
+            log(f"{fn}(): add ({key}:{val}) to repo_cfg[{repo_id}]")
+
+        config_map = {}
+        try:
+            config_map_str = repos_cfg[repo_id].get(REPOS_CONFIG_MAP)
+            log(f"{fn}(): config_map '{config_map_str}'")
+
+            if config_map_str is not None:
+                config_map = json.loads(config_map_str)
+
+            log(f"{fn}(): config_map '{json.dumps(config_map)}'")
+        except json.JSONDecodeError as err:
+            print(err)
+            error(f"{fn}(): Value for config_map ({config_map_str}) could not be decoded.")
+
+        repo_cfg[repo_id][REPOS_CONFIG_MAP] = config_map
+
+    # print full repo_cfg for debugging purposes
+    log(f"{fn}(): complete repo_cfg that was just read: {json.dumps(repo_cfg, indent=4)}")
+
+    return repo_cfg
 
 
 def create_pr_dir(pr, jobs_base_dir, event_info):
@@ -203,52 +316,154 @@ def apply_cvmfs_customizations(cvmfs_customizations, arch_job_dir):
                 file_object.write(cvmfs_customizations[key]+'\n')
 
             # TODO (maybe) create mappings_file to be used by
-            #      eessi-bot-build.slurm to init SINGULARITY_BIND;
+            #      bot-build.slurm to init SINGULARITY_BIND;
             #      for now, only existing mappings may be customized
 
 
-def setup_pr_in_arch_job_dir(pr, arch_target_map, run_dir, cvmfs_customizations):
-    """setup pull request in arch_job_dir and apply cvmfs customizations
+def prepare_jobs(pr, event_dir, build_env_cfg, arch_map, repocfg):
+    """prepare job directory with pull request and cfg/job.cfg as well as
+       additional config files
 
     Args:
-        pr (object): data of pr
-        arch_target_map (dictionary): contains entries of the format
-                                      OS/SUBDIR : ADDITIONAL_SBATCH_PARAMETERS where the jobs are submitted
-        run_dir (string): path to run directory
-        cvmfs_customizations (dictionary): CVMFS configuration for the build job
+        pr: github.PullRequest.Pullrequest object
+        event_dir: base directory for all jobs created for this event
+        build_env_cfg: build env configuration
+        arch_map: maps OS/SW_DIR to Slurm parameters
+        repocfg: repository config
 
     Returns:
-        tuple of 2 elements containing
-            - repo_name(string):  pr base repository name
-            - jobs(list): list containing all the jobs
+        jobs: list of the created jobs
     """
-    # adopting approach outlined in https://github.com/EESSI/eessi-bot-software-layer/issues/17
-    # need to use `base` instead of `head` ... don't need to know the branch name
-    # TODO rename to base_repo_name?
-    repo_name = pr.base.repo.full_name
-    log("submit_build_jobs: pr.base.repo.full_name '%s'" % pr.base.repo.full_name)
-    branch_name = pr.base.ref
-    log("submit_build_jobs: pr.base.repo.ref '%s'" % pr.base.ref)
+    fn = sys._getframe().f_code.co_name
+
+    base_repo_name = pr.base.repo.full_name
+    log(f"{fn}(): pr.base.repo.full_name '{base_repo_name}'")
+
+    base_branch_name = pr.base.ref
+    log(f"{fn}(): pr.base.repo.ref '{base_branch_name}'")
+
     jobs = []
-    for arch_target, slurm_opt in arch_target_map.items():
-        arch_job_dir = os.path.join(run_dir, arch_target.replace('/', '_'))
+    for arch, slurm_opt in arch_map.items():
+        arch_dir = arch.replace('/', '_')
+        # check if repo_target_map contains an entry for {arch}
+        if arch not in repocfg[REPO_TARGET_MAP]:
+            log(f"{fn}(): skipping arch {arch} because repo target map does not define repositories to build for")
+            continue
+        for repo_id in repocfg[REPO_TARGET_MAP][arch]:
+            # ensure repocfg contains information about the repository repo_id if repo_id != EESSI-pilot
+            # Note, EESSI-pilot is a bad/misleading name, it should be more like AS_IN_CONTAINER
+            if repo_id != "EESSI-pilot" and repo_id not in repocfg:
+                log(f"{fn}(): skipping repo {repo_id}, it is not defined in repo config {repocfg[REPOS_CFG_DIR]}")
+                continue
+            job_dir = os.path.join(event_dir, arch_dir, repo_id)
+            os.makedirs(job_dir, exist_ok=True)
+            log(f"{fn}(): job_dir '{job_dir}'")
 
-        os.makedirs(arch_job_dir, exist_ok=True)
-        log("arch_job_dir '%s'" % arch_job_dir)
+            # TODO optimisation? download once, copy and cleanup initial copy?
+            download_pr(base_repo_name, base_branch_name, pr, job_dir)
 
-        download_pr(repo_name, branch_name, pr, arch_job_dir)
+            # prepare ./cfg/job.cfg
+            cpu_target = '/'.join(arch.split('/')[1:])
+            os_type = arch.split('/')[0]
+            log(f"{fn}(): arch = '{arch}' => cpu_target = '{cpu_target}' , os_type = '{os_type}'")
+            prepare_job_cfg(job_dir, build_env_cfg, repocfg, repo_id, cpu_target, os_type)
 
-        # check if we need to apply local customizations:
-        #   is cvmfs_customizations defined? yes, apply it
-        apply_cvmfs_customizations(cvmfs_customizations, arch_job_dir)
-        # enlist jobs to proceed
-        job = Job(arch_job_dir, arch_target, slurm_opt)
-        jobs.append(job)
-    log("  %d jobs to proceed after applying white list" % len(jobs))
+            # enlist jobs to proceed
+            job = Job(job_dir, arch, repo_id, slurm_opt)
+            jobs.append(job)
+
+    log(f"{fn}(): {len(jobs)} jobs to proceed after applying white list")
     if jobs:
         log(json.dumps(jobs, indent=4))
 
-    return repo_name, jobs
+    return jobs
+
+
+def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir, os_type):
+    """
+    Set up job configuration file 'cfg/job.cfg'
+
+    Args:
+        job_dir (string): directory of job
+        build_env_cfg (dictionary): build environment configuration
+        repos_cfg (dictionary):  configuration settings for all repositories
+        repo_id (string):  identifier of the repository to build for
+        software_subdir (string): software subdirectory to build for (CPU arch)
+        os_type (string): type of the os (e.g., linux)
+    """
+    fn = sys._getframe().f_code.co_name
+
+    jobcfg_dir = os.path.join(job_dir, 'cfg')
+    # create ini file job.cfg with entries:
+    # [site_config]
+    # local_tmp = LOCAL_TMP_VALUE
+    #
+    # [repository]
+    # repos_cfg_dir = JOB_CFG_DIR
+    # repo_id = REPO_ID
+    # container = CONTAINER
+    # repo_name = REPO_NAME
+    # repo_version = REPO_VERSION
+    #
+    # [architecture]
+    # software_subdir = SOFTWARE_SUBDIR
+    # os_type = OS_TYPE
+    job_cfg = configparser.ConfigParser()
+    job_cfg[JOB_SITECONFIG] = {}
+    if build_env_cfg[CONTAINER_CACHEDIR]:
+        job_cfg[JOB_SITECONFIG][CONTAINER_CACHEDIR] = build_env_cfg[CONTAINER_CACHEDIR]
+    if build_env_cfg[LOCAL_TMP]:
+        job_cfg[JOB_SITECONFIG][JOB_LOCAL_TMP] = build_env_cfg[LOCAL_TMP]
+    if build_env_cfg[HTTP_PROXY]:
+        job_cfg[JOB_SITECONFIG][JOB_HTTP_PROXY] = build_env_cfg[HTTP_PROXY]
+    if build_env_cfg[HTTPS_PROXY]:
+        job_cfg[JOB_SITECONFIG][JOB_HTTPS_PROXY] = build_env_cfg[HTTPS_PROXY]
+    if build_env_cfg[LOAD_MODULES]:
+        job_cfg[JOB_SITECONFIG][JOB_LOAD_MODULES] = build_env_cfg[LOAD_MODULES]
+
+    job_cfg[JOB_REPOSITORY] = {}
+    # directory for repos.cfg
+    # note REPOS_CFG_DIR is a global cfg for all repositories, hence it is stored
+    # in repos_cfg (not in config for a specific repository, i.e., repo_cfg)
+    if REPOS_CFG_DIR in repos_cfg and repos_cfg[REPOS_CFG_DIR]:
+        job_cfg[JOB_REPOSITORY][JOB_REPOS_CFG_DIR] = jobcfg_dir
+    # repo id
+    job_cfg[JOB_REPOSITORY][JOB_REPO_ID] = repo_id
+
+    # settings for specific repo
+    if repo_id in repos_cfg:
+        repo_cfg = repos_cfg[repo_id]
+        if repo_cfg[REPOS_CONTAINER]:
+            job_cfg[JOB_REPOSITORY][JOB_CONTAINER] = repo_cfg[REPOS_CONTAINER]
+        if repo_cfg[REPOS_REPO_NAME]:
+            job_cfg[JOB_REPOSITORY][JOB_REPO_NAME] = repo_cfg[REPOS_REPO_NAME]
+        if repo_cfg[REPOS_REPO_VERSION]:
+            job_cfg[JOB_REPOSITORY][JOB_REPO_VERSION] = repo_cfg[REPOS_REPO_VERSION]
+
+    job_cfg[JOB_ARCHITECTURE] = {}
+    job_cfg[JOB_ARCHITECTURE][JOB_SOFTWARE_SUBDIR] = software_subdir
+    job_cfg[JOB_ARCHITECTURE][JOB_OS_TYPE] = os_type
+
+    # copy repository config bundle to directory cfg
+    # TODO verify that app.cfg defines 'repos_cfg_dir'
+    # copy repos_cfg[REPOS_CFG_DIR]/repos.cfg to jobcfg_dir
+    # copy repos_cfg[REPOS_CFG_DIR]/*.tgz to jobcfg_dir
+    if REPOS_CFG_DIR in repos_cfg and repos_cfg[REPOS_CFG_DIR] and os.path.isdir(repos_cfg[REPOS_CFG_DIR]):
+        src = repos_cfg[REPOS_CFG_DIR]
+        shutil.copytree(src, jobcfg_dir)
+        log(f"{fn}(): copied {src} to {jobcfg_dir}")
+
+    # make sure that job cfg dir exists
+    os.makedirs(jobcfg_dir, exist_ok=True)
+
+    jobcfg_file = os.path.join(jobcfg_dir, 'job.cfg')
+    with open(jobcfg_file, "w") as jcf:
+        job_cfg.write(jcf)
+
+    # read back job cfg file so we can log contents
+    with open(jobcfg_file, "r") as jcf:
+        jobcfg_txt = jcf.read()
+        log(f"{fn}(): created {jobcfg_file} with '{jobcfg_txt}'")
 
 
 def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
@@ -266,9 +481,6 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
             - job_id(string):  job_id of submitted job
             - symlink(string): symlink from main pr_<ID> dir to job dir (job[0])
     """
-    # determine CPU target to use: job.arch_target, but without the linux/ part
-    cpu_target = '/'.join(job.arch_target.split('/')[1:])
-
     # Add a default time limit of 24h to the command if nothing else is specified by the user
     all_opts_str = " ".join([build_env_cfg[SLURM_PARAMS], job.slurm_opts])
     all_opts_list = all_opts_str.split(" ")
@@ -282,29 +494,8 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
         build_env_cfg[SLURM_PARAMS],
         time_limit,
         job.slurm_opts,
-        # set $CPU_TARGET in job environment, which can be picked up by build job script;
-        '--export=ALL,CPU_TARGET=%s' % cpu_target,
         build_env_cfg[BUILD_JOB_SCRIPT],
-        '--tmpdir', build_env_cfg[LOCAL_TMP],
     ])
-    if build_env_cfg[HTTP_PROXY]:
-        command_line += f' --http-proxy {build_env_cfg[HTTP_PROXY]}'
-    if build_env_cfg[HTTPS_PROXY]:
-        command_line += f' --https-proxy {build_env_cfg[HTTPS_PROXY]}'
-    if build_env_cfg[LOAD_MODULES]:
-        command_line += f' --load-modules {build_env_cfg[LOAD_MODULES]}'
-
-    # TODO the handling of generic targets requires a bit knowledge about
-    #      the internals of building the software layer, maybe ok for now,
-    #      but it might be good to think about an alternative
-    # if target contains generic, add ' --generic' to command line
-    if cpu_target.endswith("generic"):
-        command_line += ' --generic'
-
-    # to make sure that correct $CPU_TARGET value is passed into job,
-    # we need to also set it in the submission environment;
-    # cfr. documentation for sbatch --export option, see https://slurm.schedmd.com/sbatch.html
-    os.environ['CPU_TARGET'] = cpu_target
 
     cmdline_output, cmdline_error, cmdline_exit_code = run_cmd(command_line,
                                                                "submit job for target '%s'" % job.arch_target,
@@ -369,6 +560,7 @@ def create_pr_comment(job, job_id, app_name, pr_number, repo_name, gh, symlink):
     # construct initial job comment
     job_comment = (f"New job on instance `{app_name}`"
                    f" for architecture `{arch_name}`"
+                   f" for repository `{job.repo_id}`"
                    f" in job dir `{symlink}`\n"
                    f"|date|job status|comment|\n"
                    f"|----------|----------|------------------------|\n"
@@ -412,11 +604,14 @@ def submit_build_jobs(pr, event_info):
     ym, pr_id, run_dir = create_pr_dir(pr, build_env_cfg[JOBS_BASE_DIR], event_info)
     gh = github.get_instance()
 
-    # [download pull request]
-    repo_name, jobs = setup_pr_in_arch_job_dir(pr, arch_target_map, run_dir, build_env_cfg[CVMFS_CUSTOMIZATIONS])
+    repocfg = get_repo_cfg(cfg)
+
+    # setup job directories (one per elem in product of architecture % repositories)
+    jobs = prepare_jobs(pr, run_dir, build_env_cfg, arch_target_map, repocfg)
 
     # Run jobs with the build job submission script
     submitted_jobs = []
+    repo_name = pr.base.repo.full_name
     for job in jobs:
         # TODO make local_tmp specific to job? to isolate jobs if multiple ones can run on a single node
         job_id, symlink = submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id)
