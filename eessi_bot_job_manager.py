@@ -39,6 +39,7 @@ from connections import github
 from tools.args import job_manager_parse
 from datetime import datetime, timezone
 from tools import config, run_cmd
+from tools.job_metadata import read_job_metadata_from_file
 from tools.pr_comments import get_submitted_job_comment, update_comment
 
 from pyghee.utils import log, error
@@ -171,26 +172,10 @@ class EESSIBotSoftwareLayerJobManager:
 
     def read_job_pr_metadata(self, job_metadata_path):
         """
-        Check if metadata file exists, read it and return 'PR' section if so, return None if not.
+        Determine metadata of a job or None.
         """
         # check if metadata file exist
-        if os.path.isfile(job_metadata_path):
-            log(f"Found metadata file at {job_metadata_path}", self.logfile)
-            metadata = configparser.ConfigParser()
-            try:
-                metadata.read(job_metadata_path)
-            except Exception as err:
-                error(f"Unable to read job metadata file {job_metadata_path}: {err}")
-
-            # get PR section
-            if "PR" in metadata:
-                metadata_pr = metadata["PR"]
-            else:
-                metadata_pr = {}
-            return metadata_pr
-        else:
-            log(f"No metadata file found at {job_metadata_path}, so not a bot job", self.logfile)
-            return None
+        return read_job_metadata_from_file(job_metadata_path, self.log_file)
 
     # job_manager.process_new_job(current_jobs[nj])
     def process_new_job(self, new_job):
