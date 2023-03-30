@@ -60,6 +60,26 @@ def get_submitted_job_comment(pr, job_id):
     return get_comment(pr, job_search_pattern)
 
 
+def determine_issue_comment(pull_request, pr_comment_id, search_pattern=None):
+    if pr_comment_id != -1:
+        return pull_request.get_issue_comment(pr_comment_id)
+    else:
+        # TODO does this always return all comments?
+        comments = pull_request.get_issue_comments()
+        for comment in comments:
+            # NOTE
+            # adjust search string if format changed by event handler
+            # (separate process running eessi_bot_event_handler.py)
+            re_pattern = f".*{search_pattern}.*"
+            comment_match = re.search(re_pattern, comment.body)
+
+            if comment_match:
+                log(f"{funcname}(): found comment with id {comment.id}")
+
+                return pull_request.get_issue_comment(int(comment.id))
+    return None
+
+
 def update_comment(cmnt_id, pr, update, log_file=None):
     """update comment of the job
 
