@@ -31,14 +31,14 @@ def read_config(path='app.cfg'):
 
     return config
 
+
 def check_required_cfg_settings(req_settings, path="app.cfg"):
     """
-    Reads the config file and checks if it contains the required settings, 
-    signaling an error if not
-    Args: 
+    Reads the config file and checks if it contains the required settings, signaling an error if not
+    Args:
         req_settings (dict (str, list)): required settings
         path (string): path to the configuration file
-    Returns: 
+    Returns:
         None
     """
     cfg = read_config()
