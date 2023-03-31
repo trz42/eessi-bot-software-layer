@@ -141,14 +141,14 @@ scontrol_command = /usr/bin/scontrol
 
 # variable 'comment' under 'submitted_job_comments' should not be changed as there are regular expression patterns matching it
 [submitted_job_comments]
-description = New job on instance `{app_name}` for architecture `{arch_name}` in job dir `{symlink}` 
-comment = job id `{job_id}` awaits release by job manager 
+initial_comment = New job on instance `{app_name}` for architecture `{arch_name}` for repository `{repo_id}` in job dir `{symlink}` 
+awaits_release = job id `{job_id}` awaits release by job manager 
 
 [new_job_comments]
-comment = job awaits launch by Slurm scheduler 
+awaits_lauch = job awaits launch by Slurm scheduler 
 
 [running_job_comments]
-comment = job `{job_id}` is running 
+running_job = job `{job_id}` is running 
 
 [finished_job_comments]
 success = :grin: SUCCESS tarball `{tarball_name}` ({tarball_size} GiB) in job dir 

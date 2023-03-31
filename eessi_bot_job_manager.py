@@ -43,6 +43,26 @@ from tools.pr_comments import get_submitted_job_comment, update_comment
 
 from pyghee.utils import log, error
 
+AWAITS_LAUCH = "awaits_lauch"
+FAILURE = "failure"
+FINISHED_JOB_COMMENTS = "finished_job_comments"
+NEW_JOB_COMMENTS = "new_job_comments"
+MISSING_MODULES = "missing_modules"
+MULTIPLE_TARBALLS = "multiple_tarballs"
+NO_MATCHING_TARBALL = "no_matching_tarball"
+NO_SLURM_OUT = "no_slurm_out"
+NO_TARBALL_MESSAGE = "no_tarball_message"
+RUNNING_JOB = "running_job"
+RUNNING_JOB_COMMENTS = "running_job_comments"
+SLURM_OUT = "slurm_out"
+SUCCESS = "success"
+
+REQUIRED_CONFIG = {
+    NEW_JOB_COMMENTS: [AWAITS_LAUCH],
+    RUNNING_JOB_COMMENTS: [RUNNING_JOB],
+    FINISHED_JOB_COMMENTS: [SUCCESS, FAILURE, NO_SLURM_OUT, SLURM_OUT, MISSING_MODULES, 
+                            NO_TARBALL_MESSAGE, NO_MATCHING_TARBALL, MULTIPLE_TARBALLS]
+}
 
 class EESSIBotSoftwareLayerJobManager:
     "main class for (Slurm) job manager of EESSI bot (separate process)"
@@ -291,10 +311,10 @@ class EESSIBotSoftwareLayerJobManager:
             # (c) add a row to the table
             # add row to status table if we found a comment
             if "comment_id" in new_job:
-                comments = config.read_config()["new_job_comments"]
+                new_job_comments_cfg = config.read_config()[NEW_JOB_COMMENTS]
                 dt = datetime.now(timezone.utc)
                 update = "\n|%s|released|" % dt.strftime("%b %d %X %Z %Y")
-                update += f"{comments['comment']}|"
+                update += f"{new_job_comments_cfg[AWAITS_LAUCH]}|"
                 update_comment(new_job["comment_id"], pr, update)
             else:
                 log(
@@ -364,8 +384,8 @@ class EESSIBotSoftwareLayerJobManager:
 
         if "comment_id" in running_job:
             dt = datetime.now(timezone.utc)
-            comments = config.read_config()["running_job_comments"]
-            running_msg = comments['comment'].format(job_id=running_job['jobid'])
+            running_job_comments_cfg = config.read_config()[RUNNING_JOB_COMMENTS]
+            running_msg = running_job_comments_cfg[RUNNING_JOB].format(job_id=running_job['jobid'])
             if "comment_body" in running_job and running_msg in running_job["comment_body"]:
                 log("Not updating comment, '%s' already found" % running_msg)
             else:
@@ -465,7 +485,7 @@ class EESSIBotSoftwareLayerJobManager:
 
         dt = datetime.now(timezone.utc)
 
-        comments = config.read_config()["finished_job_comments"]
+        finished_job_comments_cfg = config.read_config()[FINISHED_JOB_COMMENTS]
         comment_update = f"\n|{dt.strftime('%b %d %X %Z %Y')}|finished|"
         if (no_missing_modules and targz_created and
                 len(eessi_tarballs) == 1):
@@ -474,7 +494,10 @@ class EESSIBotSoftwareLayerJobManager:
             #   (installation status, tarball name, tarball size)
             tarball_name = os.path.basename(eessi_tarballs[0])
             tarball_size = os.path.getsize(eessi_tarballs[0]) / 2**30
-            success_comment = comments["success"].format(tarball_name=tarball_name, tarball_size=tarball_size)
+            success_comment = finished_job_comments_cfg[SUCCESS].format(
+                tarball_name=tarball_name,
+                tarball_size=tarball_size
+            )
             comment_update += f"{success_comment}|"
             # NOTE explicitly name repo in build job comment?
             # comment_update += '\nAwaiting approval to
@@ -488,33 +511,37 @@ class EESSIBotSoftwareLayerJobManager:
             # prepare a message with details about the above conditions and
             # update PR with a comment
 
-            comment_update += f"{comments['failure']} <ul>"
+            comment_update += f"{finished_job_comments_cfg[FAILURE]} <ul>"
             found_slurm_out = os.path.exists(slurm_out)
 
             if not found_slurm_out:
                 # no slurm out ... something went wrong with the job f"<li> {} </li>"
-                comment_update += f"<li> {comments['no_slurm_out'].format(slurm_out=os.path.basename(slurm_out))} </li>"
+                comment_update += f"<li> {finished_job_comments_cfg[NO_SLURM_OUT]} </li>".format(
+                    slurm_out=os.path.basename(slurm_out)
+                )
             else:
-                comment_update += f"<li> {comments['slurm_out'].format(slurm_out=os.path.basename(slurm_out))} </li>"
+                comment_update += f"<li> {finished_job_comments_cfg[SLURM_OUT]} </li>".format(
+                    slurm_out=os.path.basename(slurm_out)
+                )
 
             if found_slurm_out and not no_missing_modules:
                 # Found slurm out, but doesn't contain message 'No missing modules!'
-                comment_update += f"<li> {comments['missing_modules']} </li>"
+                comment_update += f"<li> {finished_job_comments_cfg[MISSING_MODULES]} </li>"
 
             if found_slurm_out and not targz_created:
                 # Found slurm out, but doesn't contain message
                 #   'eessi-.*-software-.*.tar.gz created!'
-                comment_update += f"<li> {comments['no_tarball_message']} </li>"
+                comment_update += f"<li> {finished_job_comments_cfg[NO_TARBALL_MESSAGE]} </li>"
 
             if len(eessi_tarballs) == 0:
                 # no luck, job just seemed to have failed ...
-                comment_update += f"<li> {comments['no_matching_tarball']} </li>".format(
+                comment_update += f"<li> {finished_job_comments_cfg[NO_MATCHING_TARBALL]} </li>".format(
                     tarball_pattern=tarball_pattern.replace(r"*", r"\*")
                 )
 
             if len(eessi_tarballs) > 1:
                 # something's fishy, we only expected a single tar.gz file
-                comment_update += f"<li> {comments['multiple_tarballs']} </li>".format(
+                comment_update += f"<li> {finished_job_comments_cfg[MULTIPLE_TARBALLS]} </li>".format(
                     num_tarballs=len(eessi_tarballs),
                     tarball_pattern=tarball_pattern.replace(r"*", r"\*")
                 )
@@ -554,8 +581,8 @@ def main():
 
     opts = job_manager_parse()
 
-    # config is read to raise an exception early when the job_manager runs.
-    config.read_config()
+    # config is read and checked for settings to raise an exception early when the job_manager runs.
+    config.check_required_cfg_settings(REQUIRED_CONFIG)
     github.connect()
 
     job_manager = EESSIBotSoftwareLayerJobManager()

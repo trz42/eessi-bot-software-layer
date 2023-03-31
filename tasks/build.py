@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from pyghee.utils import log, error
 from tools import config, run_cmd
 
+AWAITS_RELEASE = "awaits_release"
 BUILDENV = "buildenv"
 BUILD_JOB_SCRIPT = "build_job_script"
 CONTAINER_CACHEDIR = "container_cachedir"
@@ -30,10 +31,12 @@ DEFAULT_JOB_TIME_LIMIT = "24:00:00"
 CVMFS_CUSTOMIZATIONS = "cvmfs_customizations"
 HTTP_PROXY = "http_proxy"
 HTTPS_PROXY = "https_proxy"
+INITIAL_COMMENT = "initial_comment"
 JOBS_BASE_DIR = "jobs_base_dir"
 LOAD_MODULES = "load_modules"
 LOCAL_TMP = "local_tmp"
 SLURM_PARAMS = "slurm_params"
+SUBMITTED_JOB_COMMENTS = "submitted_job_comments"
 SUBMIT_COMMAND = "submit_command"
 BUILD_PERMISSION = "build_permission"
 ARCHITECTURE_TARGETS = "architecturetargets"
@@ -552,16 +555,17 @@ def create_pr_comments(job, job_id, app_name, job_comment, pr, repo_name, gh, sy
     dt = datetime.now(timezone.utc)
 
     # construct initial job comment
-    comments = config.read_config()["submitted_job_comments"]
-    job_comment = (f"{comments['description']}"
+    submitted_job_comments_cfg = config.read_config()[SUBMITTED_JOB_COMMENTS]
+    job_comment = (f"{submitted_job_comments_cfg[INITIAL_COMMENT]}"
                    f"\n|date|job status|comment|\n"
                    f"|----------|----------|------------------------|\n"
                    f"|{dt.strftime('%b %d %X %Z %Y')}|"
                    f"submitted|"
-                   f"{comments['comment']}|").format(app_name=app_name,
-                                                     arch_name=arch_name,
-                                                     symlink=symlink,
-                                                     job_id=job_id)
+                   f"{submitted_job_comments_cfg[AWAITS_RELEASE]}|").format(app_name=app_name,
+                                                                            arch_name=arch_name,
+                                                                            symlink=symlink,
+                                                                            repo_id=job.repo_id,
+                                                                            job_id=job_id)
 
     # create comment to pull request
     repo = gh.get_repo(repo_name)
