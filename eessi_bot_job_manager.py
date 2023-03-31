@@ -64,6 +64,7 @@ REQUIRED_CONFIG = {
                             NO_TARBALL_MESSAGE, NO_MATCHING_TARBALL, MULTIPLE_TARBALLS]
 }
 
+
 class EESSIBotSoftwareLayerJobManager:
     "main class for (Slurm) job manager of EESSI bot (separate process)"
 
