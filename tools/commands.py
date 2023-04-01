@@ -12,7 +12,7 @@ import re
 import sys
 
 from pyghee.utils import log
-from tools.filter import Filter, EESSIBotActionFilter, EESSIBotActionFilterError
+from tools.filter import EESSIBotActionFilter, EESSIBotActionFilterError
 
 
 def get_bot_command(line):
@@ -49,13 +49,13 @@ class EESSIBotCommand:
             except EESSIBotActionFilterError as baf:
                 reason = baf.args
                 log(f"ERROR: EESSIBotActionFilterError - {reason}")
-                self.action_filters = []
+                self.action_filters = None
                 raise EESSIBotCommandError("invalid action filter")
             except Exception as err:
                 log(f"Unexpected {err=}, {type(err)=}")
                 raise
         else:
-            self.action_filters = []
+            self.action_filters = EESSIBotActionFilter("")
 
     def to_string(self):
         return f"{self.command} {self.action_filters.to_string()}"
