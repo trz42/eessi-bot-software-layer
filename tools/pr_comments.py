@@ -13,6 +13,7 @@
 #
 import re
 
+from connections import github
 from pyghee.utils import log
 from retry import retry
 from retry.api import retry_call
@@ -77,3 +78,24 @@ def update_comment(cmnt_id, pr, update, log_file=None):
     else:
         log(f"no comment with id {cmnt_id}, skipping update '{update}'",
             log_file=log_file)
+
+
+def update_pr_comment(event_info, update):
+    """
+    Updates a comment determined from an event.
+
+    Args:
+        event_info (dict): storing all information of an event
+        update (string): the update for the comment associated with the event
+    """
+    request_body = event_info['raw_request_body']
+    comment_new = request_body['comment']['body']
+    repo_name = request_body['repository']['full_name']
+    pr_number = int(request_body['issue']['number'])
+    issue_id = int(request_body['comment']['id'])
+
+    gh = github.get_instance()
+    repo = gh.get_repo(repo_name)
+    pull_request = repo.get_pull(pr_number)
+    issue_comment = pull_request.get_issue_comment(issue_id)
+    issue_comment.edit(comment_new + update)
