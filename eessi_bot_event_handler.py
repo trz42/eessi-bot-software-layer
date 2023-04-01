@@ -22,6 +22,7 @@ from tools import config
 from tools.args import event_handler_parse
 from tools.commands import get_bot_command, EESSIBotCommand, EESSIBotCommandError
 from tools.permissions import check_command_permission
+from tools.pr_comments import update_pr_comment
 from tasks.build import check_build_permission, submit_build_jobs, get_repo_cfg
 from tasks.deploy import deploy_built_artefacts
 
@@ -90,7 +91,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         #      ... in order to prevent surprises we should be careful what the bot
         #      adds to comments, for example, before updating a comment it could
         #      run the update through the function checking for a bot command.
-        if check_command_permission(sender) == False:
+        if check_command_permission(sender) is False:
             self.log(f"account `{sender}` has NO permission to send commands to bot")
             return
         else:
@@ -111,6 +112,10 @@ class EESSIBotSoftwareLayer(PyGHee):
         commands = []
         for line in comment_new.split('\n'):
             self.log(f"searching line '{line}' for bot command")
+            line_stripped = line.strip()
+            if line.isspace() or len(line_stripped) == 0:
+                self.log(f"line '{line}' is empty")
+                continue
             bot_command = get_bot_command(line)
             if bot_command:
                 try:
@@ -133,10 +138,6 @@ class EESSIBotSoftwareLayer(PyGHee):
                 comment_update += "\n  there is no whitespace at the beginning of a line"
         self.log(f"comment update: '{comment_update}'")
 
-        # process commands
-        # for cmd in commands:
-        #     print("")
-
         if comment_update == '':
             # no update to be added, just log and return
             self.log("update to comment is empty")
@@ -147,16 +148,25 @@ class EESSIBotSoftwareLayer(PyGHee):
             # ... together with checking the sender of a comment update this aims
             # at preventing the bot to enter an endless loop in commenting on its own
             # comments
-            repo_name = request_body['repository']['full_name']
-            pr_number = int(request_body['issue']['number'])
-            issue_id = int(request_body['comment']['id'])
-            gh = github.get_instance()
-            repo = gh.get_repo(repo_name)
-            pull_request = repo.get_pull(pr_number)
-            issue_comment = pull_request.get_issue_comment(issue_id)
-            issue_comment.edit(comment_new + comment_update)
+            update_pr_comment(event_info, comment_update)
         else:
             self.log(f"update '{comment_update}' is considered to contain bot command ... not updating PR comment")
+
+        # process commands
+        for cmd in commands:
+            try:
+                update = self.handle_bot_command(cmd, event_info)
+                comment_update += f"\n- handling `{cmd.command}` resulted in:"
+                comment_update += update
+                update_pr_comment(event_info, comment_update)
+            except EESSIBotCommandError as bce:
+                self.log(f"ERROR: handling {cmd.command} failed with {bce.args}")
+                comment_update += f"\n- handling `{cmd.command}` failed with {bce.args}"
+                update_pr_comment(event_info, comment_update)
+                continue
+            except Exception as err:
+                log(f"Unexpected {err=}, {type(err)=}")
+                raise
 
         self.log("issue_comment event handled!")
 
@@ -236,17 +246,28 @@ class EESSIBotSoftwareLayer(PyGHee):
     def handle_bot_command(self, bot_command, event_info, log_file=None):
         """
         Handle bot command
+
+        Args:
+            bot_command (EESSIBotCommand): command to be handled
+            event_info (dict): object containing all information of the event
         """
-        handler_name = f"handle_bot_command_{bot_command.command}"
+        cmd = bot_command.command
+        handler_name = f"handle_bot_command_{cmd}"
         if hasattr(self, handler_name):
             handler = getattr(self, handler_name)
-            self.log(f"Handling bot command {bot_command.command}")
-            handler(event_info)
+            self.log(f"Handling bot command {cmd}")
+            return handler(event_info)
         else:
-            self.log("No handler for command '{bot_command.command}'")
+            self.log(f"No handler for command '{cmd}'")
+            raise EESSIBotCommandError(f"unknown command '{cmd}'; use `bot: help` for usage information")
 
     def handle_bot_command_help(self, event_info):
-        return
+        help_msg = "\n  **How to send commands to bot instances**"
+        help_msg += "\n  - Commands must be sent with a **new** comment (edits of existing comments are ignored)."
+        help_msg += "\n  - A comment may contain multiple commands, one per line."
+        help_msg += "\n  - Every command begins at the start of a line and has the syntax `bot: COMMAND [ARGUMENTS]*`"
+        help_msg += "\n  - Currently supported COMMANDs are: `help`"
+        return help_msg
 
     def handle_bot_command_build(self, event_info):
         return
