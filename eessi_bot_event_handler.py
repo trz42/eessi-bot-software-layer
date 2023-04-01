@@ -20,7 +20,7 @@ import sys
 from connections import github
 from tools import config
 from tools.args import event_handler_parse
-from tools.commands import get_bot_command
+from tools.commands import get_bot_command, EESSIBotCommand, EESSIBotCommandError
 from tools.permissions import check_command_permission
 from tasks.build import check_build_permission, submit_build_jobs, get_repo_cfg
 from tasks.deploy import deploy_built_artefacts
@@ -113,11 +113,18 @@ class EESSIBotSoftwareLayer(PyGHee):
             self.log(f"searching line '{line}' for bot command")
             bot_command = get_bot_command(line)
             if bot_command:
-                commands.append(EESSIBotCommand(bot_command))
+                try:
+                    ebc = EESSIBotCommand(bot_command)
+                except EESSIBotCommandError as bce:
+                    self.log(f"ERROR: parsing {bot_command=} failed with {bce.args}")
+                    comment_update += f"\n- parsing `{bot_command=}` received"
+                    comment_update += f" from `{sender=}` failed"
+                    continue
+                commands.append(ebc)
                 self.log(f"found bot command: '{bot_command}'")
                 comment_update += "\n- received bot command "
                 comment_update += f"`{bot_command}`"
-                comment_update += f" from `{sender}`"
+                comment_update += f" from `{sender}` (expanded command format: `{ebc.to_string()}`)"
             else:
                 self.log(f"'{line}' is not considered to contain a bot command")
                 # TODO keep the below for debugging purposes
@@ -127,8 +134,8 @@ class EESSIBotSoftwareLayer(PyGHee):
         self.log(f"comment update: '{comment_update}'")
 
         # process commands
-        for cmd in commands:
-            print("")
+        # for cmd in commands:
+        #     print("")
 
         if comment_update == '':
             # no update to be added, just log and return
