@@ -19,13 +19,27 @@ FILTER_COMPONENTS = ['architecture', 'instance', 'job', 'repository']
 Filter = namedtuple('Filter', ('component', 'pattern'))
 
 
+class EESSIBotActionFilterError(Exception):
+    pass
+
+
 class EESSIBotActionFilter:
-    def __init__(self):
+    def __init__(self, filter_string):
         """
         EESSIBotActionFilter constructor
-        """
 
+        Args:
+            filter_string (string): string containing whitespace separated filters
+        """
         self.action_filters = []
+        for _filter in filter_string.split():
+            try:
+                self.add_filter_from_string(_filter)
+            except EESSIBotActionFilterError:
+                raise
+            except Exception as err:
+                log(f"Unexpected {err=}, {type(err)=}")
+                raise
 
     def clear_all(self):
         self.action_filters = []
@@ -52,6 +66,23 @@ class EESSIBotActionFilter:
             self.action_filters.append(Filter(full_component, pattern))
         else:
             log(f"component {component} is unknown")
+            raise EESSIBotActionFilterError(f"unknown {component=} in {component}:{pattern}")
+
+    def add_filter_from_string(self, filter_string):
+        """
+        Adds a filter from a string
+
+        Args:
+            filter_string (string): filter provided as command:pattern
+        """
+        _filter_split = filter_string.split(':')
+        if len(_filter_split) != 2:
+            log(f"filter string '{filter_string}' does not conform to format 'component:pattern'")
+            raise EESSIBotActionFilterError(f"filter '{filter_string}' does not conform to format 'component:pattern'")
+        if len(_filter_split[1]) == 0:
+            log(f"pattern in filter string '{filter_string}' is empty")
+            raise EESSIBotActionFilterError(f"pattern in filter string '{filter_string}' is empty")
+        self.add_filter(_filter_split[0], _filter_split[1])
 
     def remove_filter(self, component, pattern):
         """
@@ -73,12 +104,12 @@ class EESSIBotActionFilter:
         """
         Convert filters to string
         """
-        filter_string = ''
+        filter_str_list = []
         for _filter in self.action_filters:
             cm = _filter.component
             re = _filter.pattern
-            filter_string += f"{cm}:{re}\n"
-        return filter_string
+            filter_str_list.append(f"{cm}:{re}")
+        return " ".join(filter_str_list)
 
     def check_filters(self, context):
         """
