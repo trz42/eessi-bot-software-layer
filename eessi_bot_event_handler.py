@@ -13,6 +13,7 @@
 #
 # license: GPLv2
 #
+import re
 import waitress
 import sys
 
@@ -89,36 +90,30 @@ class EESSIBotSoftwareLayer(PyGHee):
         #      ... in order to prevent surprises we should be careful what the bot
         #      adds to comments, for example, before updating a comment it could
         #      run the update through the function checking for a bot command.
-        if check_command_permission(sender):
-            self.log(f"account `{sender}` has no permission to send commands to bot")
+        if check_command_permission(sender) == False:
+            self.log(f"account `{sender}` has NO permission to send commands to bot")
             return
+        else:
+            self.log(f"account `{sender}` has permission to send commands to bot")
 
-        # determine what is new in comment
-        comment_diff = ''
+        # only scan for comments in newly created comments
         if action == 'created':
-            comment_old = ''
             comment_new = request_body['comment']['body']
-            comment_diff = comment_new[len(comment_old):]
-            self.log(f"comment created: '{comment_diff}'")
-        elif action == 'edited':
-            comment_old = request_body['changes']['body']['from']
-            self.log(f"comment edited: OLD '{comment_old}'")
-            comment_new = request_body['comment']['body']
-            self.log(f"comment edited: NEW '{comment_new}'")
-            if len(comment_old) < len(comment_new):
-                comment_diff = comment_new[len(comment_old):]
-            else:
-                self.log("comment edited: NEW shorter than OLD (assume cleanup -> no action)")
-            self.log(f"comment edited: DIFF '{comment_diff}'")
+            self.log(f"comment created:\n########\n{comment_new.rstrip()}\n########")
+        else:
+            self.log(f"comment action '{action}' not handled")
+            return
 
         # search for commands in what is new in comment
         # init comment_update with an empty string or later split would fail if
         # it is None
         comment_update = ''
-        for line in comment_diff.split('\n'):
+        commands = []
+        for line in comment_new.split('\n'):
             self.log(f"searching line '{line}' for bot command")
             bot_command = get_bot_command(line)
             if bot_command:
+                commands.append(EESSIBotCommand(bot_command))
                 self.log(f"found bot command: '{bot_command}'")
                 comment_update += "\n- received bot command "
                 comment_update += f"`{bot_command}`"
@@ -126,16 +121,19 @@ class EESSIBotSoftwareLayer(PyGHee):
             else:
                 self.log(f"'{line}' is not considered to contain a bot command")
                 # TODO keep the below for debugging purposes
-                # comment_update += "\n- line <code>{line}</code> is not considered to contain a bot command"
-                # comment_update += "\n  bot commands begin with `bot: `, make sure"
-                # comment_update += "\n  there is no whitespace at the beginning of a line"
+                comment_update += f"\n- line <code>{line}</code> is not considered to contain a bot command"
+                comment_update += "\n- bot commands begin with `bot: `, make sure"
+                comment_update += "\n  there is no whitespace at the beginning of a line"
         self.log(f"comment update: '{comment_update}'")
+
+        # process commands
+        for cmd in commands:
+            print("")
+
         if comment_update == '':
             # no update to be added, just log and return
             self.log("update to comment is empty")
             return
-
-        comment_update += f"\n<!-- ADD NEW COMMENTS BELOW THIS LINE -->\n"
 
         if not any(map(get_bot_command, comment_update.split('\n'))):
             # the 'not any()' ensures that the update would not be considered a bot command itself
@@ -227,6 +225,42 @@ class EESSIBotSoftwareLayer(PyGHee):
             handler(event_info, pr)
         else:
             self.log("No handler for PR action '%s'", action)
+
+    def handle_bot_command(self, bot_command, event_info, log_file=None):
+        """
+        Handle bot command
+        """
+        handler_name = f"handle_bot_command_{bot_command.command}"
+        if hasattr(self, handler_name):
+            handler = getattr(self, handler_name)
+            self.log(f"Handling bot command {bot_command.command}")
+            handler(event_info)
+        else:
+            self.log("No handler for command '{bot_command.command}'")
+
+    def handle_bot_command_help(self, event_info):
+        return
+
+    def handle_bot_command_build(self, event_info):
+        return
+
+    def handle_bot_command_deploy(self, event_info):
+        return
+
+    def handle_bot_command_enable(self, event_info):
+        return
+
+    def handle_bot_command_disable(self, event_info):
+        return
+
+    def handle_bot_command_cancel(self, event_info):
+        return
+
+    def handle_bot_command_status(self, event_info):
+        return
+
+    def handle_bot_command_show_config(self, event_info):
+        return
 
     def start(self, app, port=3000):
         """starts the app and log information in the log file
