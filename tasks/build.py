@@ -354,6 +354,10 @@ def prepare_jobs(pr, event_dir, build_env_cfg, arch_map, repocfg):
             if repo_id != "EESSI-pilot" and repo_id not in repocfg:
                 log(f"{fn}(): skipping repo {repo_id}, it is not defined in repo config {repocfg[REPOS_CFG_DIR]}")
                 continue
+
+            # TODO check filter: context = (arch, repo, app_name)
+            #      passed --> log & go on
+            #      missed --> log & continue
             job_dir = os.path.join(event_dir, arch_dir, repo_id)
             os.makedirs(job_dir, exist_ok=True)
             log(f"{fn}(): job_dir '{job_dir}'")
