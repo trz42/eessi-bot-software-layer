@@ -275,7 +275,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         gh = github.get_instance()
         self.log("repository: '%s'", event_info['raw_request_body']['repository']['full_name'])
         repo_name = event_info['raw_request_body']['repository']['full_name']
-        pr_number = event_info['raw_request_body']['pull_request']['number']
+        pr_number = event_info['raw_request_body']['issue']['number']
         pr = gh.get_repo(repo_name).get_pull(pr_number)
         build_msg = ''
         if check_build_permission(pr, event_info):
@@ -306,7 +306,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         self.log("processing bot command 'showconfig'")
         gh = github.get_instance()
         repo_name = event_info['raw_request_body']['repository']['full_name']
-        pr_number = event_info['raw_request_body']['pull_request']['number']
+        pr_number = event_info['raw_request_body']['issue']['number']
         pr = gh.get_repo(repo_name).get_pull(pr_number)
         comment_id = self.handle_pull_request_opened_event(event_info, pr)
         return f"added comment #{comment_id} to show configuration"
