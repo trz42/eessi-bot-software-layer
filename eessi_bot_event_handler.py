@@ -13,7 +13,6 @@
 #
 # license: GPLv2
 #
-import re
 import waitress
 import sys
 
@@ -21,6 +20,7 @@ from connections import github
 from tools import config
 from tools.args import event_handler_parse
 from tools.commands import get_bot_command, EESSIBotCommand, EESSIBotCommandError
+from tools.filter import EESSIBotActionFilter
 from tools.permissions import check_command_permission
 from tools.pr_comments import update_pr_comment
 from tasks.build import check_build_permission, submit_build_jobs, get_repo_cfg
@@ -68,7 +68,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         txt = request_body['comment']['body']
         self.log(f"Comment in {issue_url} (owned by @{owner}) {action} by @{sender}: {txt}")
         # check if addition to comment includes a command for the bot, e.g.,
-        #   bot: rebuild [arch:intel] [instance:AWS]
+        #   bot: build [arch:intel] [instance:AWS]
         #   bot: cancel [job:jobid]
         #   bot: disable [arch:generic]
         # actions: created, edited
@@ -155,7 +155,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         # process commands
         for cmd in commands:
             try:
-                update = self.handle_bot_command(cmd, event_info)
+                update = self.handle_bot_command(event_info, cmd)
                 comment_update += f"\n- handling `{cmd.command}` resulted in:"
                 comment_update += update
                 update_pr_comment(event_info, comment_update)
@@ -193,7 +193,8 @@ class EESSIBotSoftwareLayer(PyGHee):
         if label == "bot:build":
             # run function to build software stack
             if check_build_permission(pr, event_info):
-                submit_build_jobs(pr, event_info)
+                # use an empty filter
+                submit_build_jobs(pr, event_info, EESSIBotActionFilter(""))
 
         elif label == "bot:deploy":
             # run function to deploy built artefacts
@@ -243,25 +244,25 @@ class EESSIBotSoftwareLayer(PyGHee):
         else:
             self.log("No handler for PR action '%s'", action)
 
-    def handle_bot_command(self, bot_command, event_info, log_file=None):
+    def handle_bot_command(self, event_info, bot_command, log_file=None):
         """
         Handle bot command
 
         Args:
-            bot_command (EESSIBotCommand): command to be handled
             event_info (dict): object containing all information of the event
+            bot_command (EESSIBotCommand): command to be handled
         """
         cmd = bot_command.command
         handler_name = f"handle_bot_command_{cmd}"
         if hasattr(self, handler_name):
             handler = getattr(self, handler_name)
             self.log(f"Handling bot command {cmd}")
-            return handler(event_info)
+            return handler(event_info, bot_command)
         else:
             self.log(f"No handler for command '{cmd}'")
             raise EESSIBotCommandError(f"unknown command '{cmd}'; use `bot: help` for usage information")
 
-    def handle_bot_command_help(self, event_info):
+    def handle_bot_command_help(self, event_info, bot_command):
         help_msg = "\n  **How to send commands to bot instances**"
         help_msg += "\n  - Commands must be sent with a **new** comment (edits of existing comments are ignored)."
         help_msg += "\n  - A comment may contain multiple commands, one per line."
@@ -269,26 +270,39 @@ class EESSIBotSoftwareLayer(PyGHee):
         help_msg += "\n  - Currently supported COMMANDs are: `help`"
         return help_msg
 
-    def handle_bot_command_build(self, event_info):
-        return
+    def handle_bot_command_build(self, event_info, bot_command):
+        gh = github.get_instance()
+        self.log("repository: '%s'", event_info['raw_request_body']['repository']['full_name'])
+        repo_name = event_info['raw_request_body']['repository']['full_name']
+        pr_number = event_info['raw_request_body']['pull_request']['number']
+        pr = gh.get_repo(repo_name).get_pull(pr_number)
+        build_msg = ''
+        if check_build_permission(pr, event_info):
+            # use filter from command
+            build_msg = submit_build_jobs(pr, event_info, bot_command.action_filters)
+        else:
+            request_body = event_info['raw_request_body']
+            sender = request_body['sender']['login']
+            build_msg = f"account {sender} has no permission to submit build jobs"
+        return build_msg
 
-    def handle_bot_command_deploy(self, event_info):
-        return
+#    def handle_bot_command_deploy(self, event_info, bot_command):
+#        return
 
-    def handle_bot_command_enable(self, event_info):
-        return
+#    def handle_bot_command_enable(self, event_info, bot_command):
+#        return
 
-    def handle_bot_command_disable(self, event_info):
-        return
+#    def handle_bot_command_disable(self, event_info, bot_command):
+#        return
 
-    def handle_bot_command_cancel(self, event_info):
-        return
+#    def handle_bot_command_cancel(self, event_info, bot_command):
+#        return
 
-    def handle_bot_command_status(self, event_info):
-        return
+#    def handle_bot_command_status(self, event_info, bot_command):
+#        return
 
-    def handle_bot_command_show_config(self, event_info):
-        return
+#    def handle_bot_command_show_config(self, event_info, bot_command):
+#        return
 
     def start(self, app, port=3000):
         """starts the app and log information in the log file

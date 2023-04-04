@@ -155,7 +155,7 @@ def get_architecturetargets(cfg):
     architecturetargets = cfg[ARCHITECTURE_TARGETS]
 
     arch_target_map = json.loads(architecturetargets.get('arch_target_map'))
-    log(f"{fn(): arch target map '{json.dumps(arch_target_map)}'")
+    log(f"{fn}(): arch target map '{json.dumps(arch_target_map)}'")
     return arch_target_map
 
 
@@ -243,7 +243,7 @@ def create_pr_dir(pr, cfg, event_info):
     """Create directory for Pull Request
 
     Args:
-        pr (object): pr details
+        pr (github.PullRequest.Pullrequest): object to interact with pull request
         cfg (dict): dictionary holding full configuration (by default defined in app.cfg)
         event_info (dict): event received by event_handler
 
@@ -287,7 +287,7 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
     Args:
         repo_name (string): pr base repo name
         branch_name (string): pr branch name
-        pr (object): pr details
+        pr (github.PullRequest.Pullrequest): object to interact with pull request
         arch_job_dir (string): location of arch_job_dir
     """
     # fn = sys._getframe().f_code.co_name
@@ -344,14 +344,15 @@ def apply_cvmfs_customizations(cvmfs_customizations, arch_job_dir):
             #      for now, only existing mappings may be customized
 
 
-def prepare_jobs(pr, cfg, event_info):
+def prepare_jobs(pr, cfg, event_info, action_filter):
     """prepare job directory with pull request and cfg/job.cfg as well as
        additional config files
 
     Args:
-        pr: github.PullRequest.Pullrequest object
+        pr (github.PullRequest.Pullrequest): object to interact with pull request
         cfg (dict): dictionary holding full configuration (by default defined in app.cfg)
         event_info (dict): event received by event_handler
+        action_filter (EESSIBotActionFilter): used to filter which jobs shall be prepared
 
     Returns:
         jobs: list of the created jobs
@@ -360,7 +361,7 @@ def prepare_jobs(pr, cfg, event_info):
 
     app_name = cfg[GITHUB].get(APP_NAME)
     build_env_cfg = get_build_env_cfg(cfg)
-    arch_target_map = get_architecturetargets(cfg)
+    arch_map = get_architecturetargets(cfg)
     repocfg = get_repo_cfg(cfg)
 
     base_repo_name = pr.base.repo.full_name
@@ -391,12 +392,18 @@ def prepare_jobs(pr, cfg, event_info):
                 log(f"{fn}(): skipping repo {repo_id}, it is not defined in repo config {repocfg[REPOS_CFG_DIR]}")
                 continue
 
-            # TODO check filter: context = (arch, repo, app_name)
-            #      passed --> log & go on
-            #      missed --> log & continue
-            # what is the state of the job, directory tree at this point? can we defer some to after we have checked the filter?
-            # - list functions called from eessi_bot_event_handler.py to here and what they do (changes on disk, data structures, calls to GH, ...)
-            # - determine if and how those need and can be deferred
+            # if filter exists, check filter against context = (arch, repo, app_name)
+            #   true --> log & go on
+            #   false --> log & continue
+            if action_filter:
+                log(f"{fn}(): checking filter {action_filter.to_string()}")
+                context = {{"architecture": arch}, {"repository": repo_id}, {"instance": app_name}}
+                log(f"{fn}(): context is '{json.dumps(context, indent=4)}'")
+                if not action_filter.check_filters(context):
+                    log(f"{fn}(): context does NOT satisfy filter(s), skipping")
+                    continue
+                else:
+                    log(f"{fn}(): context DOES satisfy filter(s), going on with job")
             job_dir = os.path.join(run_dir, arch_dir, repo_id)
             os.makedirs(job_dir, exist_ok=True)
             log(f"{fn}(): job_dir '{job_dir}'")
@@ -565,7 +572,7 @@ def create_metadata(job, pr, job_id):
 
     Args:
         job (list):  jobs to be submitted
-        pr (object): data of pr
+        pr (github.PullRequest.Pullrequest): object to interact with pull request
         job_id (string): job id after parsing
     """
     # fn = sys._getframe().f_code.co_name
@@ -587,7 +594,7 @@ def create_pr_comments(job, job_id, app_name, pr, gh, symlink):
         job (list): jobs to be submitted
         job_id (string): job id after parsing
         app_name (string): name of the app
-        pr (object): pr data
+        pr (github.PullRequest.Pullrequest): object to interact with pull request
         gh (object):github instance
         symlink(string): symlink from main pr_<ID> dir to job dir
     """
@@ -616,13 +623,14 @@ def create_pr_comments(job, job_id, app_name, pr, gh, symlink):
     pull_request.create_issue_comment(job_comment)
 
 
-def submit_build_jobs(pr, event_info):
+def submit_build_jobs(pr, event_info, action_filter):
     """Build from the pr by fetching data for build environment cofinguration, downloading pr,
        running jobs and adding comments
 
     Args:
-        pr (object): _description_
+        pr (github.PullRequest.Pullrequest): object to interact with pull request
         event_info (string): event received by event_handler
+        action_filter (EESSIBotActionFilter): used to filter which jobs shall be prepared
     """
     fn = sys._getframe().f_code.co_name
 
@@ -631,20 +639,22 @@ def submit_build_jobs(pr, event_info):
     app_name = cfg[GITHUB].get(APP_NAME)
 
     # setup job directories (one per elem in product of architecture % repositories)
-    jobs = prepare_jobs(pr, cfg, event_info)
+    jobs = prepare_jobs(pr, cfg, event_info, action_filter)
 
     # return if no jobs to be submitted
     if not jobs:
         log(f"{fn}(): no jobs ({len(jobs)}) to be submitted")
-        return
+        return "no jobs were prepared"
 
     # obtain handle to GH
     gh = github.get_instance()
 
     # process prepared jobs: submit, create metadata file and add comment to PR
+    job_ids = []
     for job in jobs:
         # submit job
         job_id, symlink = submit_job(job, cfg)
+        job_ids.append(job_id)
 
         # create _bot_job<jobid>.metadata file in submission directory
         create_metadata(job, pr, job_id)
@@ -652,12 +662,15 @@ def submit_build_jobs(pr, event_info):
         # report submitted job
         create_pr_comments(job, job_id, app_name, pr, gh, symlink)
 
+    return_msg = f"created jobs: {', '.join(job_ids)}"
+    return return_msg
+
 
 def check_build_permission(pr, event_info):
     """check if the GH account is authorized to trigger build
 
     Args:
-        pr (object): pr details
+        pr (github.PullRequest.Pullrequest): object to interact with pull request
         event_info (string): event received by event_handler
 
     """
