@@ -319,13 +319,13 @@ def apply_cvmfs_customizations(cvmfs_customizations, arch_job_dir):
             #      for now, only existing mappings may be customized
 
 
-def prepare_jobs(pr, event_dir, build_env_cfg, arch_map, repocfg):
+def prepare_jobs(pr, run_dir, build_env_cfg, arch_map, repocfg):
     """prepare job directory with pull request and cfg/job.cfg as well as
        additional config files
 
     Args:
         pr: github.PullRequest.Pullrequest object
-        event_dir: base directory for all jobs created for this event
+        run_dir: base directory for all jobs created for this event
         build_env_cfg: build env configuration
         arch_map: maps OS/SW_DIR to Slurm parameters
         repocfg: repository config
@@ -358,7 +358,10 @@ def prepare_jobs(pr, event_dir, build_env_cfg, arch_map, repocfg):
             # TODO check filter: context = (arch, repo, app_name)
             #      passed --> log & go on
             #      missed --> log & continue
-            job_dir = os.path.join(event_dir, arch_dir, repo_id)
+            # what is the state of the job, directory tree at this point? can we defer some to after we have checked the filter?
+            # - list functions called from eessi_bot_event_handler.py to here and what they do (changes on disk, data structures, calls to GH, ...)
+            # - determine if and how those need and can be deferred
+            job_dir = os.path.join(run_dir, arch_dir, repo_id)
             os.makedirs(job_dir, exist_ok=True)
             log(f"{fn}(): job_dir '{job_dir}'")
 
