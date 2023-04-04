@@ -45,7 +45,8 @@ def determine_job_dirs(pr_number):
     #  - we may have to scan multiple YYYY.MM directories if the PR was
     #    processed over more than one month
     #  - we assume that job IDs are positive integer numbers
-    build_env_cfg = get_build_env_cfg()
+    cfg = config.read_config()
+    build_env_cfg = get_build_env_cfg(cfg)
     jobs_base_dir = build_env_cfg[JOBS_BASE_DIR]
     log(f"{funcname}(): jobs_base_dir = {jobs_base_dir}")
 
