@@ -223,7 +223,8 @@ class EESSIBotSoftwareLayer(PyGHee):
         gh = github.get_instance()
         repo = gh.get_repo(repo_name)
         pull_request = repo.get_pull(pr.number)
-        pull_request.create_issue_comment(comment)
+        comment = pull_request.create_issue_comment(comment)
+        return comment.id
 
     def handle_pull_request_event(self, event_info, log_file=None):
         """
@@ -267,7 +268,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         help_msg += "\n  - Commands must be sent with a **new** comment (edits of existing comments are ignored)."
         help_msg += "\n  - A comment may contain multiple commands, one per line."
         help_msg += "\n  - Every command begins at the start of a line and has the syntax `bot: COMMAND [ARGUMENTS]*`"
-        help_msg += "\n  - Currently supported COMMANDs are: `help`"
+        help_msg += "\n  - Currently supported COMMANDs are: `help`, `build`, `showconfig`"
         return help_msg
 
     def handle_bot_command_build(self, event_info, bot_command):
@@ -301,8 +302,14 @@ class EESSIBotSoftwareLayer(PyGHee):
 #    def handle_bot_command_status(self, event_info, bot_command):
 #        return
 
-#    def handle_bot_command_show_config(self, event_info, bot_command):
-#        return
+    def handle_bot_command_showconfig(self, event_info, bot_command):
+        self.log("processing bot command 'showconfig'")
+        gh = github.get_instance()
+        repo_name = event_info['raw_request_body']['repository']['full_name']
+        pr_number = event_info['raw_request_body']['pull_request']['number']
+        pr = gh.get_repo(repo_name).get_pull(pr_number)
+        comment_id = self.handle_pull_request_opened_event(event_info, pr)
+        return f"added comment #{comment_id} to show configuration"
 
     def start(self, app, port=3000):
         """starts the app and log information in the log file
