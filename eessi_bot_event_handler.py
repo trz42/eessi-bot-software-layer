@@ -23,11 +23,16 @@ from tools.commands import get_bot_command, EESSIBotCommand, EESSIBotCommandErro
 from tools.filter import EESSIBotActionFilter
 from tools.permissions import check_command_permission
 from tools.pr_comments import update_pr_comment
-from tasks.build import check_build_permission, submit_build_jobs, get_repo_cfg
+from tasks.build import check_build_permission, submit_build_jobs, get_repo_cfg, get_architecturetargets
 from tasks.deploy import deploy_built_artefacts
 
 from pyghee.lib import PyGHee, create_app, get_event_info, read_event_from_json
 from pyghee.utils import log
+
+
+GITHUB = "github"
+APP_NAME = "app_name"
+REPO_TARGET_MAP = "repo_target_map"
 
 
 class EESSIBotSoftwareLayer(PyGHee):
@@ -156,7 +161,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         for cmd in commands:
             try:
                 update = self.handle_bot_command(event_info, cmd)
-                comment_update += f"\n- handling `{cmd.command}` resulted in:"
+                comment_update += f"\n- handling `{cmd.command}` resulted in: "
                 comment_update += update
                 update_pr_comment(event_info, comment_update)
             except EESSIBotCommandError as bce:
@@ -207,13 +212,20 @@ class EESSIBotSoftwareLayer(PyGHee):
         Handle opening of a pull request.
         """
         self.log("PR opened: waiting for label bot:build")
-        app_name = self.cfg['github']['app_name']
+        app_name = self.cfg[GITHUB][APP_NAME]
         # TODO check if PR already has a comment with arch targets and
         # repositories
+        arch_map = get_architecturetargets(self.cfg)
         repo_cfg = get_repo_cfg(self.cfg)
+
         comment = f"Instance `{app_name}` is configured to build:"
-        for arch in repo_cfg['repo_target_map'].keys():
-            for repo_id in repo_cfg['repo_target_map'][arch]:
+
+        for arch in arch_map.keys():
+            # check if repo_target_map contains an entry for {arch}
+            if arch not in repo_cfg[REPO_TARGET_MAP]:
+                self.log(f"skipping arch {arch} because repo target map does not define repositories to build for")
+                continue
+            for repo_id in repo_cfg[REPO_TARGET_MAP][arch]:
                 comment += f"\n- arch `{'/'.join(arch.split('/')[1:])}` for repo `{repo_id}`"
 
         self.log(f"PR opened: comment '{comment}'")
@@ -223,8 +235,8 @@ class EESSIBotSoftwareLayer(PyGHee):
         gh = github.get_instance()
         repo = gh.get_repo(repo_name)
         pull_request = repo.get_pull(pr.number)
-        comment = pull_request.create_issue_comment(comment)
-        return comment.id
+        issue_comment = pull_request.create_issue_comment(comment)
+        return issue_comment
 
     def handle_pull_request_event(self, event_info, log_file=None):
         """
@@ -308,8 +320,8 @@ class EESSIBotSoftwareLayer(PyGHee):
         repo_name = event_info['raw_request_body']['repository']['full_name']
         pr_number = event_info['raw_request_body']['issue']['number']
         pr = gh.get_repo(repo_name).get_pull(pr_number)
-        comment_id = self.handle_pull_request_opened_event(event_info, pr)
-        return f"added comment #{comment_id} to show configuration"
+        issue_comment = self.handle_pull_request_opened_event(event_info, pr)
+        return f"added comment {issue_comment.issue_url} to show configuration"
 
     def start(self, app, port=3000):
         """starts the app and log information in the log file
