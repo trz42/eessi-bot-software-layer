@@ -15,7 +15,7 @@
 import pytest
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
-from tools.filter import EESSIBotActionFilter
+from tools.filter import EESSIBotActionFilter, EESSIBotActionFilterError
 
 
 def test_empty_action_filter():
@@ -39,10 +39,9 @@ def test_add_non_supported_component():
     af = EESSIBotActionFilter("")
     component = 'machine'
     pattern = '.*intel.*'
-    af.add_filter(component, pattern)
-    expected = ''
-    actual = af.to_string()
-    assert expected == actual
+    with pytest.raises(Exception) as err:
+        af.add_filter(component, pattern)
+    assert err.type == EESSIBotActionFilterError
 
 
 def test_check_matching_empty_filter():
