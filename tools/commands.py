@@ -52,7 +52,7 @@ class EESSIBotCommand:
                 self.action_filters = None
                 raise EESSIBotCommandError("invalid action filter")
             except Exception as err:
-                log(f"Unexpected {err=}, {type(err)=}")
+                log(f"Unexpected err={err}, type(err)={type(err)}")
                 raise
         else:
             self.action_filters = EESSIBotActionFilter("")
