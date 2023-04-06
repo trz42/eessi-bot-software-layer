@@ -19,14 +19,14 @@ from tools.filter import EESSIBotActionFilter
 
 
 def test_empty_action_filter():
-    af = EESSIBotActionFilter()
+    af = EESSIBotActionFilter("")
     expected = ''
     actual = af.to_string()
     assert expected == actual
 
 
 def test_add_single_action_filter():
-    af = EESSIBotActionFilter()
+    af = EESSIBotActionFilter("")
     component = 'arch'
     pattern = '.*intel.*'
     af.add_filter(component, pattern)
@@ -36,7 +36,7 @@ def test_add_single_action_filter():
 
 
 def test_add_non_supported_component():
-    af = EESSIBotActionFilter()
+    af = EESSIBotActionFilter("")
     component = 'machine'
     pattern = '.*intel.*'
     af.add_filter(component, pattern)
@@ -46,7 +46,7 @@ def test_add_non_supported_component():
 
 
 def test_check_matching_empty_filter():
-    af = EESSIBotActionFilter()
+    af = EESSIBotActionFilter("")
     expected = ''
     actual = af.to_string()
     assert expected == actual
@@ -58,7 +58,7 @@ def test_check_matching_empty_filter():
 
 
 def test_check_matching_simple_filter():
-    af = EESSIBotActionFilter()
+    af = EESSIBotActionFilter("")
     component = 'arch'
     pattern = '.*intel.*'
     af.add_filter(component, pattern)
@@ -74,7 +74,7 @@ def test_check_matching_simple_filter():
 
 @pytest.fixture
 def complex_filter():
-    af = EESSIBotActionFilter()
+    af = EESSIBotActionFilter("")
     component1 = 'arch'
     pattern1 = '.*intel.*'
     af.add_filter(component1, pattern1)
@@ -125,7 +125,7 @@ def test_non_match_architecture_repository_context(complex_filter):
 
 @pytest.fixture
 def arch_filter_slash_syntax():
-    af = EESSIBotActionFilter()
+    af = EESSIBotActionFilter("")
     component1 = 'arch'
     pattern1 = '.*/intel/.*'
     af.add_filter(component1, pattern1)
@@ -146,7 +146,7 @@ def test_match_architecture_syntax_slash(arch_filter_slash_syntax):
 
 @pytest.fixture
 def arch_filter_dash_syntax():
-    af = EESSIBotActionFilter()
+    af = EESSIBotActionFilter("")
     component1 = 'arch'
     pattern1 = '.*-intel-.*'
     af.add_filter(component1, pattern1)
