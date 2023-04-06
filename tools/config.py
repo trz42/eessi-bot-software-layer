@@ -30,3 +30,21 @@ def read_config(path='app.cfg'):
         error(f"{fn}(): Unable to read configuration file {path}!\n{err}")
 
     return config
+
+
+def check_required_cfg_settings(req_settings, path="app.cfg"):
+    """
+    Reads the config file and checks if it contains the required settings, signaling an error if not
+    Args:
+        req_settings (dict (str, list)): required settings
+        path (string): path to the configuration file
+    Returns:
+        None
+    """
+    cfg = read_config()
+    for section in req_settings.keys():
+        if section not in cfg:
+            error(f'Missing section "{section}" in configuration file {path}.')
+        for item in req_settings[section]:
+            if item not in cfg[section]:
+                error(f'Missing configuration item "{item}" in section "{section}" of configuration file {path}.')
