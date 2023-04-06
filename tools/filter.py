@@ -38,7 +38,7 @@ class EESSIBotActionFilter:
             except EESSIBotActionFilterError:
                 raise
             except Exception as err:
-                log(f"Unexpected {err=}, {type(err)=}")
+                log(f"Unexpected err={err}, type(err)={type(err)}")
                 raise
 
     def clear_all(self):
@@ -66,7 +66,7 @@ class EESSIBotActionFilter:
             self.action_filters.append(Filter(full_component, pattern))
         else:
             log(f"component {component} is unknown")
-            raise EESSIBotActionFilterError(f"unknown {component=} in {component}:{pattern}")
+            raise EESSIBotActionFilterError(f"unknown component={component} in {component}:{pattern}")
 
     def add_filter_from_string(self, filter_string):
         """

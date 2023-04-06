@@ -127,9 +127,9 @@ class EESSIBotSoftwareLayer(PyGHee):
                 try:
                     ebc = EESSIBotCommand(bot_command)
                 except EESSIBotCommandError as bce:
-                    self.log(f"ERROR: parsing {bot_command=} failed with {bce.args}")
-                    comment_update += f"\n- parsing `{bot_command=}` received"
-                    comment_update += f" from `{sender=}` failed"
+                    self.log(f"ERROR: parsing bot command '{bot_command}' failed with {bce.args}")
+                    comment_update += f"\n- parsing bot command `{bot_command}` received"
+                    comment_update += f" from sender `{sender}` failed"
                     continue
                 commands.append(ebc)
                 self.log(f"found bot command: '{bot_command}'")
@@ -171,7 +171,7 @@ class EESSIBotSoftwareLayer(PyGHee):
                 update_pr_comment(event_info, comment_update)
                 continue
             except Exception as err:
-                log(f"Unexpected {err=}, {type(err)=}")
+                log(f"Unexpected err={err}, type(err)={type(err)}")
                 raise
 
         self.log("issue_comment event handled!")
