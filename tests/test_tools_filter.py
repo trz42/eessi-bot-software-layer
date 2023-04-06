@@ -30,7 +30,7 @@ def test_add_single_action_filter():
     component = 'arch'
     pattern = '.*intel.*'
     af.add_filter(component, pattern)
-    expected = "architecture:.*intel.*\n"
+    expected = "architecture:.*intel.*"
     actual = af.to_string()
     assert expected == actual
 
@@ -62,7 +62,7 @@ def test_check_matching_simple_filter():
     component = 'arch'
     pattern = '.*intel.*'
     af.add_filter(component, pattern)
-    expected = f"architecture:{pattern}\n"
+    expected = f"architecture:{pattern}"
     actual = af.to_string()
     assert expected == actual
 
@@ -88,9 +88,9 @@ def complex_filter():
 
 
 def test_create_complex_filter(complex_filter):
-    expected = "architecture:.*intel.*\n"
-    expected += "repository:nessi.no-2022.*\n"
-    expected += "instance:[aA]\n"
+    expected = "architecture:.*intel.*"
+    expected += " repository:nessi.no-2022.*"
+    expected += " instance:[aA]"
     actual = complex_filter.to_string()
     assert expected == actual
 
