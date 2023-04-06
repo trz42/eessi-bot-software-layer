@@ -16,6 +16,7 @@
 import filecmp
 import os
 import re
+import shutil
 from unittest.mock import patch
 
 # Third party imports (anything installed into the local Python environment)
@@ -263,6 +264,7 @@ def mocked_github(request):
 @pytest.mark.pr_number(1)
 def test_create_pr_comment_succeeds(mocked_github, tmpdir):
     """Tests for function create_pr_comment."""
+    shutil.copyfile("tests/test_app.cfg", "app.cfg")
     # creating a PR comment
     print("CREATING PR COMMENT")
     job = Job(tmpdir, "test/architecture", "EESSI-pilot", "--speed-up")
@@ -288,6 +290,7 @@ def test_create_pr_comment_succeeds(mocked_github, tmpdir):
 @pytest.mark.create_fails(True)
 def test_create_pr_comment_succeeds_none(mocked_github, tmpdir):
     """Tests for function create_pr_comment."""
+    shutil.copyfile("tests/test_app.cfg", "app.cfg")
     # creating a PR comment
     print("CREATING PR COMMENT")
     job = Job(tmpdir, "test/architecture", "EESSI-pilot", "--speed-up")
@@ -307,6 +310,7 @@ def test_create_pr_comment_succeeds_none(mocked_github, tmpdir):
 @pytest.mark.create_raises("1")
 def test_create_pr_comment_raises_once_then_succeeds(mocked_github, tmpdir):
     """Tests for function create_pr_comment."""
+    shutil.copyfile("tests/test_app.cfg", "app.cfg")
     # creating a PR comment
     print("CREATING PR COMMENT")
     job = Job(tmpdir, "test/architecture", "EESSI-pilot", "--speed-up")
@@ -328,6 +332,7 @@ def test_create_pr_comment_raises_once_then_succeeds(mocked_github, tmpdir):
 @pytest.mark.create_raises("always_raise")
 def test_create_pr_comment_always_raises(mocked_github, tmpdir):
     """Tests for function create_pr_comment."""
+    shutil.copyfile("tests/test_app.cfg", "app.cfg")
     # creating a PR comment
     print("CREATING PR COMMENT")
     job = Job(tmpdir, "test/architecture", "EESSI-pilot", "--speed-up")
@@ -350,6 +355,7 @@ def test_create_pr_comment_always_raises(mocked_github, tmpdir):
 @pytest.mark.create_raises("3")
 def test_create_pr_comment_three_raises(mocked_github, tmpdir):
     """Tests for function create_pr_comment."""
+    shutil.copyfile("tests/test_app.cfg", "app.cfg")
     # creating a PR comment
     print("CREATING PR COMMENT")
     job = Job(tmpdir, "test/architecture", "EESSI-pilot", "--speed-up")
