@@ -21,6 +21,7 @@ from collections import namedtuple
 from connections import github
 from datetime import datetime, timezone
 from pyghee.utils import log, error
+from retry.api import retry_call
 from tools import config, run_cmd
 
 AWAITS_RELEASE = "awaits_release"
@@ -518,36 +519,41 @@ def submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id):
     return job_id, symlink
 
 
-def create_metadata(job, repo_name, pr, job_id):
-    """Create metadata file in submission dir
+def create_metadata_file(job, job_id, repo_name, pr_number, pr_comment_id):
+    """Create metadata file in submission dir.
 
     Args:
-        job (list):  jobs to be submitted
+        job (named tuple): key data about job that has been submitted
+        job_id (string): id of submitted job
         repo_name (string): pr base repository name
-        pr (object): data of pr
-        job_id (string): job id after parsing
+        pr_number (int): number of pr
+        pr_comment_id (int): id of PR comment
     """
+    fn = sys._getframe().f_code.co_name
+
     # create _bot_job<jobid>.metadata file in submission directory
     bot_jobfile = configparser.ConfigParser()
-    bot_jobfile['PR'] = {'repo': repo_name, 'pr_number': pr.number}
+    bot_jobfile['PR'] = {'repo': repo_name, 'pr_number': pr_number, 'pr_comment_id': pr_comment_id}
     bot_jobfile_path = os.path.join(job.working_dir, f'_bot_job{job_id}.metadata')
     with open(bot_jobfile_path, 'w') as bjf:
         bot_jobfile.write(bjf)
+    log(f"{fn}(): created job metadata file {bot_jobfile_path}")
 
 
-def create_pr_comments(job, job_id, app_name, job_comment, pr, repo_name, gh, symlink):
-    """create comments for pr
+def create_pr_comment(job, job_id, app_name, pr_number, repo_name, gh, symlink):
+    """create pr comment for newly submitted jobpr
 
     Args:
-        job (list): jobs to be submitted
-        job_id (string): job id after parsing
+        job (named tuple): key data about job that has been submitted
+        job_id (string): id of submitted job
         app_name (string): name of the app
-        job_comment (string): comments for jobs status and job release
-        pr (object): pr data
+        pr_number (int): number of the pr
         repo_name (string): pr base repo name
-        gh (object):github instance
-        symlink(string): symlink from main pr_<ID> dir to job dir
+        gh (object): github instance
+        symlink (string): symlink from main pr_<ID> dir to job dir
     """
+    fn = sys._getframe().f_code.co_name
+
     # obtain arch from job.arch_target which has the format OS/ARCH
     arch_name = '-'.join(job.arch_target.split('/')[1:])
 
@@ -569,8 +575,15 @@ def create_pr_comments(job, job_id, app_name, job_comment, pr, repo_name, gh, sy
 
     # create comment to pull request
     repo = gh.get_repo(repo_name)
-    pull_request = repo.get_pull(pr.number)
-    pull_request.create_issue_comment(job_comment)
+    pull_request = repo.get_pull(pr_number)
+    issue_comment = retry_call(pull_request.create_issue_comment, fargs=[job_comment],
+                               exceptions=Exception, tries=3, delay=1, backoff=2, max_delay=10)
+    if issue_comment:
+        log(f"{fn}(): created PR issue comment with id {issue_comment.id}")
+        return issue_comment.id
+    else:
+        log(f"{fn}(): failed to create PR issue comment for job {job_id}")
+        return -1
 
 
 def submit_build_jobs(pr, event_info):
@@ -604,16 +617,16 @@ def submit_build_jobs(pr, event_info):
 
     # Run jobs with the build job submission script
     submitted_jobs = []
-    job_comment = ''
     repo_name = pr.base.repo.full_name
     for job in jobs:
         # TODO make local_tmp specific to job? to isolate jobs if multiple ones can run on a single node
         job_id, symlink = submit_job(job, submitted_jobs, build_env_cfg, ym, pr_id)
 
-        # create _bot_job<jobid>.metadata file in submission directory
-        create_metadata(job, repo_name, pr, job_id)
         # report submitted jobs (incl architecture, ...)
-        create_pr_comments(job, job_id, app_name, job_comment, pr, repo_name, gh, symlink)
+        pr_comment_id = create_pr_comment(job, job_id, app_name, int(pr.number), repo_name, gh, symlink)
+
+        # create _bot_job<jobid>.metadata file in submission directory
+        create_metadata_file(job, job_id, repo_name, int(pr.number), pr_comment_id)
 
 
 def check_build_permission(pr, event_info):
