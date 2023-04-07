@@ -20,6 +20,7 @@ import shutil
 from unittest.mock import patch
 
 # Third party imports (anything installed into the local Python environment)
+from datetime import datetime
 import pytest
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
@@ -267,18 +268,21 @@ def test_create_pr_comment_succeeds(mocked_github, tmpdir):
     shutil.copyfile("tests/test_app.cfg", "app.cfg")
     # creating a PR comment
     print("CREATING PR COMMENT")
-    job = Job(tmpdir, "test/architecture", "EESSI-pilot", "--speed-up")
+    ym = datetime.today().strftime('%Y.%m')
+    pr_number = 1
+    job = Job(tmpdir, "test/architecture", "EESSI-pilot", "--speed-up", ym, pr_number)
+
     job_id = "123"
     app_name = "pytest"
-    pr_number = 1
+
     repo_name = "EESSI/software-layer"
+    repo = mocked_github.get_repo(repo_name)
+    pr = repo.get_pull(pr_number)
     symlink = "/symlink"
-    comment_id = create_pr_comment(job, job_id, app_name, pr_number, repo_name, mocked_github, symlink)
+    comment_id = create_pr_comment(job, job_id, app_name, pr, mocked_github, symlink)
     assert comment_id == 1
     # check if created comment includes jobid?
     print("VERIFYING PR COMMENT")
-    repo = mocked_github.get_repo(repo_name)
-    pr = repo.get_pull(pr_number)
     comment = get_submitted_job_comment(pr, job_id)
     assert job_id in comment.body
 
