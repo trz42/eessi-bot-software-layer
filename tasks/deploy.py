@@ -26,6 +26,7 @@ ENDPOINT_URL = "endpoint_url"
 BUCKET_NAME = "bucket_name"
 UPLOAD_POLICY = "upload_policy"
 DEPLOY_PERMISSION = "deploy_permission"
+NO_DEPLOY_PERMISSION_COMMENT = "no_deploy_permission_comment"
 
 
 def determine_job_dirs(pr_number):
@@ -406,7 +407,15 @@ def deploy_built_artefacts(pr, event_info):
     # permission to trigger the deployment
     if labeler not in deploy_permission.split():
         log(f"{funcname}(): GH account '{labeler}' is not authorized to deploy")
-        # TODO update PR comments for this bot instance?
+        no_deploy_permission_comment = deploy_cfg.get(NO_DEPLOY_PERMISSION_COMMENT)
+        gh = github.get_instance()
+        repo_name = event_info["raw_request_body"]["repository"]["full_name"]
+        repo = gh.get_repo(repo_name)
+        pull_request = repo.get_pull(pr.number)
+        pull_request.create_issue_comment(
+            no_deploy_permission_comment.format(deploy_labeler=labeler,
+                                                deploy_permission_users=", ".join(deploy_permission.split()))
+        )
         return
     else:
         log(f"{funcname}(): GH account '{labeler}' is authorized to deploy")
