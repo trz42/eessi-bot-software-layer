@@ -180,6 +180,7 @@ class MockPullRequest:
         self.create_raises = create_raises
         self.create_exception = create_exception
         self.create_call_count = 0
+        self.base = None
 
     def create_issue_comment(self, body):
         def should_raise_exception():
