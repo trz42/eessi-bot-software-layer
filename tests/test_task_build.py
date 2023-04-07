@@ -154,8 +154,12 @@ class MockGitHub:
         repo = self.repos[repo_name]
         return repo
 
+
 MockBase = namedtuple('MockBase', ['repo'])
+
+
 MockRepo = namedtuple('MockRepo', ['full_name'])
+
 
 class MockRepository:
     def __init__(self, repo_name):
