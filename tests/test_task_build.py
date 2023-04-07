@@ -178,7 +178,7 @@ class MockRepository:
 
 class MockPullRequest:
     def __init__(self, pr_number, create_raises='0', create_exception=Exception, create_fails=False):
-        self.pr_number = pr_number
+        self.number = pr_number
         self.issue_comments = []
         self.create_fails = create_fails
         self.create_raises = create_raises
