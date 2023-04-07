@@ -20,6 +20,7 @@ import shutil
 from unittest.mock import patch
 
 # Third party imports (anything installed into the local Python environment)
+from collections import namedtuple
 from datetime import datetime
 import pytest
 
@@ -153,6 +154,8 @@ class MockGitHub:
         repo = self.repos[repo_name]
         return repo
 
+MockBase = namedtuple('MockBase', ['repo'])
+MockRepo = namedtuple('MockRepo', ['full_name'])
 
 class MockRepository:
     def __init__(self, repo_name):
@@ -165,6 +168,7 @@ class MockRepository:
         else:
             self.pull_requests[pr_number] = MockPullRequest(pr_number, create_raises,
                                                             CreateIssueCommentException, create_fails)
+            self.pull_requests[pr_number].base = MockBase(MockRepo(self.repo_name))
             return self.pull_requests[pr_number]
 
     def get_pull(self, pr_number):
