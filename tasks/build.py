@@ -21,6 +21,7 @@ from collections import namedtuple
 from connections import github
 from datetime import datetime, timezone
 from pyghee.utils import log, error
+from retry.api import retry_call
 from tools import config, run_cmd
 
 APP_NAME = "app_name"
@@ -570,38 +571,40 @@ def submit_job(job, cfg):
     return job_id, symlink
 
 
-def create_metadata(job, pr, job_id):
-    """Create metadata file in submission dir
+def create_metadata_file(job, job_id, pr, pr_comment_id):
+    """Create metadata file in submission dir.
 
     Args:
-        job (list):  jobs to be submitted
+        job (named tuple): key data about job that has been submitted
+        job_id (string): id of submitted job
         pr (github.PullRequest.Pullrequest): object to interact with pull request
-        job_id (string): job id after parsing
+        pr_comment_id (int): id of PR comment
     """
-    # fn = sys._getframe().f_code.co_name
+    fn = sys._getframe().f_code.co_name
 
     repo_name = pr.base.repo.full_name
 
     # create _bot_job<jobid>.metadata file in submission directory
     bot_jobfile = configparser.ConfigParser()
-    bot_jobfile['PR'] = {'repo': repo_name, 'pr_number': pr.number}
+    bot_jobfile['PR'] = {'repo': repo_name, 'pr_number': pr.number, 'pr_comment_id': pr_comment_id}
     bot_jobfile_path = os.path.join(job.working_dir, f'_bot_job{job_id}.metadata')
     with open(bot_jobfile_path, 'w') as bjf:
         bot_jobfile.write(bjf)
+    log(f"{fn}(): created job metadata file {bot_jobfile_path}")
 
 
-def create_pr_comments(job, job_id, app_name, pr, gh, symlink):
-    """create comments for pr
+def create_pr_comment(job, job_id, app_name, pr, gh, symlink):
+    """create pr comment for newly submitted job
 
     Args:
-        job (list): jobs to be submitted
-        job_id (string): job id after parsing
+        job (named tuple): key data about job that has been submitted
+        job_id (string): id of submitted job
         app_name (string): name of the app
         pr (github.PullRequest.Pullrequest): object to interact with pull request
-        gh (object):github instance
-        symlink(string): symlink from main pr_<ID> dir to job dir
+        gh (object): github instance
+        symlink (string): symlink from main pr_<ID> dir to job dir
     """
-    # fn = sys._getframe().f_code.co_name
+    fn = sys._getframe().f_code.co_name
 
     # obtain arch from job.arch_target which has the format OS/ARCH
     arch_name = '-'.join(job.arch_target.split('/')[1:])
@@ -626,7 +629,14 @@ def create_pr_comments(job, job_id, app_name, pr, gh, symlink):
     repo_name = pr.base.repo.full_name
     repo = gh.get_repo(repo_name)
     pull_request = repo.get_pull(pr.number)
-    pull_request.create_issue_comment(job_comment)
+    issue_comment = retry_call(pull_request.create_issue_comment, fargs=[job_comment],
+                               exceptions=Exception, tries=3, delay=1, backoff=2, max_delay=10)
+    if issue_comment:
+        log(f"{fn}(): created PR issue comment with id {issue_comment.id}")
+        return issue_comment.id
+    else:
+        log(f"{fn}(): failed to create PR issue comment for job {job_id}")
+        return -1
 
 
 def submit_build_jobs(pr, event_info, action_filter):
@@ -662,11 +672,11 @@ def submit_build_jobs(pr, event_info, action_filter):
         job_id, symlink = submit_job(job, cfg)
         job_ids.append(job_id)
 
-        # create _bot_job<jobid>.metadata file in submission directory
-        create_metadata(job, pr, job_id)
-
         # report submitted job
-        create_pr_comments(job, job_id, app_name, pr, gh, symlink)
+        pr_comment_id = create_pr_comment(job, job_id, app_name, pr, gh, symlink)
+
+        # create _bot_job<jobid>.metadata file in submission directory
+        create_metadata_file(job, job_id, pr, pr_comment_id)
 
     return_msg = f"created jobs: {', '.join(job_ids)}"
     return return_msg
