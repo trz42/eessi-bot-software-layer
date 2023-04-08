@@ -39,34 +39,30 @@ def create_metadata_file(job, job_id, pr, pr_comment_id):
     log(f"{fn}(): created job metadata file {bot_jobfile_path}")
 
 
-def read_metadata_file(job_metadata_path, log_file=None):
+def read_metadata_file(metadata_path, log_file=None):
     """
-    Try to read metadata file and return its PR section. Return None in
+    Try to read metadata file and return it. Return None in
     case of failure (treat all cases as if the file did not exist):
     - file does not exist,
-    - file exists but does not contain PR section,
     - file exists but parsing/reading resulted in an exception.
 
     Args:
-        job_metadata_path (string): path to job metadata file
+        metadata_path (string): path to metadata file
         log_file (string): path to log file
     """
     # check if metadata file exist
-    if os.path.isfile(job_metadata_path):
-        log(f"Found metadata file at {job_metadata_path}", log_file)
+    if os.path.isfile(metadata_path):
+        log(f"Found metadata file at {metadata_path}", log_file)
         metadata = configparser.ConfigParser()
         try:
-            metadata.read(job_metadata_path)
+            metadata.read(metadata_path)
         except Exception as err:
             # error would let the process exist, this is too harsh,
-            log(f"Unable to read job metadata file {job_metadata_path}: {err}")
+            # we return None and let the caller decide what to do.
+            log(f"Unable to read metadata file {metadata_path}: {err}")
             return None
 
-        # get PR section
-        if "PR" in metadata:
-            return metadata["PR"]
-        else:
-            return None
+        return metadata
     else:
-        log(f"No metadata file found at {job_metadata_path}, so not a bot job", log_file)
+        log(f"No metadata file found at {metadata_path}.", log_file)
         return None

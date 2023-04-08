@@ -196,7 +196,11 @@ class EESSIBotSoftwareLayerJobManager:
         Check if metadata file exists, read it and return 'PR' section if so, return None if not.
         """
         # just use a function provided by module tools.job_metadata
-        return read_metadata_file(job_metadata_path, self.logfile)
+        metadata = read_metadata_file(job_metadata_path, self.logfile)
+        if metadata and "PR" in metadata:
+            return metadata["PR"]
+        else:
+            return None
 
     # job_manager.process_new_job(current_jobs[nj])
     def process_new_job(self, new_job):
