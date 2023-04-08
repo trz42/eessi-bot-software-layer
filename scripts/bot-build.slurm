@@ -29,3 +29,16 @@ if [ -f bot/build.sh ]; then
 else
     fatal_error "could not find bot/build.sh script in '${PWD}'"
 fi
+echo "bot/build.sh finished"
+if [ -f bot/check-result.sh ]; then
+    echo "bot/check-result.sh script found in '${PWD}', so running it!"
+    bot/check-result.sh
+else
+    echo "could not find bot/check-result.sh script in '${PWD}' ..."
+    echo "... depositing default _bot_job${SLURM_JOB_ID}.result file in '${PWD}'"
+    cat > _bot_job${SLURM_JOB_ID}.result <<EOF
+result=UNKNOWN
+msg="Did not find bot/check-result.sh script in '${PWD}'. Check job manually."
+EOF
+fi
+echo "check result step finished"
