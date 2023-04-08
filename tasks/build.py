@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from pyghee.utils import log, error
 from retry.api import retry_call
 from tools import config, run_cmd
+from tools.job_metadata import create_metadata_file
 
 APP_NAME = "app_name"
 AWAITS_RELEASE = "awaits_release"
@@ -570,28 +571,6 @@ def submit_job(job, cfg):
     os.symlink(job[0], symlink)
 
     return job_id, symlink
-
-
-def create_metadata_file(job, job_id, pr, pr_comment_id):
-    """Create metadata file in submission dir.
-
-    Args:
-        job (named tuple): key data about job that has been submitted
-        job_id (string): id of submitted job
-        pr (github.PullRequest.Pullrequest): object to interact with pull request
-        pr_comment_id (int): id of PR comment
-    """
-    fn = sys._getframe().f_code.co_name
-
-    repo_name = pr.base.repo.full_name
-
-    # create _bot_job<jobid>.metadata file in submission directory
-    bot_jobfile = configparser.ConfigParser()
-    bot_jobfile['PR'] = {'repo': repo_name, 'pr_number': pr.number, 'pr_comment_id': pr_comment_id}
-    bot_jobfile_path = os.path.join(job.working_dir, f'_bot_job{job_id}.metadata')
-    with open(bot_jobfile_path, 'w') as bjf:
-        bot_jobfile.write(bjf)
-    log(f"{fn}(): created job metadata file {bot_jobfile_path}")
 
 
 def create_pr_comment(job, job_id, app_name, pr, gh, symlink):
