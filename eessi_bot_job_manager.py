@@ -425,7 +425,22 @@ class EESSIBotSoftwareLayerJobManager:
         job_results = self.read_job_result(job_result_file_path)
         if job_results:
             # TODO process results & return
+            # get summary
+            summary = job_results.get(JOB_RESULT_SUMMARY, ":shrug: UNKOWN")
+            # get details
+            details = job_results.get(JOB_RESULT_DETAILS, "* _no details provided_")
+            # get built_artefacts
+            built_artefacts = job_results.get(JOB_RESULT_ARTEFACTS, "* _no built artefacts reported_")
 
+            dt = datetime.now(timezone.utc)
+
+            job_result_comment_fmt = config.read_config()[JOB_RESULT_COMMENT_FMT]
+            comment_update = f"\n|{dt.strftime('%b %d %X %Z %Y')}|finished|"
+            comment_update += job_result_comment_fmt.format(
+                summary=summary,
+                details=details,
+                built_artefacts=built_artefacts
+            )
         # we should only gotten here if there was no job result file or it could
         # not be read. if the old code has been moved to the target repository we
         # need to add a standard message ala "UNKNOWN result because no job
