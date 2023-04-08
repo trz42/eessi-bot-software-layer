@@ -40,6 +40,7 @@ from tools.args import job_manager_parse
 from datetime import datetime, timezone
 from tools import config, run_cmd
 from tools.pr_comments import get_submitted_job_comment, update_comment
+from tools.job_metadata import read_metadata_file
 
 from pyghee.utils import log, error
 
@@ -194,24 +195,8 @@ class EESSIBotSoftwareLayerJobManager:
         """
         Check if metadata file exists, read it and return 'PR' section if so, return None if not.
         """
-        # check if metadata file exist
-        if os.path.isfile(job_metadata_path):
-            log(f"Found metadata file at {job_metadata_path}", self.logfile)
-            metadata = configparser.ConfigParser()
-            try:
-                metadata.read(job_metadata_path)
-            except Exception as err:
-                error(f"Unable to read job metadata file {job_metadata_path}: {err}")
-
-            # get PR section
-            if "PR" in metadata:
-                metadata_pr = metadata["PR"]
-            else:
-                metadata_pr = {}
-            return metadata_pr
-        else:
-            log(f"No metadata file found at {job_metadata_path}, so not a bot job", self.logfile)
-            return None
+        # just use a function provided by module tools.job_metadata
+        return read_metadata_file(job_metadata_path, self.logfile)
 
     # job_manager.process_new_job(current_jobs[nj])
     def process_new_job(self, new_job):
@@ -402,6 +387,40 @@ class EESSIBotSoftwareLayerJobManager:
 
     # job_manager.process_finished_job(known_jobs[fj])
     def process_finished_job(self, finished_job):
+        # procedure:
+        # 1. check if file _bot_jobJOBID.result exists --> if so read it and
+        #    prepare update to PR comment
+        #    result file contents:
+        #      result={SUCCESS|FAILURE|UNKNOWN}
+        #      msg=multiline string that is put into details element
+        #      built_artefacts=multiline string with (relative) path names
+        #      jobid=
+        #      runtime=
+        #      resources_requested=CPU:x,RAM:yG,DISK:zG
+        #      resources_allocated=CPU:x,RAM:yG,DISK:zG
+        #      resources_used=CPU:x,RAM:yG,DISK:zG
+        # 2. if file doesn't exist, use the below procedure (only until target
+        #    repositories are updated to create such a result file)
+
+        # 1. check if _bot_jobJOBID.result exits
+        job_dir = os.path.join(self.submitted_jobs_dir, finished_job["jobid"])
+        job_result_file = f"_bot_job{finished_job['jobid']}.result"
+        job_result_file_path = os.path.join(job_dir, job_result_file)
+        job_results = self.read_job_result(job_result_file_path)
+        if job_results:
+            # TODO process results & return
+
+        # we should only gotten here if there was no job result file or it could
+        # not be read. if the old code has been moved to the target repository we
+        # need to add a standard message ala "UNKNOWN result because no job
+        # result file found"
+
+        # NOTE if also the deploy functionality is changed such to use the
+        #      results file the bot really becomes independent of what it builds
+
+        # TODO the below should be done by the target repository's script
+        #      bot/check-result.sh which should produce a file
+        #      _bot_jobJOBID.result
         # check result
         #   ("No missing packages!", "eessi-.*.tar.gz")
         #   TODO as is, this requires knowledge about the build process.
