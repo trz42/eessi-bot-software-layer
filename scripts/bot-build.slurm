@@ -37,8 +37,9 @@ else
     echo "could not find bot/check-result.sh script in '${PWD}' ..."
     echo "... depositing default _bot_job${SLURM_JOB_ID}.result file in '${PWD}'"
     cat > _bot_job${SLURM_JOB_ID}.result <<EOF
-result=UNKNOWN
-msg="Did not find bot/check-result.sh script in '${PWD}'. Check job manually."
+[RESULT]
+summary=UNKNOWN
+details="Did not find bot/check-result.sh script in '${PWD}'. Check job manually."
 EOF
 fi
 echo "check result step finished"

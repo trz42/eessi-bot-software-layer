@@ -202,6 +202,17 @@ class EESSIBotSoftwareLayerJobManager:
         else:
             return None
 
+    def read_job_result(self, job_result_file_path):
+        """
+        Check if result file exists, read it and return 'RESULT section if so, return None if not.
+        """
+        # just use a function provided by module tools.job_metadata
+        result = read_metadata_file(job_result_file_path, self.logfile)
+        if result and "RESULT" in result:
+            return result["RESULT"]
+        else:
+            return None
+
     # job_manager.process_new_job(current_jobs[nj])
     def process_new_job(self, new_job):
         # create symlink in submitted_jobs_dir (destination is the working
@@ -395,8 +406,9 @@ class EESSIBotSoftwareLayerJobManager:
         # 1. check if file _bot_jobJOBID.result exists --> if so read it and
         #    prepare update to PR comment
         #    result file contents:
-        #      result={SUCCESS|FAILURE|UNKNOWN}
-        #      msg=multiline string that is put into details element
+        #      [RESULT]
+        #      summary={SUCCESS|FAILURE|UNKNOWN}
+        #      details=multiline string that is put into details element
         #      built_artefacts=multiline string with (relative) path names
         #      jobid=
         #      runtime=
