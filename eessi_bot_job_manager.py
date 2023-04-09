@@ -33,13 +33,14 @@ import glob
 import os
 import re
 import time
+import sys
 
 
 from connections import github
 from tools.args import job_manager_parse
 from datetime import datetime, timezone
 from tools import config, run_cmd
-from tools.pr_comments import get_submitted_job_comment, update_comment
+from tools.pr_comments import get_submitted_job_comment, update_comment, make_html_list_items
 from tools.job_metadata import read_metadata_file
 
 from pyghee.utils import log, error
@@ -402,6 +403,7 @@ class EESSIBotSoftwareLayerJobManager:
 
     # job_manager.process_finished_job(known_jobs[fj])
     def process_finished_job(self, finished_job):
+        fn = sys._getframe().f_code.co_name
         # procedure:
         # 1. check if file _bot_jobJOBID.result exists --> if so read it and
         #    prepare update to PR comment
@@ -428,9 +430,11 @@ class EESSIBotSoftwareLayerJobManager:
             # get summary
             summary = job_results.get(JOB_RESULT_SUMMARY, ":shrug: UNKOWN")
             # get details
-            details = job_results.get(JOB_RESULT_DETAILS, "* _no details provided_")
+            details = job_results.get(JOB_RESULT_DETAILS, "_no details provided_")
+            details_list = make_html_list_items(details)
             # get built_artefacts
-            built_artefacts = job_results.get(JOB_RESULT_ARTEFACTS, "* _no built artefacts reported_")
+            built_artefacts = job_results.get(JOB_RESULT_ARTEFACTS, "_no built artefacts reported_")
+            built_artefacts_list = make_html_list_items(built_artefacts)
 
             dt = datetime.now(timezone.utc)
 
@@ -438,12 +442,46 @@ class EESSIBotSoftwareLayerJobManager:
             comment_update = f"\n|{dt.strftime('%b %d %X %Z %Y')}|finished|"
             comment_update += job_result_comment_fmt.format(
                 summary=summary,
-                details=details,
-                built_artefacts=built_artefacts
+                details=details_list,
+                built_artefacts=built_artefacts_list
             )
+
+            # obtain id of PR comment to be updated (from _bot_jobID.metadata)
+            metadata_file = f"_bot_job{finished_job['jobid']}.metadata"
+            job_metadata_path = os.path.join(job_dir, metadata_file)
+            metadata_pr = self.read_job_pr_metadata(job_metadata_path)
+            if metadata_pr is None:
+                # TODO should we raise the Exception here? maybe first process
+                #      the finished job and raise an exception at the end?
+                raise Exception("Unable to find metadata file")
+
+            # get repo name
+            repo_name = metadata_pr.get("repo", None)
+            # get pr number
+            pr_number = metadata_pr.get("pr_number", -1)
+            # get pr comment id
+            pr_comment_id = metadata_pr.get("pr_comment_id", -1)
+            log(f"{fn}(): pr comment id {pr_comment_id}", self.logfile)
 
             # establish contact to pull request on github
             gh = github.get_instance()
+
+            repo = gh.get_repo(repo_name)
+            pull_request = repo.get_pull(int(pr_number))
+
+            update_comment(pr_comment_id, pull_request, comment_update)
+
+            # move symlink from job_ids_dir/submitted to jobs_ids_dir/finished
+            old_symlink = os.path.join(
+                self.submitted_jobs_dir, finished_job["jobid"])
+            finished_jobs_dir = os.path.join(self.job_ids_dir, "finished")
+            os.makedirs(finished_jobs_dir, exist_ok=True)
+            new_symlink = os.path.join(
+                finished_jobs_dir, finished_job["jobid"])
+            log(f"{fn}(): os.rename({old_symlink},{new_symlink})", self.logfile)
+            os.rename(old_symlink, new_symlink)
+
+            return foo
 
         # we should only gotten here if there was no job result file or it
         # could not be read. if the old code has been moved to the target
@@ -500,11 +538,7 @@ class EESSIBotSoftwareLayerJobManager:
             finished_job_cmnt = get_submitted_job_comment(pull_request, finished_job['jobid'])
 
             if finished_job_cmnt:
-                log(
-                    "process_finished_job(): found comment with id %s"
-                    % finished_job_cmnt.id,
-                    self.logfile,
-                )
+                log(f"{fn}(): found comment with id {finished_job_cmnt.id}", self.logfile)
                 finished_job["comment_id"] = finished_job_cmnt.id
 
         # analyse job result
@@ -611,11 +645,8 @@ class EESSIBotSoftwareLayerJobManager:
         if "comment_id" in finished_job:
             update_comment(finished_job["comment_id"], pull_request, comment_update)
         else:
-            log(
-                "process_finished_job(): did not obtain/find a "
-                "comment for job '%s'" % finished_job["jobid"],
-                self.logfile,
-            )
+            job_id = finished_job["jobid"]
+            log(f"{fn}(): did not find a comment for job {job_id}", self.logfile)
             # TODO just create one?
 
         # move symlink from job_ids_dir/submitted to jobs_ids_dir/finished
@@ -625,10 +656,7 @@ class EESSIBotSoftwareLayerJobManager:
         os.makedirs(finished_jobs_dir, exist_ok=True)
         new_symlink = os.path.join(
             finished_jobs_dir, finished_job["jobid"])
-        log(
-            f"process_finished_job(): os.rename({old_symlink},{new_symlink})",
-            self.logfile,
-        )
+        log(f"{fn}(): os.rename({old_symlink},{new_symlink})", self.logfile)
         os.rename(old_symlink, new_symlink)
 
 
