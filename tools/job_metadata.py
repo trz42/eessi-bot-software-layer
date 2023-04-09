@@ -8,31 +8,35 @@
 #
 # license: GPLv2
 #
-from collections import namedtuple
+# from collections import namedtuple
 import configparser
 import os
 import sys
 
 from pyghee.utils import log, error
 from tasks.build import Job
+from tools.pr_comments import PRComment
 
 
-def create_metadata_file(job, job_id, pr, pr_comment_id):
+def create_metadata_file(job, job_id, pr_comment):
     """Create metadata file in submission dir.
 
     Args:
         job (named tuple): key data about job that has been submitted
         job_id (string): id of submitted job
-        pr (github.PullRequest.Pullrequest): object to interact with pull request
-        pr_comment_id (int): id of PR comment
+        pr_comment (PRComment): contains repo_name, pr_number and pr_comment_id
     """
     fn = sys._getframe().f_code.co_name
 
-    repo_name = pr.base.repo.full_name
+    repo_name = pr_comment.repo_name
+    pr_number = pr_comment.pr_number
+    pr_comment_id = pr_comment.pr_comment_id
 
     # create _bot_job<jobid>.metadata file in submission directory
     bot_jobfile = configparser.ConfigParser()
-    bot_jobfile['PR'] = {'repo': repo_name, 'pr_number': pr.number, 'pr_comment_id': pr_comment_id}
+    bot_jobfile['PR'] = {'repo': repo_name,
+                         'pr_number': pr_number,
+                         'pr_comment_id': pr_comment_id}
     bot_jobfile_path = os.path.join(job.working_dir, f'_bot_job{job_id}.metadata')
     with open(bot_jobfile_path, 'w') as bjf:
         bot_jobfile.write(bjf)

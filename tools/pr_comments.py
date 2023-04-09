@@ -13,10 +13,14 @@
 #
 import re
 
+from collections import namedtuple
 from connections import github
 from pyghee.utils import log
 from retry import retry
 from retry.api import retry_call
+
+
+PRComment = namedtuple('PRComment', ('repo_name', 'pr_number', 'pr_comment_id'))
 
 
 @retry(Exception, tries=5, delay=1, backoff=2, max_delay=30)

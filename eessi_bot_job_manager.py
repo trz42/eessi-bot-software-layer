@@ -441,13 +441,18 @@ class EESSIBotSoftwareLayerJobManager:
                 details=details,
                 built_artefacts=built_artefacts
             )
-        # we should only gotten here if there was no job result file or it could
-        # not be read. if the old code has been moved to the target repository we
-        # need to add a standard message ala "UNKNOWN result because no job
-        # result file found"
+
+            # establish contact to pull request on github
+            gh = github.get_instance()
+
+        # we should only gotten here if there was no job result file or it
+        # could not be read. if the old code has been moved to the target
+        # repository we need to add a standard message ala "UNKNOWN result
+        # because no job result file found"
 
         # NOTE if also the deploy functionality is changed such to use the
-        #      results file the bot really becomes independent of what it builds
+        #      results file the bot really becomes independent of what it
+        #      builds
 
         # TODO the below should be done by the target repository's script
         #      bot/check-result.sh which should produce a file
@@ -471,15 +476,15 @@ class EESSIBotSoftwareLayerJobManager:
         job_dir = os.path.join(self.submitted_jobs_dir, finished_job["jobid"])
         sym_dst = os.readlink(job_dir)
 
-        # TODO create function for obtaining values from metadata file
-        #        might be based on allowing multiple configuration files
-        #        in tools/config.py
+        # read some information from job metadata file
         metadata_file = "_bot_job%s.metadata" % finished_job["jobid"]
         job_metadata_path = os.path.join(job_dir, metadata_file)
 
         # check if metadata file exist
         metadata_pr = self.read_job_pr_metadata(job_metadata_path)
         if metadata_pr is None:
+            # TODO should we raise the Exception here? maybe first process
+            #      the finished job and raise an exception at the end?
             raise Exception("Unable to find metadata file")
 
         # get repo name

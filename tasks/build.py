@@ -655,8 +655,10 @@ def submit_build_jobs(pr, event_info, action_filter):
         # report submitted job
         pr_comment_id = create_pr_comment(job, job_id, app_name, pr, gh, symlink)
 
+        pr_comment = PRComment(pr.base.repo.full_name, pr.number, pr_comment_id)
+
         # create _bot_job<jobid>.metadata file in submission directory
-        create_metadata_file(job, job_id, pr, pr_comment_id)
+        create_metadata_file(job, job_id, pr_comment)
 
     return_msg = f"created jobs: {', '.join(job_ids)}"
     return return_msg
