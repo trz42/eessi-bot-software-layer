@@ -24,6 +24,7 @@ from pyghee.utils import log, error
 from retry.api import retry_call
 from tools import config, run_cmd
 from tools.job_metadata import create_metadata_file
+from tools.pr_comments import PRComment
 
 APP_NAME = "app_name"
 AWAITS_RELEASE = "awaits_release"

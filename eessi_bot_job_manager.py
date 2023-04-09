@@ -28,7 +28,7 @@
 # license: GPLv2
 #
 
-import configparser
+# import configparser
 import glob
 import os
 import re
@@ -43,7 +43,7 @@ from tools import config, run_cmd
 from tools.pr_comments import get_submitted_job_comment, update_comment, make_html_list_items
 from tools.job_metadata import read_metadata_file
 
-from pyghee.utils import log, error
+from pyghee.utils import log
 
 AWAITS_LAUCH = "awaits_lauch"
 FAILURE = "failure"
@@ -445,9 +445,6 @@ class EESSIBotSoftwareLayerJobManager:
         #     resources_requested=CPU:x,RAM:yG,DISK:zG
         #     resources_allocated=CPU:x,RAM:yG,DISK:zG
         #     resources_used=CPU:x,RAM:yG,DISK:zG
-        # OLD
-        #   if file doesn't exist, use the below procedure (only until target
-        #   repositories are updated to create such a result file)
 
         # NEW check if _bot_jobJOBID.result exits
         job_result_file = f"_bot_job{job_id}.result"
@@ -507,12 +504,10 @@ class EESSIBotSoftwareLayerJobManager:
 
             update_comment(pr_comment_id, pull_request, comment_update)
 
-            return
+        return
 
-        # we should only gotten here if there was no job result file or it
-        # could not be read. if the old code has been moved to the target
-        # repository we need to add a standard message ala "UNKNOWN result
-        # because no job result file found"
+        # we should not gotten here because scripts/bot-build.slurm creates
+        # a default results file if bot/check-result.sh doesn't exist
 
         # NOTE if also the deploy functionality is changed such to use the
         #      results file the bot really becomes independent of what it

@@ -13,9 +13,9 @@ import configparser
 import os
 import sys
 
-from pyghee.utils import log, error
-from tasks.build import Job
-from tools.pr_comments import PRComment
+from pyghee.utils import log
+# from tasks.build import Job
+# from tools.pr_comments import PRComment
 
 
 def create_metadata_file(job, job_id, pr_comment):
