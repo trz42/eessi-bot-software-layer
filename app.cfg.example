@@ -187,3 +187,7 @@ missing_modules = Slurm output lacks message "No missing modules!".
 no_tarball_message = Slurm output lacks message about created tarball.
 no_matching_tarball = No tarball matching `{tarball_pattern}` found in job dir.
 multiple_tarballs = Found {num_tarballs} tarballs in job dir - only 1 matching `{tarball_pattern}` expected.
+job_result_comment_fmt =
+<details><summary>{summary} _click triangle for details_</summary>
+Details:<ul>{details}</ul>
+Artefacts:<ul>{artefacts}</ul>
