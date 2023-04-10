@@ -68,7 +68,8 @@ REQUIRED_CONFIG = {
     NEW_JOB_COMMENTS: [AWAITS_LAUCH],
     RUNNING_JOB_COMMENTS: [RUNNING_JOB],
     FINISHED_JOB_COMMENTS: [SUCCESS, FAILURE, NO_SLURM_OUT, SLURM_OUT, MISSING_MODULES,
-                            NO_TARBALL_MESSAGE, NO_MATCHING_TARBALL, MULTIPLE_TARBALLS]
+                            NO_TARBALL_MESSAGE, NO_MATCHING_TARBALL, MULTIPLE_TARBALLS,
+                            JOB_RESULT_COMMENT_FMT]
 }
 
 
@@ -455,10 +456,10 @@ class EESSIBotSoftwareLayerJobManager:
             # get summary
             summary = job_results.get(JOB_RESULT_SUMMARY, ":shrug: UNKOWN")
             # get details
-            details = job_results.get(JOB_RESULT_DETAILS, "_no details provided_")
+            details = job_results.get(JOB_RESULT_DETAILS, "No details were provided.")
             details_list = make_html_list_items(details)
             # get built_artefacts
-            artefacts = job_results.get(JOB_RESULT_ARTEFACTS, "_no artefacts reported_")
+            artefacts = job_results.get(JOB_RESULT_ARTEFACTS, "No artefacts were found/reported.")
             artefacts_list = make_html_list_items(artefacts)
 
             # TODO report to log
@@ -471,7 +472,8 @@ class EESSIBotSoftwareLayerJobManager:
 
             dt = datetime.now(timezone.utc)
 
-            job_result_comment_fmt = config.read_config()[JOB_RESULT_COMMENT_FMT]
+            finished_job_comments_cfg = config.read_config()[FINISHED_JOB_COMMENTS]
+            job_result_comment_fmt = finished_job_comments_cfg[JOB_RESULT_COMMENT_FMT]
             comment_update = f"\n|{dt.strftime('%b %d %X %Z %Y')}|finished|"
             comment_update += job_result_comment_fmt.format(
                 summary=summary,
@@ -502,7 +504,7 @@ class EESSIBotSoftwareLayerJobManager:
             repo = gh.get_repo(repo_name)
             pull_request = repo.get_pull(int(pr_number))
 
-            update_comment(pr_comment_id, pull_request, comment_update)
+            update_comment(int(pr_comment_id), pull_request, comment_update)
 
         return
 
