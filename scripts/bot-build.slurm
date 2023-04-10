@@ -31,7 +31,7 @@ else
     fatal_error "could not find ${BOT_BUILD_SCRIPT} script in '${PWD}'"
 fi
 echo "bot/build.sh finished"
-CHECK_RESULT_SCRIPT=_bot/check-result.sh
+CHECK_RESULT_SCRIPT=bot/check-result.sh
 if [ -f ${CHECK_RESULT_SCRIPT} ]; then
     echo "${CHECK_RESULT_SCRIPT} script found in '${PWD}', so running it!"
     ${CHECK_RESULT_SCRIPT}
