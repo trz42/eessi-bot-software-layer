@@ -23,23 +23,27 @@
 #    for example, repos.cfg and configuration file bundles for repositories
 
 echo "Starting bot-build.slurm"
-if [ -f bot/build.sh ]; then
-    echo "bot/build.sh script found in '${PWD}', so running it!"
-    bot/build.sh
+BOT_BUILD_SCRIPT=bot/build.sh
+if [ -f ${BOT_BUILD_SCRIPT} ]; then
+    echo "${BOT_BUILD_SCRIPT} script found in '${PWD}', so running it!"
+    ${BOT_BUILD_SCRIPT}
 else
-    fatal_error "could not find bot/build.sh script in '${PWD}'"
+    fatal_error "could not find ${BOT_BUILD_SCRIPT} script in '${PWD}'"
 fi
 echo "bot/build.sh finished"
-if [ -f bot/check-result.sh ]; then
-    echo "bot/check-result.sh script found in '${PWD}', so running it!"
-    bot/check-result.sh
+CHECK_RESULT_SCRIPT=_bot/check-result.sh
+if [ -f ${CHECK_RESULT_SCRIPT} ]; then
+    echo "${CHECK_RESULT_SCRIPT} script found in '${PWD}', so running it!"
+    ${CHECK_RESULT_SCRIPT}
 else
-    echo "could not find bot/check-result.sh script in '${PWD}' ..."
+    echo "could not find ${CHECK_RESULT_SCRIPT} script in '${PWD}' ..."
     echo "... depositing default _bot_job${SLURM_JOB_ID}.result file in '${PWD}'"
-    cat > _bot_job${SLURM_JOB_ID}.result <<EOF
+    cat << 'EOF' > _bot_job${SLURM_JOB_ID}.result
 [RESULT]
-summary=UNKNOWN
-details="Did not find bot/check-result.sh script in '${PWD}'. Check job manually."
+summary = :shrug: UNKNOWN
+details =
+    Did not find `bot/check-result.sh` script in job's work directory.
+    *Check job manually or ask an admin of the bot instance to assist you.*
 EOF
 fi
 echo "check result step finished"
