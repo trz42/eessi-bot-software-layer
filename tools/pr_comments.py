@@ -116,5 +116,6 @@ def make_html_list_items(lines):
     """
     html_list_items = ""
     for line in lines.split("\n"):
-        html_list_items += f"<li>{line}</li>"
+        if len(line.strip()) > 0:
+            html_list_items += f"<li>{line}</li>"
     return html_list_items
