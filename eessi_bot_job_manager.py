@@ -43,7 +43,7 @@ from tools.pr_comments import get_submitted_job_comment, update_comment
 
 from pyghee.utils import log, error
 
-AWAITS_LAUCH = "awaits_lauch"
+AWAITS_LAUNCH = "awaits_launch"
 FAILURE = "failure"
 FINISHED_JOB_COMMENTS = "finished_job_comments"
 NEW_JOB_COMMENTS = "new_job_comments"
@@ -58,7 +58,7 @@ SLURM_OUT = "slurm_out"
 SUCCESS = "success"
 
 REQUIRED_CONFIG = {
-    NEW_JOB_COMMENTS: [AWAITS_LAUCH],
+    NEW_JOB_COMMENTS: [AWAITS_LAUNCH],
     RUNNING_JOB_COMMENTS: [RUNNING_JOB],
     FINISHED_JOB_COMMENTS: [SUCCESS, FAILURE, NO_SLURM_OUT, SLURM_OUT, MISSING_MODULES,
                             NO_TARBALL_MESSAGE, NO_MATCHING_TARBALL, MULTIPLE_TARBALLS]
@@ -315,7 +315,7 @@ class EESSIBotSoftwareLayerJobManager:
                 new_job_comments_cfg = config.read_config()[NEW_JOB_COMMENTS]
                 dt = datetime.now(timezone.utc)
                 update = "\n|%s|released|" % dt.strftime("%b %d %X %Z %Y")
-                update += f"{new_job_comments_cfg[AWAITS_LAUCH]}|"
+                update += f"{new_job_comments_cfg[AWAITS_LAUNCH]}|"
                 update_comment(new_job["comment_id"], pr, update)
             else:
                 log(
