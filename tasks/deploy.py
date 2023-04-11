@@ -17,7 +17,7 @@ from connections import github
 from datetime import datetime, timezone
 from pyghee.utils import log
 from tasks.build import get_build_env_cfg
-from tools import config, run_cmd
+from tools import config, run_cmd, pr_comments
 
 JOBS_BASE_DIR = "jobs_base_dir"
 DEPLOYCFG = "deploycfg"
@@ -407,14 +407,10 @@ def deploy_built_artefacts(pr, event_info):
     if labeler not in deploy_permission.split():
         log(f"{funcname}(): GH account '{labeler}' is not authorized to deploy")
         no_deploy_permission_comment = deploy_cfg.get(NO_DEPLOY_PERMISSION_COMMENT)
-        gh = github.get_instance()
         repo_name = event_info["raw_request_body"]["repository"]["full_name"]
-        repo = gh.get_repo(repo_name)
-        pull_request = repo.get_pull(pr.number)
-        pull_request.create_issue_comment(
-            no_deploy_permission_comment.format(deploy_labeler=labeler,
-                                                deploy_permission_users=", ".join(deploy_permission.split()))
-        )
+        pr_comments.create_comment(repo_name,
+                                   pr.number,
+                                   no_deploy_permission_comment.format(deploy_labeler=labeler))
         return
     else:
         log(f"{funcname}(): GH account '{labeler}' is authorized to deploy")

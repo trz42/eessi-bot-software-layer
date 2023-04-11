@@ -22,7 +22,7 @@ from connections import github
 from datetime import datetime, timezone
 from pyghee.utils import log, error
 from retry.api import retry_call
-from tools import config, run_cmd
+from tools import config, run_cmd, pr_comments
 
 AWAITS_RELEASE = "awaits_release"
 BUILDENV = "buildenv"
@@ -656,14 +656,10 @@ def check_build_permission(pr, event_info):
     if build_labeler not in build_permission.split():
         log(f"{funcname}(): GH account '{build_labeler}' is not authorized to build")
         no_build_permission_comment = buildenv.get(NO_BUILD_PERMISSION_COMMENT)
-        gh = github.get_instance()
         repo_name = event_info["raw_request_body"]["repository"]["full_name"]
-        repo = gh.get_repo(repo_name)
-        pull_request = repo.get_pull(pr.number)
-        pull_request.create_issue_comment(
-            no_build_permission_comment.format(build_labeler=build_labeler,
-                                               build_permission_users=", ".join(build_permission.split()))
-        )
+        pr_comments.create_comment(repo_name,
+                                   pr.number,
+                                   no_build_permission_comment.format(build_labeler=build_labeler))
         return False
     else:
         log(f"{funcname}(): GH account '{build_labeler}' is authorized to build")
