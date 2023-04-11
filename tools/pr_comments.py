@@ -82,8 +82,8 @@ def update_comment(cmnt_id, pr, update, log_file=None):
 
 def create_comment(repo_name, pr_number, comment):
     """create a comment on a pr
-    
-    Args: 
+
+    Args:
         repo_name (str): name of the repo with the pr
         pr_number (int): number of the pr within the repo
         comment (string): new comment
