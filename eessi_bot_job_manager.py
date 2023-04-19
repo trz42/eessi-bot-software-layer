@@ -60,6 +60,8 @@ SLURM_OUT = "slurm_out"
 SUCCESS = "success"
 
 JOB_RESULT_COMMENT_FMT = "job_result_comment_fmt"
+JOB_RESULT_DETAILS_ITEM_FMT = "job_result_details_item_fmt"
+JOB_RESULT_ARTEFACTS_ITEM_FMT = "job_result_artefacts_item_fmt"
 JOB_RESULT_SUMMARY = "summary"
 JOB_RESULT_DETAILS = "details"
 JOB_RESULT_ARTEFACTS = "artefacts"
@@ -69,7 +71,8 @@ REQUIRED_CONFIG = {
     RUNNING_JOB_COMMENTS: [RUNNING_JOB],
     FINISHED_JOB_COMMENTS: [SUCCESS, FAILURE, NO_SLURM_OUT, SLURM_OUT, MISSING_MODULES,
                             NO_TARBALL_MESSAGE, NO_MATCHING_TARBALL, MULTIPLE_TARBALLS,
-                            JOB_RESULT_COMMENT_FMT]
+                            JOB_RESULT_COMMENT_FMT, JOB_RESULT_DETAILS_ITEM_FMT,
+                            JOB_RESULT_ARTEFACTS_ITEM_FMT]
 }
 
 
@@ -433,7 +436,6 @@ class EESSIBotSoftwareLayerJobManager:
         os.rename(old_symlink, new_symlink)
 
         # REPORT status (to logfile in any case, to PR comment if accessible)
-        # NEW
         #   check if file _bot_jobJOBID.result exists --> if so read it and
         #   prepare update to PR comment
         #   result file contents:
@@ -447,64 +449,77 @@ class EESSIBotSoftwareLayerJobManager:
         #     resources_allocated=CPU:x,RAM:yG,DISK:zG
         #     resources_used=CPU:x,RAM:yG,DISK:zG
 
-        # NEW check if _bot_jobJOBID.result exits
+        # obtain format templates from app.cfg
+        finished_job_comments_cfg = config.read_config()[FINISHED_JOB_COMMENTS]
+        job_result_details_item_fmt = finished_job_comments_cfg[JOB_RESULT_DETAILS_ITEM_FMT]
+        job_result_artefacts_item_fmt = finished_job_comments_cfg[JOB_RESULT_ARTEFACTS_ITEM_FMT]
+
+        # check if _bot_jobJOBID.result exits
         job_result_file = f"_bot_job{job_id}.result"
         job_result_file_path = os.path.join(new_symlink, job_result_file)
         job_results = self.read_job_result(job_result_file_path)
-        if job_results:
-            # TODO process results & return
-            # get summary
+        if job_results is None:
+            # set summary to ':shrug UKNOWN'
+            summary = ":shrug: UNKNOWN"
+            # set details to 'job results file ... does not exist or reading it failed'
+            details = f"Job results file `{job_result_file_path}` does not exist or reading it failed."
+            details_list = make_html_list_items(details, job_result_details_item_fmt)
+            artefacts = "No artefacts were found/reported."
+            artefacts_list = make_html_list_items(artefacts, job_result_artefacts_item_fmt)
+        else:
+            # job_results is not None
+
+            # get summary (or set it to ':shrug: UNKNOWN' if no summary found)
             summary = job_results.get(JOB_RESULT_SUMMARY, ":shrug: UNKOWN")
-            # get details
+            # get details (or set it to 'No details were provided.' if no details found)
             details = job_results.get(JOB_RESULT_DETAILS, "No details were provided.")
-            details_list = make_html_list_items(details)
-            # get built_artefacts
+            details_list = make_html_list_items(details, job_result_details_item_fmt)
+            # get artefacts (or set it to 'No artefacts were found/reported.' if no artefacts found)
             artefacts = job_results.get(JOB_RESULT_ARTEFACTS, "No artefacts were found/reported.")
-            artefacts_list = make_html_list_items(artefacts)
+            artefacts_list = make_html_list_items(artefacts, job_result_artefacts_item_fmt)
 
-            # TODO report to log
-            log(f"{fn}(): finished job {job_id}\n"
-                f"########\n"
-                f"summary: {summary}\n"
-                f"details: {details}\n"
-                f"artefacts: {artefacts}\n"
-                f"########\n", self.logfile)
+        # TODO report to log
+        log(f"{fn}(): finished job {job_id}\n"
+            f"########\n"
+            f"summary: {summary}\n"
+            f"details: {details}\n"
+            f"artefacts: {artefacts}\n"
+            f"########\n", self.logfile)
 
-            dt = datetime.now(timezone.utc)
+        dt = datetime.now(timezone.utc)
 
-            finished_job_comments_cfg = config.read_config()[FINISHED_JOB_COMMENTS]
-            job_result_comment_fmt = finished_job_comments_cfg[JOB_RESULT_COMMENT_FMT]
-            comment_update = f"\n|{dt.strftime('%b %d %X %Z %Y')}|finished|"
-            comment_update += job_result_comment_fmt.format(
-                summary=summary,
-                details=details_list,
-                artefacts=artefacts_list
-            )
+        job_result_comment_fmt = finished_job_comments_cfg[JOB_RESULT_COMMENT_FMT]
+        comment_update = f"\n|{dt.strftime('%b %d %X %Z %Y')}|finished|"
+        comment_update += job_result_comment_fmt.format(
+            summary=summary,
+            details=details_list,
+            artefacts=artefacts_list
+        )
 
-            # obtain id of PR comment to be updated (from _bot_jobID.metadata)
-            metadata_file = f"_bot_job{job_id}.metadata"
-            job_metadata_path = os.path.join(new_symlink, metadata_file)
-            metadata_pr = self.read_job_pr_metadata(job_metadata_path)
-            if metadata_pr is None:
-                # TODO should we raise the Exception here? maybe first process
-                #      the finished job and raise an exception at the end?
-                raise Exception("Unable to find metadata file ... skip updating PR comment")
+        # obtain id of PR comment to be updated (from _bot_jobID.metadata)
+        metadata_file = f"_bot_job{job_id}.metadata"
+        job_metadata_path = os.path.join(new_symlink, metadata_file)
+        metadata_pr = self.read_job_pr_metadata(job_metadata_path)
+        if metadata_pr is None:
+            # TODO should we raise the Exception here? maybe first process
+            #      the finished job and raise an exception at the end?
+            raise Exception("Unable to find metadata file ... skip updating PR comment")
 
-            # get repo name
-            repo_name = metadata_pr.get("repo", None)
-            # get pr number
-            pr_number = metadata_pr.get("pr_number", -1)
-            # get pr comment id
-            pr_comment_id = metadata_pr.get("pr_comment_id", -1)
-            log(f"{fn}(): pr comment id {pr_comment_id}", self.logfile)
+        # get repo name
+        repo_name = metadata_pr.get("repo", None)
+        # get pr number
+        pr_number = metadata_pr.get("pr_number", -1)
+        # get pr comment id
+        pr_comment_id = metadata_pr.get("pr_comment_id", -1)
+        log(f"{fn}(): pr comment id {pr_comment_id}", self.logfile)
 
-            # establish contact to pull request on github
-            gh = github.get_instance()
+        # establish contact to pull request on github
+        gh = github.get_instance()
 
-            repo = gh.get_repo(repo_name)
-            pull_request = repo.get_pull(int(pr_number))
+        repo = gh.get_repo(repo_name)
+        pull_request = repo.get_pull(int(pr_number))
 
-            update_comment(int(pr_comment_id), pull_request, comment_update)
+        update_comment(int(pr_comment_id), pull_request, comment_update)
 
         return
 
