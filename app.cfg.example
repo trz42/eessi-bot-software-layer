@@ -164,7 +164,14 @@ poll_interval = 60
 scontrol_command = /usr/bin/scontrol
 
 
-# variable 'comment' under 'submitted_job_comments' should not be changed as there are regular expression patterns matching it
+# Note 1. The value of the setting 'initial_comment' in section
+#         '[submitted_job_comments]' should not be changed because the bot
+#         uses regular expression pattern to identify a comment with this
+#         format.
+# Note 2. Any name inside curly brackets is replaced by the bot with
+#         corresponding data. If the name is changed or the curly brackets
+#         are removed, the output (in PR comments) will lack important
+#         information.
 [submitted_job_comments]
 initial_comment = New job on instance `{app_name}` for architecture `{arch_name}` for repository `{repo_id}` in job dir `{symlink}`
 awaits_release = job id `{job_id}` awaits release by job manager
@@ -187,4 +194,6 @@ missing_modules = Slurm output lacks message "No missing modules!".
 no_tarball_message = Slurm output lacks message about created tarball.
 no_matching_tarball = No tarball matching `{tarball_pattern}` found in job dir.
 multiple_tarballs = Found {num_tarballs} tarballs in job dir - only 1 matching `{tarball_pattern}` expected.
-job_result_comment_fmt = <details><summary>{summary} _(click triangle for detailed information)_</summary>Details:<ul>{details}</ul>Artefacts:<ul>{artefacts}</ul>
+job_result_comment_fmt = <details><summary>{summary} _(click triangle for detailed information)_</summary>Details:{details}Artefacts:<ul>{artefacts}</ul>
+job_result_details_item_fmt = <br/>{item}
+job_result_artefacts_item_fmt = <li><code>{item}</code></li>
