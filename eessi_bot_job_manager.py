@@ -462,7 +462,7 @@ class EESSIBotSoftwareLayerJobManager:
             # set summary to ':shrug UKNOWN'
             summary = ":shrug: UNKNOWN"
             # set details to 'job results file ... does not exist or reading it failed'
-            details = f"Job results file `{job_result_file_path}` does not exist or reading it failed."
+            details = f"Job results file `{job_result_file}` does not exist in job directory or reading it failed."
             details_list = make_html_list_items(details, job_result_details_item_fmt)
             artefacts = "No artefacts were found/reported."
             artefacts_list = make_html_list_items(artefacts, job_result_artefacts_item_fmt)
