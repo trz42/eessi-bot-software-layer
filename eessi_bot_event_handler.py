@@ -71,8 +71,11 @@ class EESSIBotSoftwareLayer(PyGHee):
         action = request_body['action']
         sender = request_body['sender']['login']
         owner = request_body['comment']['user']['login']
-        txt = request_body['comment']['body']
-        self.log(f"Comment in {issue_url} (owned by @{owner}) {action} by @{sender}: {txt}")
+        # next two lines are commented out and replaced to write less to log files
+        # txt = request_body['comment']['body']
+        # self.log(f"Comment in {issue_url} (owned by @{owner}) {action} by @{sender}: {txt}")
+        self.log(f"Comment in {issue_url} (owned by @{owner}) {action} by @{sender}")
+
         # check if addition to comment includes a command for the bot, e.g.,
         #   bot: build [arch:intel] [instance:AWS]
         #   bot: cancel [job:jobid]
@@ -106,7 +109,9 @@ class EESSIBotSoftwareLayer(PyGHee):
         # only scan for comments in newly created comments
         if action == 'created':
             comment_new = request_body['comment']['body']
-            self.log(f"comment created:\n########\n{comment_new.rstrip()}\n########")
+            # next line commented out and replaced to write less to log files
+            # self.log(f"comment created:\n########\n{comment_new.rstrip()}\n########")
+            self.log(f"comment action '{action}' is handled")
         else:
             self.log(f"comment action '{action}' not handled")
             return
@@ -117,10 +122,12 @@ class EESSIBotSoftwareLayer(PyGHee):
         comment_update = ''
         commands = []
         for line in comment_new.split('\n'):
-            self.log(f"searching line '{line}' for bot command")
+            # next line commented out to write less to log files
+            # self.log(f"searching line '{line}' for bot command")
             line_stripped = line.strip()
             if line.isspace() or len(line_stripped) == 0:
-                self.log(f"line '{line}' is empty")
+                # next line commented out to write less to log files
+                # self.log(f"line '{line}' is empty")
                 continue
             bot_command = get_bot_command(line)
             if bot_command:
@@ -139,20 +146,22 @@ class EESSIBotSoftwareLayer(PyGHee):
                 comment_update += "\n- received bot command "
                 comment_update += f"`{bot_command}`"
                 comment_update += f" from `{sender}` (expanded command format: `{ebc.to_string()}`)"
-            else:
-                self.log(f"'{line}' is not considered to contain a bot command")
+            # next two lines are commented out to write less to log files
+            # else:
+                # self.log(f"'{line}' is not considered to contain a bot command")
                 # next three lines commented out to make the bot less noisy,
                 # could be enabled again if bot commands accept arg --verbose
                 # or bot instance has a similar setting
                 # comment_update += f"\n- line <code>{line}</code> is not considered to contain a bot command"
                 # comment_update += "\n- bot commands begin with `bot: `, make sure"
                 # comment_update += "\n  there is no whitespace at the beginning of a line"
-        self.log(f"comment update: '{comment_update}'")
 
         if comment_update == '':
             # no update to be added, just log and return
             self.log("update to comment is empty")
             return
+        else:
+            self.log(f"comment update: '{comment_update}'")
 
         if not any(map(get_bot_command, comment_update.split('\n'))):
             # the 'not any()' ensures that the update would not be considered a bot command itself
