@@ -176,15 +176,17 @@ class EESSIBotSoftwareLayer(PyGHee):
         for cmd in commands:
             try:
                 update = self.handle_bot_command(event_info, cmd)
-                # next two lines commented out to make the bot less noisy,
-                # could be enabled again if bot commands accept arg --verbose
-                # or bot instance has a similar setting; those were also a bit
-                # confusing when different instances overwrote comments of the
-                # other instances
-                # comment_update += f"\n- handling `{cmd.command}` resulted in: "
-                # comment_update += update
-                # update_pr_comment(event_info, comment_update)
+                # the update to the PR comment is only done if the command is
+                # 'help'; otherwise there was too much noise and also updates
+                # were a bit confusing when different instances overwrote
+                # comments of the other instances
+                if cmd.command == 'help':
+                    comment_update += f"\n- handling `{cmd.command}` resulted in: "
+                    comment_update += update
+                    update_pr_comment(event_info, comment_update)
+
                 self.log(f"handling '{cmd.command}' resulted in '{update}'")
+
             except EESSIBotCommandError as bce:
                 self.log(f"ERROR: handling {cmd.command} failed with {bce.args}")
                 # next two lines commented out to make the bot less noisy,
