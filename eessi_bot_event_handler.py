@@ -128,8 +128,11 @@ class EESSIBotSoftwareLayer(PyGHee):
                     ebc = EESSIBotCommand(bot_command)
                 except EESSIBotCommandError as bce:
                     self.log(f"ERROR: parsing bot command '{bot_command}' failed with {bce.args}")
-                    comment_update += f"\n- parsing bot command `{bot_command}` received"
-                    comment_update += f" from sender `{sender}` failed"
+                    # next two lines commented out to make the bot less noisy,
+                    # could be enabled again if bot commands accept arg --verbose
+                    # or bot instance has a similar setting
+                    # comment_update += f"\n- parsing bot command `{bot_command}` received"
+                    # comment_update += f" from sender `{sender}` failed"
                     continue
                 commands.append(ebc)
                 self.log(f"found bot command: '{bot_command}'")
@@ -138,10 +141,12 @@ class EESSIBotSoftwareLayer(PyGHee):
                 comment_update += f" from `{sender}` (expanded command format: `{ebc.to_string()}`)"
             else:
                 self.log(f"'{line}' is not considered to contain a bot command")
-                # TODO keep the below for debugging purposes
-                comment_update += f"\n- line <code>{line}</code> is not considered to contain a bot command"
-                comment_update += "\n- bot commands begin with `bot: `, make sure"
-                comment_update += "\n  there is no whitespace at the beginning of a line"
+                # next three lines commented out to make the bot less noisy,
+                # could be enabled again if bot commands accept arg --verbose
+                # or bot instance has a similar setting
+                # comment_update += f"\n- line <code>{line}</code> is not considered to contain a bot command"
+                # comment_update += "\n- bot commands begin with `bot: `, make sure"
+                # comment_update += "\n  there is no whitespace at the beginning of a line"
         self.log(f"comment update: '{comment_update}'")
 
         if comment_update == '':
@@ -162,13 +167,22 @@ class EESSIBotSoftwareLayer(PyGHee):
         for cmd in commands:
             try:
                 update = self.handle_bot_command(event_info, cmd)
-                comment_update += f"\n- handling `{cmd.command}` resulted in: "
-                comment_update += update
-                update_pr_comment(event_info, comment_update)
+                # next two lines commented out to make the bot less noisy,
+                # could be enabled again if bot commands accept arg --verbose
+                # or bot instance has a similar setting; those were also a bit
+                # confusing when different instances overwrote comments of the
+                # other instances
+                # comment_update += f"\n- handling `{cmd.command}` resulted in: "
+                # comment_update += update
+                # update_pr_comment(event_info, comment_update)
+                self.log(f"handling '{cmd.command}' resulted in '{update}'")
             except EESSIBotCommandError as bce:
                 self.log(f"ERROR: handling {cmd.command} failed with {bce.args}")
-                comment_update += f"\n- handling `{cmd.command}` failed with {bce.args}"
-                update_pr_comment(event_info, comment_update)
+                # next two lines commented out to make the bot less noisy,
+                # could be enabled again if bot commands accept arg --verbose
+                # or bot instance has a similar setting
+                # comment_update += f"\n- handling `{cmd.command}` failed with {bce.args}"
+                # update_pr_comment(event_info, comment_update)
                 continue
             except Exception as err:
                 log(f"Unexpected err={err}, type(err)={type(err)}")
