@@ -114,3 +114,39 @@ def test_determine_new_jobs():
     assert(job_manager.determine_new_jobs({}, current_jobs) == ['0', '1', '2'])
     assert(job_manager.determine_new_jobs(known_jobs_one_job, current_jobs) == ['1', '2'])
     assert(job_manager.determine_new_jobs(known_jobs_all_jobs, current_jobs) == [])
+
+def test_determine_finished_jobs():
+    job_manager = EESSIBotSoftwareLayerJobManager()
+
+    current_jobs_all_jobs = {
+        '0': {
+            'jobid': '0', 'state': '', 'reason': ''
+        },
+        '1': {
+            'jobid': '1', 'state': '', 'reason': ''
+        },
+        '2': {
+            'jobid': '2', 'state': '', 'reason': ''
+        }
+    }
+    current_jobs_one_job = {
+        '0': {
+            'jobid': '0', 'state': '', 'reason': ''
+        }
+    }
+    
+    known_jobs = {
+        '0': {
+            'jobid': '0'
+        },
+        '1': {
+            'jobid': '1'
+        },
+        '2': {
+            'jobid': '2'
+        }
+    }
+
+    assert(job_manager.determine_finished_jobs(known_jobs, current_jobs_all_jobs) == [])
+    assert(job_manager.determine_finished_jobs(known_jobs, current_jobs_one_job) == ['1', '2'])
+    assert(job_manager.determine_finished_jobs(known_jobs, {}) == ['0', '1', '2'])
