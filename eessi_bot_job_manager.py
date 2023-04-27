@@ -40,7 +40,7 @@ from connections import github
 from tools.args import job_manager_parse
 from datetime import datetime, timezone
 from tools import config, run_cmd
-from tools.pr_comments import get_submitted_job_comment, update_comment, make_html_list_items
+from tools.pr_comments import get_submitted_job_comment, update_comment
 from tools.job_metadata import read_metadata_file
 
 from pyghee.utils import log
@@ -59,20 +59,15 @@ RUNNING_JOB_COMMENTS = "running_job_comments"
 SLURM_OUT = "slurm_out"
 SUCCESS = "success"
 
-JOB_RESULT_COMMENT_FMT = "job_result_comment_fmt"
-JOB_RESULT_DETAILS_ITEM_FMT = "job_result_details_item_fmt"
-JOB_RESULT_ARTEFACTS_ITEM_FMT = "job_result_artefacts_item_fmt"
-JOB_RESULT_SUMMARY = "summary"
-JOB_RESULT_DETAILS = "details"
-JOB_RESULT_ARTEFACTS = "artefacts"
+JOB_RESULT_UNKNOWN_FMT = "job_result_unknown_fmt"
+JOB_RESULT_COMMENT_DETAILS = "comment_details"
 
 REQUIRED_CONFIG = {
     NEW_JOB_COMMENTS: [AWAITS_LAUCH],
     RUNNING_JOB_COMMENTS: [RUNNING_JOB],
     FINISHED_JOB_COMMENTS: [SUCCESS, FAILURE, NO_SLURM_OUT, SLURM_OUT, MISSING_MODULES,
                             NO_TARBALL_MESSAGE, NO_MATCHING_TARBALL, MULTIPLE_TARBALLS,
-                            JOB_RESULT_COMMENT_FMT, JOB_RESULT_DETAILS_ITEM_FMT,
-                            JOB_RESULT_ARTEFACTS_ITEM_FMT]
+                            JOB_RESULT_UNKNOWN_FMT]
 }
 
 
@@ -436,65 +431,42 @@ class EESSIBotSoftwareLayerJobManager:
         os.rename(old_symlink, new_symlink)
 
         # REPORT status (to logfile in any case, to PR comment if accessible)
+        #   rely fully on what bot/check-result.sh has returned
         #   check if file _bot_jobJOBID.result exists --> if so read it and
-        #   prepare update to PR comment
-        #   result file contents:
-        #     [RESULT]
-        #     summary={SUCCESS|FAILURE|UNKNOWN}
-        #     details=multiline string that is put into details element
-        #     built_artefacts=multiline string with (relative) path names
-        #     jobid=
-        #     runtime=
-        #     resources_requested=CPU:x,RAM:yG,DISK:zG
-        #     resources_allocated=CPU:x,RAM:yG,DISK:zG
-        #     resources_used=CPU:x,RAM:yG,DISK:zG
+        #   update PR comment
+        # contents of *.result file (here we only use section [RESULT])
+        #   [RESULT]
+        #   comment_details = _FULLY_DEFINED_UPDATE_TO_PR_COMMENT_
+        #   [repo_id]
+        #   artefacts = _LIST_OF_ARTEFACTS_TO_BE_DEPLOYED_TO_repo_id_
 
         # obtain format templates from app.cfg
         finished_job_comments_cfg = config.read_config()[FINISHED_JOB_COMMENTS]
-        job_result_details_item_fmt = finished_job_comments_cfg[JOB_RESULT_DETAILS_ITEM_FMT]
-        job_result_artefacts_item_fmt = finished_job_comments_cfg[JOB_RESULT_ARTEFACTS_ITEM_FMT]
 
         # check if _bot_jobJOBID.result exits
         job_result_file = f"_bot_job{job_id}.result"
         job_result_file_path = os.path.join(new_symlink, job_result_file)
         job_results = self.read_job_result(job_result_file_path)
-        if job_results is None:
-            # set summary to ':shrug UKNOWN'
-            summary = ":shrug: UNKNOWN"
-            # set details to 'job results file ... does not exist or reading it failed'
-            details = f"Job results file `{job_result_file}` does not exist in job directory or reading it failed."
-            details_list = make_html_list_items(details, job_result_details_item_fmt)
-            artefacts = "No artefacts were found/reported."
-            artefacts_list = make_html_list_items(artefacts, job_result_artefacts_item_fmt)
-        else:
-            # job_results is not None
 
-            # get summary (or set it to ':shrug: UNKNOWN' if no summary found)
-            summary = job_results.get(JOB_RESULT_SUMMARY, ":shrug: UNKOWN")
-            # get details (or set it to 'No details were provided.' if no details found)
-            details = job_results.get(JOB_RESULT_DETAILS, "No details were provided.")
-            details_list = make_html_list_items(details, job_result_details_item_fmt)
-            # get artefacts (or set it to 'No artefacts were found/reported.' if no artefacts found)
-            artefacts = job_results.get(JOB_RESULT_ARTEFACTS, "No artefacts were found/reported.")
-            artefacts_list = make_html_list_items(artefacts, job_result_artefacts_item_fmt)
+        # set comment_details in case no results were found (self.read_job_result
+        # returned None), it's also used (reused actually) in case the job
+        # results do not have a preformatted comment
+        job_result_unknown_fmt = finished_job_comments_cfg[JOB_RESULT_UNKNOWN_FMT]
+        comment_details = job_result_unknown_fmt.format(file=job_result_file)
+        if job_results:
+            # get preformatted comment_details or use previously set default for unknown
+            comment_details = job_results.get(JOB_RESULT_COMMENT_DETAILS, comment_details)
 
-        # TODO report to log
+        # report to log
         log(f"{fn}(): finished job {job_id}\n"
             f"########\n"
-            f"summary: {summary}\n"
-            f"details: {details}\n"
-            f"artefacts: {artefacts}\n"
+            f"comment_details: {comment_details}\n"
             f"########\n", self.logfile)
 
         dt = datetime.now(timezone.utc)
 
-        job_result_comment_fmt = finished_job_comments_cfg[JOB_RESULT_COMMENT_FMT]
         comment_update = f"\n|{dt.strftime('%b %d %X %Z %Y')}|finished|"
-        comment_update += job_result_comment_fmt.format(
-            summary=summary,
-            details=details_list,
-            artefacts=artefacts_list
-        )
+        comment_update += f"{comment_details}|"
 
         # obtain id of PR comment to be updated (from _bot_jobID.metadata)
         metadata_file = f"_bot_job{job_id}.metadata"

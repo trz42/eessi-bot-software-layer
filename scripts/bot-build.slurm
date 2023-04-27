@@ -40,10 +40,7 @@ else
     echo "... depositing default _bot_job${SLURM_JOB_ID}.result file in '${PWD}'"
     cat << 'EOF' > _bot_job${SLURM_JOB_ID}.result
 [RESULT]
-summary = :shrug: UNKNOWN
-details =
-    Did not find `bot/check-result.sh` script in job's work directory.
-    *Check job manually or ask an admin of the bot instance to assist you.*
+comment_details = <details><summary>:shrug: UNKNOWN _(click triangle for detailed information)_<summary/><ul><li>Did not find `bot/check-result.sh` script in job's work directory.</li><li>*Check job manually or ask an admin of the bot instance to assist you.*</li></ul></details>
 EOF
 fi
 echo "check result step finished"
