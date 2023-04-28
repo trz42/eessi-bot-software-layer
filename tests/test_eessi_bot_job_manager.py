@@ -6,6 +6,7 @@
 #
 # author: Kenneth Hoste (@boegel)
 # author: Hafsa Naeem (@hafsa-naeem)
+# author: Jonas Qvigstad (@jonas-lq)
 #
 # license: GPLv2
 #
