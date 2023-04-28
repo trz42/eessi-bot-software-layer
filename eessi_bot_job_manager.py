@@ -59,7 +59,7 @@ SLURM_OUT = "slurm_out"
 SUCCESS = "success"
 
 JOB_RESULT_UNKNOWN_FMT = "job_result_unknown_fmt"
-JOB_RESULT_COMMENT_DETAILS = "comment_details"
+JOB_RESULT_COMMENT_DESCRIPTION = "comment_description"
 
 REQUIRED_CONFIG = {
     NEW_JOB_COMMENTS: [AWAITS_LAUCH],
@@ -435,9 +435,9 @@ class EESSIBotSoftwareLayerJobManager:
         #   update PR comment
         # contents of *.result file (here we only use section [RESULT])
         #   [RESULT]
-        #   comment_details = _FULLY_DEFINED_UPDATE_TO_PR_COMMENT_
-        #   [repo_id]
-        #   artefacts = _LIST_OF_ARTEFACTS_TO_BE_DEPLOYED_TO_repo_id_
+        #   comment_description = _FULLY_DEFINED_UPDATE_TO_PR_COMMENT_
+        #   status = {SUCCESS,FAILURE,UNKNOWN}
+        #   artefacts = _LIST_OF_ARTEFACTS_TO_BE_DEPLOYED_
 
         # obtain format templates from app.cfg
         finished_job_comments_cfg = config.read_config()[FINISHED_JOB_COMMENTS]
@@ -447,25 +447,25 @@ class EESSIBotSoftwareLayerJobManager:
         job_result_file_path = os.path.join(new_symlink, job_result_file)
         job_results = self.read_job_result(job_result_file_path)
 
-        # set comment_details in case no results were found (self.read_job_result
+        # set comment_description in case no results were found (self.read_job_result
         # returned None), it's also used (reused actually) in case the job
         # results do not have a preformatted comment
         job_result_unknown_fmt = finished_job_comments_cfg[JOB_RESULT_UNKNOWN_FMT]
-        comment_details = job_result_unknown_fmt.format(file=job_result_file)
+        comment_description = job_result_unknown_fmt.format(file=job_result_file)
         if job_results:
-            # get preformatted comment_details or use previously set default for unknown
-            comment_details = job_results.get(JOB_RESULT_COMMENT_DETAILS, comment_details)
+            # get preformatted comment_description or use previously set default for unknown
+            comment_description = job_results.get(JOB_RESULT_COMMENT_DESCRIPTION, comment_description)
 
         # report to log
         log(f"{fn}(): finished job {job_id}\n"
             f"########\n"
-            f"comment_details: {comment_details}\n"
+            f"comment_description: {comment_description}\n"
             f"########\n", self.logfile)
 
         dt = datetime.now(timezone.utc)
 
         comment_update = f"\n|{dt.strftime('%b %d %X %Z %Y')}|finished|"
-        comment_update += f"{comment_details}|"
+        comment_update += f"{comment_description}|"
 
         # obtain id of PR comment to be updated (from _bot_jobID.metadata)
         metadata_file = f"_bot_job{job_id}.metadata"
