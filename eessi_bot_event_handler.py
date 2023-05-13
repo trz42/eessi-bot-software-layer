@@ -15,11 +15,13 @@
 #
 import waitress
 import sys
+import tasks.build as build
+import tasks.deploy as deploy
 
 from connections import github
 from tools import config
 from tools.args import event_handler_parse
-from tasks.build import check_build_permission, submit_build_jobs
+from tasks.build import check_build_permission, submit_build_jobs, get_repo_cfg
 from tasks.deploy import deploy_built_artefacts
 
 from pyghee.lib import PyGHee, create_app, get_event_info, read_event_from_json
@@ -99,6 +101,23 @@ class EESSIBotSoftwareLayer(PyGHee):
         Handle opening of a pull request.
         """
         self.log("PR opened: waiting for label bot:build")
+        app_name = self.cfg['github']['app_name']
+        # TODO check if PR already has a comment with arch targets and
+        # repositories
+        repo_cfg = get_repo_cfg(self.cfg)
+        comment = f"Instance `{app_name}` is configured to build:"
+        for arch in repo_cfg['repo_target_map'].keys():
+            for repo_id in repo_cfg['repo_target_map'][arch]:
+                comment += f"\n- arch `{'/'.join(arch.split('/')[1:])}` for repo `{repo_id}`"
+
+        self.log(f"PR opened: comment '{comment}'")
+
+        # create comment to pull request
+        repo_name = pr.base.repo.full_name
+        gh = github.get_instance()
+        repo = gh.get_repo(repo_name)
+        pull_request = repo.get_pull(pr.number)
+        pull_request.create_issue_comment(comment)
 
     def handle_pull_request_event(self, event_info, log_file=None):
         """
@@ -145,8 +164,13 @@ def main():
     """Main function."""
     opts = event_handler_parse()
 
-    # config is read to raise an exception early when the event_handler starts.
-    config.read_config()
+    required_config = {
+        build.SUBMITTED_JOB_COMMENTS: [build.INITIAL_COMMENT, build.AWAITS_RELEASE],
+        build.BUILDENV: [build.NO_BUILD_PERMISSION_COMMENT],
+        deploy.DEPLOYCFG: [deploy.NO_DEPLOY_PERMISSION_COMMENT]
+    }
+    # config is read and checked for settings to raise an exception early when the event_handler starts.
+    config.check_required_cfg_settings(required_config)
     github.connect()
 
     if opts.file:

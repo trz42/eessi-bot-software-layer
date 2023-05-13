@@ -26,7 +26,11 @@ private_key = PATH_TO_PRIVATE_KEY
 
 [buildenv]
 # name of the job script used for building an EESSI stack
-build_job_script = PATH_TO_EESSI_BOT/scripts/eessi-bot-build.slurm
+build_job_script = PATH_TO_EESSI_BOT/scripts/bot-build.slurm
+
+#The container_cachedir may be used to reuse downloaded container image files
+#across jobs. Thus, jobs can more quickly launch containers.
+container_cachedir = PATH_TO_SHARED_DIRECTORY
 
 # it may happen that we need to customize some CVMFS configuration
 #   the value of cvmfs_customizations is a dictionary which maps a file
@@ -72,6 +76,7 @@ submit_command = /usr/bin/sbatch
 # if value is left/empty everyone can trigger the build
 # value can be a space delimited list of GH accounts
 build_permission = Hafsa-Naeem
+no_build_permission_comment = Label `bot:build` has been set by user `{build_labeler}`, but this person does not have permission to trigger builds
 
 [deploycfg]
 # script for uploading built software packages
@@ -104,6 +109,7 @@ upload_policy = once
 # if value is left/empty everyone can trigger the deployment
 # value can be a space delimited list of GH accounts
 deploy_permission = trz42
+no_deploy_permission_comment = Label `bot:deploy` has been set by user `{deploy_labeler}`, but this person does not have permission to trigger deployments
 
 
 [architecturetargets]
@@ -134,3 +140,24 @@ poll_interval = 60
 
 # full path to the command for manipulating existing jobs
 scontrol_command = /usr/bin/scontrol
+
+# variable 'initial_comment' under 'submitted_job_comments' should not be changed as the bot's code uses regular expression pattern to identify a matching comment
+[submitted_job_comments]
+initial_comment = New job on instance `{app_name}` for architecture `{arch_name}` for repository `{repo_id}` in job dir `{symlink}` 
+awaits_release = job id `{job_id}` awaits release by job manager 
+
+[new_job_comments]
+awaits_launch = job awaits launch by Slurm scheduler 
+
+[running_job_comments]
+running_job = job `{job_id}` is running 
+
+[finished_job_comments]
+success = :grin: SUCCESS tarball `{tarball_name}` ({tarball_size} GiB) in job dir 
+failure = :cry: FAILURE 
+no_slurm_out = No slurm output `{slurm_out}` in job dir 
+slurm_out = Found slurm output `{slurm_out}` in job dir 
+missing_modules = Slurm output lacks message "No missing modules!". 
+no_tarball_message = Slurm output lacks message about created tarball. 
+no_matching_tarball = No tarball matching `{tarball_pattern}` found in job dir. 
+multiple_tarballs = Found {num_tarballs} tarballs in job dir - only 1 matching `{tarball_pattern}` expected. 
