@@ -195,7 +195,7 @@ class EESSIBotSoftwareLayerJobManager:
         Determine metadata of a job or None.
         """
         # check if metadata file exist
-        return read_job_metadata_from_file(job_metadata_path, self.log_file)
+        return read_job_metadata_from_file(job_metadata_path, self.logfile)
 
     # job_manager.process_new_job(current_jobs[nj])
     def process_new_job(self, new_job):
