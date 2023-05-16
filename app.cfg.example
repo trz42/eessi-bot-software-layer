@@ -85,7 +85,7 @@ submit_command = /usr/bin/sbatch
 build_permission =
 
 # template for comment when user who set a label has no permission to trigger build jobs
-no_build_permission_comment = Label `bot:build` has been set by user `{build_labeler}`, but only users `{build_permission_users}` have permission to trigger the action
+no_build_permission_comment = Label `bot:build` has been set by user `{build_labeler}`, but this person does not have permission to trigger builds
 
 
 [deploycfg]
@@ -121,7 +121,7 @@ upload_policy = once
 deploy_permission =
 
 # template for comment when user who set a label has no permission to trigger deploying tarballs
-no_deploy_permission_comment = Label `bot:deploy` has been set by user `{deploy_labeler}`, but only users `{deploy_permission_users}` have permission to trigger the action
+no_deploy_permission_comment = Label `bot:deploy` has been set by user `{deploy_labeler}`, but this person does not have permission to trigger deployments
 
 
 [architecturetargets]
@@ -178,8 +178,7 @@ awaits_release = job id `{job_id}` awaits release by job manager
 
 
 [new_job_comments]
-awaits_lauch = job awaits launch by Slurm scheduler
-
+awaits_launch = job awaits launch by Slurm scheduler 
 
 [running_job_comments]
 running_job = job `{job_id}` is running

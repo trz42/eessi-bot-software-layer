@@ -8,6 +8,7 @@
 # author: Bob Droege (@bedroge)
 # author: Hafsa Naeem (@hafsa-naeem)
 # author: Thomas Roeblitz (@trz42)
+# author: Jonas Qvigstad (@jonas-lq)
 #
 # license: GPLv2
 #
@@ -103,3 +104,17 @@ def update_pr_comment(event_info, update):
     pull_request = repo.get_pull(pr_number)
     issue_comment = pull_request.get_issue_comment(issue_id)
     issue_comment.edit(comment_new + update)
+
+
+def create_comment(repo_name, pr_number, comment):
+    """create a comment on a pr
+
+    Args:
+        repo_name (str): name of the repo with the pr
+        pr_number (int): number of the pr within the repo
+        comment (string): new comment
+    """
+    gh = github.get_instance()
+    repo = gh.get_repo(repo_name)
+    pull_request = repo.get_pull(pr_number)
+    pull_request.create_issue_comment(comment)

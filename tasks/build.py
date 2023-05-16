@@ -22,9 +22,8 @@ from connections import github
 from datetime import datetime, timezone
 from pyghee.utils import log, error
 from retry.api import retry_call
-from tools import config, run_cmd
+from tools import config, run_cmd, pr_comments
 from tools.job_metadata import create_metadata_file
-from tools.pr_comments import PRComment
 
 APP_NAME = "app_name"
 AWAITS_RELEASE = "awaits_release"
@@ -656,7 +655,7 @@ def submit_build_jobs(pr, event_info, action_filter):
         # report submitted job
         pr_comment_id = create_pr_comment(job, job_id, app_name, pr, gh, symlink)
 
-        pr_comment = PRComment(pr.base.repo.full_name, pr.number, pr_comment_id)
+        pr_comment = pr_comments.PRComment(pr.base.repo.full_name, pr.number, pr_comment_id)
 
         # create _bot_job<jobid>.metadata file in submission directory
         create_metadata_file(job, job_id, pr_comment)
@@ -691,14 +690,10 @@ def check_build_permission(pr, event_info):
     if build_labeler not in build_permission.split():
         log(f"{fn}(): GH account '{build_labeler}' is not authorized to build")
         no_build_permission_comment = buildenv.get(NO_BUILD_PERMISSION_COMMENT)
-        gh = github.get_instance()
         repo_name = event_info["raw_request_body"]["repository"]["full_name"]
-        repo = gh.get_repo(repo_name)
-        pull_request = repo.get_pull(pr.number)
-        pull_request.create_issue_comment(
-            no_build_permission_comment.format(build_labeler=build_labeler,
-                                               build_permission_users=", ".join(build_permission.split()))
-        )
+        pr_comments.create_comment(repo_name,
+                                   pr.number,
+                                   no_build_permission_comment.format(build_labeler=build_labeler))
         return False
     else:
         log(f"{fn}(): GH account '{build_labeler}' is authorized to build")
