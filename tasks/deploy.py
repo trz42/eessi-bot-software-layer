@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from pyghee.utils import log
 from tasks.build import get_build_env_cfg
 from tools import config, run_cmd, pr_comments
+from tools.job_metadata import read_job_metadata_from_file
 
 JOBS_BASE_DIR = "jobs_base_dir"
 DEPLOYCFG = "deploycfg"
@@ -150,14 +151,12 @@ def update_pr_comment(tarball, repo_name, pr_number, pr_comment_id, state, msg):
         state (string): state (upload) to be used in update
         msg (string): msg (succeeded or failed) describing upload result
     """
-    funcname = sys._getframe().f_code.co_name
-
     gh = github.get_instance()
     repo = gh.get_repo(repo_name)
     pull_request = repo.get_pull(pr_number)
 
     # adjust search string ".*{tarball}.*" if format of PR comment changed by event handler
-    issue_comment = determine_issue_comment(pull_request, pr_comment_id, tarball)
+    issue_comment = pr_comments.determine_issue_comment(pull_request, pr_comment_id, tarball)
     if issue_comment:
         dt = datetime.now(timezone.utc)
         comment_update = (f"\n|{dt.strftime('%b %d %X %Z %Y')}|{state}|"
@@ -297,20 +296,20 @@ def determine_successful_jobs(job_dirs):
         if check_build_status(slurm_out, eessi_tarballs):
             log(f"{funcname}(): SUCCESSFUL build in '{job_dir}'")
             successful_jobs.append({'job_dir': job_dir,
-                              'slurm_out': slurm_out,
-                              'pr_comment_id': pr_comment_id,
-                              'eessi_tarballs': eessi_tarballs})
+                                    'slurm_out': slurm_out,
+                                    'pr_comment_id': pr_comment_id,
+                                    'eessi_tarballs': eessi_tarballs})
         else:
             log(f"{funcname}(): FAILED build in '{job_dir}'")
 
     return successful_jobs
 
 
-def determine_pr_comment_id(job_dir)
+def determine_pr_comment_id(job_dir):
     """Determines pr_comment_id by reading _bot_job{JOBID}.metadata in job_dir."""
     # assumes that last part of job_dir encodes the job's id
     job_id = os.path.basename(os.path.normpath(job_dir))
-    job_metadata_file = os.path.join(job_dir, f"_bot_job{jobid}.metadata")
+    job_metadata_file = os.path.join(job_dir, f"_bot_job{job_id}.metadata")
     job_metadata = read_job_metadata_from_file(job_metadata_file)
     if job_metadata and "pr_comment_id" in job_metadata:
         return int(job_metadata["pr_comment_id"])

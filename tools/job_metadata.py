@@ -8,6 +8,10 @@
 #
 # license: GPLv2
 #
+import configparser
+import os
+
+from pyghee.utils import log
 
 
 def read_job_metadata_from_file(filepath, log_file=None):
@@ -29,7 +33,8 @@ def read_job_metadata_from_file(filepath, log_file=None):
         try:
             metadata.read(filepath)
         except Exception as err:
-            error(f"Unable to read job metadata file {filepath}: {err}")
+            log(f"Unable to read job metadata file {filepath}: {err}")
+            return None
 
         # get PR section
         if "PR" in metadata:
@@ -40,4 +45,3 @@ def read_job_metadata_from_file(filepath, log_file=None):
     else:
         log(f"No metadata file found at {filepath}, might not be a bot job", log_file)
         return None
-

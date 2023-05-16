@@ -28,7 +28,6 @@
 # license: GPLv2
 #
 
-import configparser
 import glob
 import os
 import re
@@ -42,7 +41,7 @@ from tools import config, run_cmd
 from tools.job_metadata import read_job_metadata_from_file
 from tools.pr_comments import get_submitted_job_comment, update_comment
 
-from pyghee.utils import log, error
+from pyghee.utils import log
 
 AWAITS_LAUNCH = "awaits_launch"
 FAILURE = "failure"

@@ -13,6 +13,7 @@
 # license: GPLv2
 #
 import re
+import sys
 
 from connections import github
 from pyghee.utils import log
@@ -63,6 +64,10 @@ def get_submitted_job_comment(pr, job_id):
 
 
 def determine_issue_comment(pull_request, pr_comment_id, search_pattern=None):
+    """Returns issue comment for a given id or using a search pattern."""
+
+    fn = sys._getframe().f_code.co_name
+
     if pr_comment_id != -1:
         return pull_request.get_issue_comment(pr_comment_id)
     else:
@@ -76,7 +81,7 @@ def determine_issue_comment(pull_request, pr_comment_id, search_pattern=None):
             comment_match = re.search(re_pattern, comment.body)
 
             if comment_match:
-                log(f"{funcname}(): found comment with id {comment.id}")
+                log(f"{fn}(): found comment with id {comment.id}")
 
                 return pull_request.get_issue_comment(int(comment.id))
     return None
