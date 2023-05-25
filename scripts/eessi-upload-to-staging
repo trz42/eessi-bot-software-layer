@@ -166,15 +166,17 @@ for file in "$*"; do
         cat ${metadata_file}
 
         echo Uploading to "${url}"
+        echo "  store tarball at ${aws_path}/tarballs/${aws_file}"
         upload_to_staging_bucket \
                 "${file}" \
                 "${bucket_name}" \
-                "${aws_path}/${aws_file}" \
+                "${aws_path}/tarballs/${aws_file}" \
                 "${endpoint_url}"
+        echo "  store metadata file at ${aws_path}/new/${aws_file}.meta.txt"
         upload_to_staging_bucket \
                 "${metadata_file}" \
                 "${bucket_name}" \
-                "${aws_path}/${aws_file}.meta.txt" \
+                "${aws_path}/new/${aws_file}.meta.txt" \
                 "${endpoint_url}"
       else
         echo "'${file}' is not a tar file."
