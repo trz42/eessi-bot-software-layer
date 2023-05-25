@@ -34,7 +34,7 @@ echo "bot/build.sh finished"
 CHECK_RESULT_SCRIPT=bot/check-result.sh
 if [ -f ${CHECK_RESULT_SCRIPT} ]; then
     echo "${CHECK_RESULT_SCRIPT} script found in '${PWD}', so running it!"
-    ${CHECK_RESULT_SCRIPT}
+    ${CHECK_RESULT_SCRIPT} --verbose
 else
     echo "could not find ${CHECK_RESULT_SCRIPT} script in '${PWD}' ..."
     echo "... depositing default _bot_job${SLURM_JOB_ID}.result file in '${PWD}'"
