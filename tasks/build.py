@@ -117,7 +117,7 @@ def get_build_env_cfg(cfg):
     cvmfs_customizations = {}
     try:
         cvmfs_customizations_str = buildenv.get(CVMFS_CUSTOMIZATIONS)
-        log("cvmfs_customizations '{cvmfs_customizations_str}'")
+        log("{fn}(): cvmfs_customizations '{cvmfs_customizations_str}'")
 
         if cvmfs_customizations_str is not None:
             cvmfs_customizations = json.loads(cvmfs_customizations_str)
@@ -144,8 +144,8 @@ def get_build_env_cfg(cfg):
     return config_data
 
 
-def get_architecturetargets(cfg):
-    """get architecturetargets and set arch_target_map
+def get_architecture_targets(cfg):
+    """get architecture_targets and set arch_target_map
 
     Args:
         cfg (dict): dictionary holding full configuration (by default defined in app.cfg)
@@ -157,9 +157,9 @@ def get_architecturetargets(cfg):
     fn = sys._getframe().f_code.co_name
 
     # cfg = config.read_config()
-    architecturetargets = cfg[ARCHITECTURE_TARGETS]
+    architecture_targets = cfg[ARCHITECTURE_TARGETS]
 
-    arch_target_map = json.loads(architecturetargets.get('arch_target_map'))
+    arch_target_map = json.loads(architecture_targets.get('arch_target_map'))
     log(f"{fn}(): arch target map '{json.dumps(arch_target_map)}'")
     return arch_target_map
 
@@ -255,7 +255,7 @@ def create_pr_dir(pr, cfg, event_info):
     Returns:
         tuple of 3 elements containing
 
-        - ym (string): string with datestamp (<year>.<month>)
+        - year_month (string): string with datestamp (<year>.<month>)
         - pr_id (int): pr number
         - run_dir (string): path to run_dir
     """
@@ -268,10 +268,10 @@ def create_pr_dir(pr, cfg, event_info):
     build_env_cfg = get_build_env_cfg(cfg)
     jobs_base_dir = build_env_cfg[JOBS_BASE_DIR]
 
-    ym = datetime.today().strftime('%Y.%m')
+    year_month = datetime.today().strftime('%Y.%m')
     pr_id = 'pr_%s' % pr.number
     event_id = 'event_%s' % event_info['id']
-    event_dir = os.path.join(jobs_base_dir, ym, pr_id, event_id)
+    event_dir = os.path.join(jobs_base_dir, year_month, pr_id, event_id)
     # the makedirs cannot be deferred to a later os.makedirs because the
     # condition in the while loop below takes the state of the directory
     # contents into account
@@ -283,7 +283,7 @@ def create_pr_dir(pr, cfg, event_info):
     run_dir = os.path.join(event_dir, 'run_%03d' % run)
     os.makedirs(run_dir, exist_ok=True)
 
-    return ym, pr_id, run_dir
+    return year_month, pr_id, run_dir
 
 
 def download_pr(repo_name, branch_name, pr, arch_job_dir):
@@ -357,7 +357,7 @@ def prepare_jobs(pr, cfg, event_info, action_filter):
         pr (github.PullRequest.Pullrequest): object to interact with pull request
         cfg (dict): dictionary holding full configuration (by default defined in app.cfg)
         event_info (dict): event received by event_handler
-        action_filter (EESSIBotActionFilter): used to filter which jobs shall be prepared
+        action_filter (EESSIBotActionFilter instance): used to filter which jobs shall be prepared
 
     Returns:
         jobs: list of the created jobs
@@ -366,7 +366,7 @@ def prepare_jobs(pr, cfg, event_info, action_filter):
 
     app_name = cfg[GITHUB].get(APP_NAME)
     build_env_cfg = get_build_env_cfg(cfg)
-    arch_map = get_architecturetargets(cfg)
+    arch_map = get_architecture_targets(cfg)
     repocfg = get_repo_cfg(cfg)
 
     base_repo_name = pr.base.repo.full_name
@@ -381,7 +381,7 @@ def prepare_jobs(pr, cfg, event_info, action_filter):
     # instead of using a run_dir, maybe just create a unique dir for each
     # job to be submitted? thus we could easily postpone the create_pr_dir
     # call to just before download_pr
-    ym, pr_id, run_dir = create_pr_dir(pr, cfg, event_info)
+    year_month, pr_id, run_dir = create_pr_dir(pr, cfg, event_info)
 
     jobs = []
     for arch, slurm_opt in arch_map.items():
@@ -398,8 +398,8 @@ def prepare_jobs(pr, cfg, event_info, action_filter):
                 continue
 
             # if filter exists, check filter against context = (arch, repo, app_name)
-            #   true --> log & go on
-            #   false --> log & continue
+            #   true --> log & go on in this iteration of for loop
+            #   false --> log & continue to next iteration of for loop
             if action_filter:
                 log(f"{fn}(): checking filter {action_filter.to_string()}")
                 context = {"architecture": arch, "repository": repo_id, "instance": app_name}
@@ -423,7 +423,7 @@ def prepare_jobs(pr, cfg, event_info, action_filter):
             prepare_job_cfg(job_dir, build_env_cfg, repocfg, repo_id, cpu_target, os_type)
 
             # enlist jobs to proceed
-            job = Job(job_dir, arch, repo_id, slurm_opt, ym, pr_id)
+            job = Job(job_dir, arch, repo_id, slurm_opt, year_month, pr_id)
             jobs.append(job)
 
     log(f"{fn}(): {len(jobs)} jobs to proceed after applying white list")
@@ -562,10 +562,8 @@ def submit_job(job, cfg):
     log(f"{fn}(): sbatch err: {cmdline_error}")
 
     job_id = cmdline_output.split()[3]
-    ym = job.year_month
-    pr_id = job.pr_id
 
-    symlink = os.path.join(build_env_cfg[JOBS_BASE_DIR], ym, pr_id, job_id)
+    symlink = os.path.join(build_env_cfg[JOBS_BASE_DIR], job.year_month, job.pr_id, job_id)
     log(f"{fn}(): create symlink {symlink} -> {job[0]}")
     os.symlink(job[0], symlink)
 
@@ -645,9 +643,9 @@ def submit_build_jobs(pr, event_info, action_filter):
        running jobs and adding comments
 
     Args:
-        pr (github.PullRequest.Pullrequest): object to interact with pull request
+        pr (github.PullRequest.Pullrequest instance): object to interact with pull request
         event_info (string): event received by event_handler
-        action_filter (EESSIBotActionFilter): used to filter which jobs shall be prepared
+        action_filter (EESSIBotActionFilter instance): used to filter which jobs shall be prepared
     """
     fn = sys._getframe().f_code.co_name
 
@@ -663,7 +661,7 @@ def submit_build_jobs(pr, event_info, action_filter):
         log(f"{fn}(): no jobs ({len(jobs)}) to be submitted")
         return "no jobs were prepared"
 
-    # obtain handle to GH
+    # obtain handle to GitHub
     gh = github.get_instance()
 
     # process prepared jobs: submit, create metadata file and add comment to PR
@@ -679,8 +677,7 @@ def submit_build_jobs(pr, event_info, action_filter):
         # create _bot_job<jobid>.metadata file in submission directory
         create_metadata_file(job, job_id, pr, pr_comment_id)
 
-    return_msg = f"created jobs: {', '.join(job_ids)}"
-    return return_msg
+    return f"created jobs: {', '.join(job_ids)}"
 
 
 def check_build_permission(pr, event_info):
