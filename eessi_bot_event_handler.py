@@ -19,7 +19,7 @@ import tasks.build as build
 import tasks.deploy as deploy
 
 from connections import github
-from tasks.build import check_build_permission, get_architecturetargets, get_repo_cfg, submit_build_jobs
+from tasks.build import check_build_permission, get_architecture_targets, get_repo_cfg, submit_build_jobs
 from tasks.deploy import deploy_built_artefacts
 from tools import config
 from tools.args import event_handler_parse
@@ -238,7 +238,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         app_name = self.cfg[GITHUB][APP_NAME]
         # TODO check if PR already has a comment with arch targets and
         # repositories
-        arch_map = get_architecturetargets(self.cfg)
+        arch_map = get_architecture_targets(self.cfg)
         repo_cfg = get_repo_cfg(self.cfg)
 
         comment = f"Instance `{app_name}` is configured to build:"
