@@ -171,7 +171,7 @@ class EESSIBotSoftwareLayer(PyGHee):
             try:
                 update = self.handle_bot_command(event_info, cmd)
                 comment_result += f"\n- handling command `{cmd.to_string()}` resulted in: "
-                comment_result += f"\n  - {update}"
+                comment_result += update
                 self.log(f"handling command '{cmd.to_string()}' resulted in '{update}'")
 
             except EESSIBotCommandError as err:
@@ -318,11 +318,18 @@ class EESSIBotSoftwareLayer(PyGHee):
         build_msg = ''
         if check_build_permission(pr, event_info):
             # use filter from command
-            build_msg = submit_build_jobs(pr, event_info, bot_command.action_filters)
+            submitted_jobs = submit_build_jobs(pr, event_info, bot_command.action_filters)
+            if submitted_jobs is None or len(submitted_jobs) == 0:
+                build_msg = "\n  - no jobs were submitted"
+            else:
+                for job_id, issue_comment in submitted_jobs.items():
+                    build_msg += f"\n  - submitted job `{job_id}`"
+                    if issue_comment:
+                        build_msg += f", for details & status see {issue_comment.html_url}"
         else:
             request_body = event_info['raw_request_body']
             sender = request_body['sender']['login']
-            build_msg = f"account {sender} has no permission to submit build jobs"
+            build_msg = f"\n  - account `{sender}` has no permission to submit build jobs"
         return build_msg
 
     def handle_bot_command_show_config(self, event_info, bot_command):
@@ -333,7 +340,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         pr_number = event_info['raw_request_body']['issue']['number']
         pr = gh.get_repo(repo_name).get_pull(pr_number)
         issue_comment = self.handle_pull_request_opened_event(event_info, pr)
-        return f"added comment {issue_comment.html_url} to show configuration"
+        return f"\n  - added comment {issue_comment.html_url} to show configuration"
 
     def start(self, app, port=3000):
         """starts the app and log information in the log file

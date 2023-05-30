@@ -632,10 +632,10 @@ def create_pr_comment(job, job_id, app_name, pr, gh, symlink):
                                exceptions=Exception, tries=3, delay=1, backoff=2, max_delay=10)
     if issue_comment:
         log(f"{fn}(): created PR issue comment with id {issue_comment.id}")
-        return issue_comment.id
+        return issue_comment
     else:
         log(f"{fn}(): failed to create PR issue comment for job {job_id}")
-        return -1
+        return None
 
 
 def submit_build_jobs(pr, event_info, action_filter):
@@ -659,25 +659,26 @@ def submit_build_jobs(pr, event_info, action_filter):
     # return if no jobs to be submitted
     if not jobs:
         log(f"{fn}(): no jobs ({len(jobs)}) to be submitted")
-        return "no jobs were prepared"
+        return {}
 
     # obtain handle to GitHub
     gh = github.get_instance()
 
     # process prepared jobs: submit, create metadata file and add comment to PR
-    job_ids = []
+    job_id_to_comment_map = {}
     for job in jobs:
         # submit job
         job_id, symlink = submit_job(job, cfg)
-        job_ids.append(job_id)
 
         # report submitted job
         pr_comment_id = create_pr_comment(job, job_id, app_name, pr, gh, symlink)
+        job_id_to_comment_map[job_id] = pr_comment_id
 
         # create _bot_job<jobid>.metadata file in submission directory
         create_metadata_file(job, job_id, pr, pr_comment_id)
 
-    return f"created jobs: {', '.join(job_ids)}"
+    # return f"created jobs: {', '.join(job_ids)}"
+    return job_id_to_comment_map
 
 
 def check_build_permission(pr, event_info):
