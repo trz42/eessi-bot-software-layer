@@ -125,7 +125,7 @@ class EESSIBotSoftwareLayer(PyGHee):
                     continue
                 commands.append(ebc)
                 self.log(f"found bot command: '{bot_command}'")
-                comment_response += "\n- received bot command `{bot_command}`"
+                comment_response += f"\n- received bot command `{bot_command}`"
                 comment_response += f" from `{sender}`"
                 comment_response += f"\n  - expanded format: `{ebc.to_string()}`"
             # FIXME add an else branch that logs information for comments not
@@ -170,13 +170,14 @@ class EESSIBotSoftwareLayer(PyGHee):
         for cmd in commands:
             try:
                 update = self.handle_bot_command(event_info, cmd)
-                comment_result += f"\n- handling `{cmd.command}` resulted in: "
-                comment_result += update
-                self.log(f"handling '{cmd.command}' resulted in '{update}'")
+                comment_result += f"\n- handling command `{cmd.to_string()}` resulted in: "
+                comment_result += f"\n  - {update}"
+                self.log(f"handling command '{cmd.to_string()}' resulted in '{update}'")
 
-            except EESSIBotCommandError as bce:
-                self.log(f"ERROR: handling {cmd.command} failed with {bce.args}")
-                comment_result += f"\n- handling `{cmd.command}` failed with {bce.args}"
+            except EESSIBotCommandError as err:
+                self.log(f"ERROR: handling command {cmd.command} failed with {err.args[0]}")
+                comment_result += f"\n- handling command `{cmd.command}` failed with message"
+                comment_result += f"\n  _{err.args[0]}_"
                 continue
             except Exception as err:
                 log(f"Unexpected err={err}, type(err)={type(err)}")
@@ -296,7 +297,7 @@ class EESSIBotSoftwareLayer(PyGHee):
             return handler(event_info, bot_command)
         else:
             self.log(f"No handler for command '{cmd}'")
-            raise EESSIBotCommandError(f"unknown command '{cmd}'; use `bot: help` for usage information")
+            raise EESSIBotCommandError(f"unknown command `{cmd}`; use `bot: help` for usage information")
 
     def handle_bot_command_help(self, event_info, bot_command):
         """handles command 'bot: help' with a simple usage info"""
@@ -332,7 +333,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         pr_number = event_info['raw_request_body']['issue']['number']
         pr = gh.get_repo(repo_name).get_pull(pr_number)
         issue_comment = self.handle_pull_request_opened_event(event_info, pr)
-        return f"added comment {issue_comment.issue_url} to show configuration"
+        return f"added comment {issue_comment.html_url} to show configuration"
 
     def start(self, app, port=3000):
         """starts the app and log information in the log file

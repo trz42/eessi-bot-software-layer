@@ -63,4 +63,4 @@ class EESSIBotCommand:
 
     def to_string(self):
         action_filters_str = self.action_filters.to_string()
-        return f"{' '.join([self.command, action_filters_str])}"
+        return f"{' '.join([self.command, action_filters_str]).rstrip()}"
