@@ -116,10 +116,10 @@ class CreateIssueCommentException(Exception):
 
 # cases for testing create_pr_comment (essentially testing create_issue_comment)
 # - create_issue_comment succeeds immediately
-#   - returns !None --> create_pr_comment returns comment (with comment_id == 1)
+#   - returns !None --> create_pr_comment returns comment (with id == 1)
 #   - returns None --> create_pr_comment returns None
 # - create_issue_comment fails once, then succeeds
-#   - returns !None --> create_pr_comment returns comment (with comment_id == 1)
+#   - returns !None --> create_pr_comment returns comment (with id == 1)
 # - create_issue_comment always fails
 # - create_issue_comment fails 3 times
 #   - symptoms of failure: exception raised or return value of tested func None
@@ -269,7 +269,7 @@ def mocked_github(request):
 
 
 # case 1: create_issue_comment succeeds immediately
-#         returns !None --> create_pr_comment returns comment (with comment_id == 1)
+#         returns !None --> create_pr_comment returns comment (with id == 1)
 @pytest.mark.repo_name("EESSI/software-layer")
 @pytest.mark.pr_number(1)
 def test_create_pr_comment_succeeds(mocked_github, tmpdir):
@@ -289,7 +289,7 @@ def test_create_pr_comment_succeeds(mocked_github, tmpdir):
     pr = repo.get_pull(pr_number)
     symlink = "/symlink"
     comment = create_pr_comment(job, job_id, app_name, pr, mocked_github, symlink)
-    assert comment.comment_id == 1
+    assert comment.id == 1
     # check if created comment includes jobid?
     print("VERIFYING PR COMMENT")
     comment = get_submitted_job_comment(pr, job_id)
@@ -322,7 +322,7 @@ def test_create_pr_comment_succeeds_none(mocked_github, tmpdir):
 
 
 # case 3: create_issue_comment fails once, then succeeds
-#         returns !None --> create_pr_comment returns comment (with comment_id == 1)
+#         returns !None --> create_pr_comment returns comment (with id == 1)
 @pytest.mark.repo_name("EESSI/software-layer")
 @pytest.mark.pr_number(1)
 @pytest.mark.create_raises("1")
@@ -343,7 +343,7 @@ def test_create_pr_comment_raises_once_then_succeeds(mocked_github, tmpdir):
     pr = repo.get_pull(pr_number)
     symlink = "/symlink"
     comment = create_pr_comment(job, job_id, app_name, pr, mocked_github, symlink)
-    assert comment.comment_id == 1
+    assert comment.id == 1
     assert pr.create_call_count == 2
 
 
