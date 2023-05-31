@@ -103,13 +103,21 @@ class EESSIBotSoftwareLayer(PyGHee):
         #      run the update through the function checking for a bot command.
         if check_command_permission(sender) is False:
             self.log(f"account `{sender}` has NO permission to send commands to bot")
-            comment_response = f"\n- account `{sender}` has NO permission to send commands to the bot"
-            comment_body = command_response_fmt.format(
-                app_name=app_name,
-                comment_response=comment_response,
-                comment_result=''
-            )
-            issue_comment = create_comment(repo_name, pr_number, comment_body)
+            # need to ensure that the bot is not responding on its own comments
+            # as a quick implementation we check if the sender name contains '[bot]'
+            # FIXME improve this by querying (and caching) information about the sender of
+            #       an event ALTERNATIVELY we could postpone this test a bit until we
+            #       have parsed the comment and know if it contains any bot command
+            if not sender.endswith('[bot]'):
+                comment_response = f"\n- account `{sender}` has NO permission to send commands to the bot"
+                comment_body = command_response_fmt.format(
+                    app_name=app_name,
+                    comment_response=comment_response,
+                    comment_result=''
+                )
+                issue_comment = create_comment(repo_name, pr_number, comment_body)
+            else:
+                self.log(f"account `{sender}` seems to be a bot instance itself, hence not creating a new PR comment")
             return
         else:
             self.log(f"account `{sender}` has permission to send commands to bot")
