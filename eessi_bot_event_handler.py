@@ -74,9 +74,17 @@ class EESSIBotSoftwareLayer(PyGHee):
         action = request_body['action']
         sender = request_body['sender']['login']
         owner = request_body['comment']['user']['login']
+        repo_name = request_body['repository']['full_name']
+        pr_number = request_body['issue']['number']
+
         # FIXME add request body text (['comment']['body']) to log message when
         # log level is set to debug
         self.log(f"Comment in {issue_url} (owned by @{owner}) {action} by @{sender}")
+
+        # obtain app name and format for reporting about received & processed
+        # commands
+        app_name = self.cfg[GITHUB][APP_NAME]
+        command_response_fmt = self.cfg[BOT_CONTROL][COMMAND_RESPONSE_FMT]
 
         # currently, only commands in new comments are supported
         #  - commands have the syntax 'bot: COMMAND [ARGS*]'
@@ -95,6 +103,13 @@ class EESSIBotSoftwareLayer(PyGHee):
         #      run the update through the function checking for a bot command.
         if check_command_permission(sender) is False:
             self.log(f"account `{sender}` has NO permission to send commands to bot")
+            comment_response = f"\n- account `{sender}` has NO permission to send commands to the bot"
+            comment_body = command_response_fmt.format(
+                app_name=app_name,
+                comment_response=comment_response,
+                comment_result=''
+            )
+            issue_comment = create_comment(repo_name, pr_number, comment_body)
             return
         else:
             self.log(f"account `{sender}` has permission to send commands to bot")
@@ -104,6 +119,8 @@ class EESSIBotSoftwareLayer(PyGHee):
             comment_received = request_body['comment']['body']
             self.log(f"comment action '{action}' is handled")
         else:
+            # NOTE we do not report this with a new PR comment, because otherwise any update to a comment would
+            # let the bot add a response (would be very noisy); we might add a debug mode later
             self.log(f"comment action '{action}' not handled")
             return
 
@@ -139,18 +156,11 @@ class EESSIBotSoftwareLayer(PyGHee):
         else:
             self.log(f"comment response: '{comment_response}'")
 
-        # obtain app name and format for reporting about received & processed
-        # commands
-        app_name = self.cfg[GITHUB][APP_NAME]
-        command_response_fmt = self.cfg[BOT_CONTROL][COMMAND_RESPONSE_FMT]
-
         if not any(map(get_bot_command, comment_response.split('\n'))):
             # the 'not any()' ensures that the response would not be considered a bot command itself
             # ... together with checking the sender of a comment update this aims
             # at preventing the bot to enter an endless loop in commenting on its own
             # comments
-            repo_name = request_body['repository']['full_name']
-            pr_number = request_body['issue']['number']
             comment_body = command_response_fmt.format(
                 app_name=app_name,
                 comment_response=comment_response,
@@ -329,7 +339,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         else:
             request_body = event_info['raw_request_body']
             sender = request_body['sender']['login']
-            build_msg = f"\n  - account `{sender}` has no permission to submit build jobs"
+            build_msg = f"\n  - account `{sender}` has NO permission to submit build jobs"
         return build_msg
 
     def handle_bot_command_show_config(self, event_info, bot_command):
