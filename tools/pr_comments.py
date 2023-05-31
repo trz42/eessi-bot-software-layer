@@ -100,13 +100,16 @@ def update_comment(cmnt_id, pr, update, log_file=None):
 
 def update_pr_comment(event_info, update):
     """
-    Updates a comment to a pull request determined from an event.
+    Updates a comment to a pull request determined from an issue_comment event.
 
     Args:
         event_info (dict): storing all information of an event
         update (string): the update for the comment associated with the event
     """
     request_body = event_info['raw_request_body']
+    if 'issue' not in request_body:
+        log("event is not an issue_comment; cannot update the comment")
+        return
     comment_new = request_body['comment']['body']
     repo_name = request_body['repository']['full_name']
     pr_number = int(request_body['issue']['number'])
