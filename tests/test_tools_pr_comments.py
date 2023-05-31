@@ -29,7 +29,7 @@ class MockIssueComment:
         self.edit_raises = edit_raises
         self.edit_exception = edit_exception
         self.edit_call_count = 0
-        self.id = 1
+        self.comment_id = 1
 
     def edit(self, body):
         def should_raise_exception():
