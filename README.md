@@ -354,6 +354,27 @@ submit_command = /usr/bin/sbatch
 ```
 This is the full path to the Slurm command used for submitting batch jobs. You may want to verify if `sbatch` is provided at that path or determine its actual location (`which sbatch`).
 
+### Section `[bot_control]`
+The section `[bot_control]` contains settings for configuring the feature to
+send commands to the bot.
+```
+command_permission = GH_ACCOUNT_1 GH_ACCOUNT_2 ...
+```
+The option `command_permission` defines which GitHub accounts can send commands
+to the bot (via new PR comments). If the value is empty NO account can send
+commands.
+
+```
+command_response_fmt = FORMAT_MARKDOWN_AND_HTML
+```
+This allows to customize the format of the comments about the handling of bot
+commands. The format needs to include `{sender}`, `{comment_response}` and
+`{comment_result}`. `{app_name}` is replaced with the name of the bot instance.
+`{comment_response}` is replaced with information about parsing the comment
+for commands before any command is run. `{comment_result}` is replaced with
+information about the result of the command that was run (can be empty).
+
+
 ### Section `[deploycfg]`
 The section `[deploycfg]` defines settings for uploading built artefacts (tarballs).
 ```
