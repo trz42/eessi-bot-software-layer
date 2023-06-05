@@ -27,5 +27,6 @@ if [ -f bot/build.sh ]; then
     echo "bot/build.sh script found in '${PWD}', so running it!"
     bot/build.sh
 else
-    fatal_error "could not find bot/build.sh script in '${PWD}'"
+    echo "could not find bot/build.sh script in '${PWD}'" >&2
+    exit 1
 fi
