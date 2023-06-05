@@ -20,6 +20,23 @@ from retry import retry
 from retry.api import retry_call
 
 
+def create_comment(repo_name, pr_number, comment):
+    """create a comment on a pr
+
+    Args:
+        repo_name (str): name of the repo with the pr
+        pr_number (int): number of the pr within the repo
+        comment (string): new comment
+
+    Returns:
+        IssueComment: data structure representing the created issue comment
+    """
+    gh = github.get_instance()
+    repo = gh.get_repo(repo_name)
+    pull_request = repo.get_pull(pr_number)
+    return pull_request.create_issue_comment(comment)
+
+
 @retry(Exception, tries=5, delay=1, backoff=2, max_delay=30)
 def get_comment(pr, search_pattern):
     """get comment using the search pattern
@@ -81,15 +98,25 @@ def update_comment(cmnt_id, pr, update, log_file=None):
             log_file=log_file)
 
 
-def create_comment(repo_name, pr_number, comment):
-    """create a comment on a pr
+def update_pr_comment(event_info, update):
+    """
+    Updates a comment to a pull request determined from an issue_comment event.
 
     Args:
-        repo_name (str): name of the repo with the pr
-        pr_number (int): number of the pr within the repo
-        comment (string): new comment
+        event_info (dict): storing all information of an event
+        update (string): the update for the comment associated with the event
     """
+    request_body = event_info['raw_request_body']
+    if 'issue' not in request_body:
+        log("event is not an issue_comment; cannot update the comment")
+        return
+    comment_new = request_body['comment']['body']
+    repo_name = request_body['repository']['full_name']
+    pr_number = int(request_body['issue']['number'])
+    issue_id = int(request_body['comment']['id'])
+
     gh = github.get_instance()
     repo = gh.get_repo(repo_name)
     pull_request = repo.get_pull(pr_number)
-    pull_request.create_issue_comment(comment)
+    issue_comment = pull_request.get_issue_comment(issue_id)
+    issue_comment.edit(comment_new + update)
