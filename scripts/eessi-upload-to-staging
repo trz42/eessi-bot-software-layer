@@ -42,7 +42,7 @@ function create_metadata_file
   _url=$2
   _repository=$3
   _pull_request=$4
-  _pull_request_commend_id=$5
+  _pull_request_comment_id=$5
 
   _tmpfile=$(mktemp)
 
