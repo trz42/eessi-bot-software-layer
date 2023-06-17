@@ -88,7 +88,7 @@ class EESSIBotSoftwareLayer(PyGHee):
 
         # currently, only commands in new comments are supported
         #  - commands have the syntax 'bot: COMMAND [ARGS*]'
-
+        #
         # first check if sender is authorized to send any command
         # - this serves a double purpose:
         #   1. check permission

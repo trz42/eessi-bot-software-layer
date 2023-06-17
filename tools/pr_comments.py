@@ -149,3 +149,20 @@ def update_pr_comment(event_info, update):
     pull_request = repo.get_pull(pr_number)
     issue_comment = pull_request.get_issue_comment(issue_id)
     issue_comment.edit(comment_new + update)
+
+
+def make_html_list_items(lines, line_format):
+    """Makes HTML list from lines.
+
+    Args:
+        lines (string): multiline string
+        line_format (string): template which contains placeholder {item}
+
+    Returns:
+        multiline (string): formatted as HTML list items
+    """
+    html_list_items = ""
+    for line in lines.split("\n"):
+        if len(line.strip()) > 0:
+            html_list_items += line_format.format(item=line)
+    return html_list_items

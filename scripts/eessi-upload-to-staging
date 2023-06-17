@@ -172,7 +172,7 @@ for file in "$*"; do
                  | perl -pe 's/^eessi.//;' | perl -pe 's/\.tar\.gz$//;' )
         aws_file=$(basename ${file})
         echo "Creating metadata file"
-        url="${bucket_base}/${aws_path}/${aws_file}"
+        url="${bucket_base}/tarballs/${aws_path}/${aws_file}"
         metadata_file=$(create_metadata_file "${file}" "${url}" \
                                              "${repository}" "${pull_request}" \
                                              "${pr_comment_id}")
@@ -180,15 +180,17 @@ for file in "$*"; do
         cat ${metadata_file}
 
         echo Uploading to "${url}"
+        echo "  store tarball at tarballs/${aws_path}/${aws_file}"
         upload_to_staging_bucket \
                 "${file}" \
                 "${bucket_name}" \
-                "${aws_path}/${aws_file}" \
+                "tarballs/${aws_path}/${aws_file}" \
                 "${endpoint_url}"
+        echo "  store metadata file at new/${aws_path}/${aws_file}.meta.txt"
         upload_to_staging_bucket \
                 "${metadata_file}" \
                 "${bucket_name}" \
-                "${aws_path}/${aws_file}.meta.txt" \
+                "new/${aws_path}/${aws_file}.meta.txt" \
                 "${endpoint_url}"
       else
         echo "'${file}' is not a tar file."
