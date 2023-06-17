@@ -28,7 +28,8 @@ if [ -f ${BOT_BUILD_SCRIPT} ]; then
     echo "${BOT_BUILD_SCRIPT} script found in '${PWD}', so running it!"
     ${BOT_BUILD_SCRIPT}
 else
-    fatal_error "could not find ${BOT_BUILD_SCRIPT} script in '${PWD}'"
+    echo "could not find ${BOT_BUILD_SCRIPT} script in '${PWD}'" >&2
+    exit 1
 fi
 echo "bot/build.sh finished"
 CHECK_RESULT_SCRIPT=bot/check-result.sh

@@ -117,13 +117,13 @@ class CreateIssueCommentException(Exception):
 
 # cases for testing create_pr_comment (essentially testing create_issue_comment)
 # - create_issue_comment succeeds immediately
-#   - returns !None --> create_pr_comment returns 1
-#   - returns None --> create_pr_comment returns -1
+#   - returns !None --> create_pr_comment returns comment (with id == 1)
+#   - returns None --> create_pr_comment returns None
 # - create_issue_comment fails once, then succeeds
-#   - returns !None --> create_pr_comment returns 1
+#   - returns !None --> create_pr_comment returns comment (with id == 1)
 # - create_issue_comment always fails
 # - create_issue_comment fails 3 times
-#   - symptoms of failure: exception raised or return value of tested func -1
+#   - symptoms of failure: exception raised or return value of tested func None
 
 # overall course of creating mocked objects
 # patch gh.get_repo(repo_name) --> returns a MockRepository
@@ -270,7 +270,7 @@ def mocked_github(request):
 
 
 # case 1: create_issue_comment succeeds immediately
-#         returns !None --> create_pr_comment returns 1
+#         returns !None --> create_pr_comment returns comment (with id == 1)
 @pytest.mark.repo_name("EESSI/software-layer")
 @pytest.mark.pr_number(1)
 def test_create_pr_comment_succeeds(mocked_github, tmpdir):
@@ -289,8 +289,8 @@ def test_create_pr_comment_succeeds(mocked_github, tmpdir):
     repo = mocked_github.get_repo(repo_name)
     pr = repo.get_pull(pr_number)
     symlink = "/symlink"
-    comment_id = create_pr_comment(job, job_id, app_name, pr, mocked_github, symlink)
-    assert comment_id == 1
+    comment = create_pr_comment(job, job_id, app_name, pr, mocked_github, symlink)
+    assert comment.id == 1
     # check if created comment includes jobid?
     print("VERIFYING PR COMMENT")
     comment = get_submitted_job_comment(pr, job_id)
@@ -298,7 +298,7 @@ def test_create_pr_comment_succeeds(mocked_github, tmpdir):
 
 
 # case 2: create_issue_comment succeeds immediately
-#         returns None --> create_pr_comment returns -1
+#         returns None --> create_pr_comment returns None
 @pytest.mark.repo_name("EESSI/software-layer")
 @pytest.mark.pr_number(1)
 @pytest.mark.create_fails(True)
@@ -318,12 +318,12 @@ def test_create_pr_comment_succeeds_none(mocked_github, tmpdir):
     repo = mocked_github.get_repo(repo_name)
     pr = repo.get_pull(pr_number)
     symlink = "/symlink"
-    comment_id = create_pr_comment(job, job_id, app_name, pr, mocked_github, symlink)
-    assert comment_id == -1
+    comment = create_pr_comment(job, job_id, app_name, pr, mocked_github, symlink)
+    assert comment is None
 
 
 # case 3: create_issue_comment fails once, then succeeds
-#         returns !None --> create_pr_comment returns 1
+#         returns !None --> create_pr_comment returns comment (with id == 1)
 @pytest.mark.repo_name("EESSI/software-layer")
 @pytest.mark.pr_number(1)
 @pytest.mark.create_raises("1")
@@ -343,8 +343,8 @@ def test_create_pr_comment_raises_once_then_succeeds(mocked_github, tmpdir):
     repo = mocked_github.get_repo(repo_name)
     pr = repo.get_pull(pr_number)
     symlink = "/symlink"
-    comment_id = create_pr_comment(job, job_id, app_name, pr, mocked_github, symlink)
-    assert comment_id == 1
+    comment = create_pr_comment(job, job_id, app_name, pr, mocked_github, symlink)
+    assert comment.id == 1
     assert pr.create_call_count == 2
 
 
@@ -413,9 +413,9 @@ def test_create_metadata_file(mocked_github, tmpdir):
 
     repo_name = "test_repo"
     pr_comment_id = 77
-    pr_comment = PRComment(repo_name, pr_number, pr_comment_id)
-
-    create_metadata_file(job, job_id, pr_comment)
+    repo = mocked_github.get_repo(repo_name)
+    pr = repo.get_pull(pr_number)
+    create_metadata_file(job, job_id, pr, pr_comment_id)
 
     expected_file = f"_bot_job{job_id}.metadata"
     expected_file_path = os.path.join(tmpdir, expected_file)
@@ -435,14 +435,14 @@ def test_create_metadata_file(mocked_github, tmpdir):
     job2 = Job(dir_does_not_exist, "test/architecture", "EESSI-pilot", "--speed_up_job", ym, pr_number)
     job_id2 = "222"
     with pytest.raises(FileNotFoundError):
-        create_metadata_file(job2, job_id2, pr_comment)
+        create_metadata_file(job2, job_id2, pr, pr_comment_id)
 
     # use directory without write permission
     dir_without_write_perm = os.path.join("/")
     job3 = Job(dir_without_write_perm, "test/architecture", "EESSI-pilot", "--speed_up_job", ym, pr_number)
     job_id3 = "333"
     with pytest.raises(OSError):
-        create_metadata_file(job3, job_id3, pr_comment)
+        create_metadata_file(job3, job_id3, pr, pr_comment_id)
 
     # disk quota exceeded (difficult to create and unlikely to happen because
     # partition where file is stored is usually very large)
@@ -451,7 +451,7 @@ def test_create_metadata_file(mocked_github, tmpdir):
     # job_id = None
     job4 = Job(tmpdir, "test/architecture", "EESSI-pilot", "--speed_up_job", ym, pr_number)
     job_id4 = None
-    create_metadata_file(job4, job_id4, pr_comment)
+    create_metadata_file(job4, job_id4, pr, pr_comment_id)
 
     expected_file4 = f"_bot_job{job_id}.metadata"
     expected_file_path4 = os.path.join(tmpdir, expected_file4)
@@ -467,4 +467,4 @@ def test_create_metadata_file(mocked_github, tmpdir):
     job5 = Job(None, "test/architecture", "EESSI-pilot", "--speed_up_job", ym, pr_number)
     job_id5 = "555"
     with pytest.raises(TypeError):
-        create_metadata_file(job5, job_id5, pr_comment)
+        create_metadata_file(job5, job_id5, pr, pr_comment_id)

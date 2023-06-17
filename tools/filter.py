@@ -14,7 +14,14 @@ from collections import namedtuple
 from pyghee.utils import log
 
 
-FILTER_COMPONENTS = ['architecture', 'instance', 'job', 'repository']
+# TODO because one can use a prefix to define a filter, we need to make sure that
+# no two filters share the same prefix OR we have to change the handling of
+# filters.
+FILTER_COMPONENT_ARCH = 'architecture'
+FILTER_COMPONENT_INST = 'instance'
+FILTER_COMPONENT_JOB = 'job'
+FILTER_COMPONENT_REPO = 'repository'
+FILTER_COMPONENTS = [FILTER_COMPONENT_ARCH, FILTER_COMPONENT_INST, FILTER_COMPONENT_JOB, FILTER_COMPONENT_REPO]
 
 Filter = namedtuple('Filter', ('component', 'pattern'))
 
@@ -24,6 +31,11 @@ class EESSIBotActionFilterError(Exception):
 
 
 class EESSIBotActionFilter:
+    """
+    Class for representing a filter (for, e.g., bot commands). A filter contains
+    a list of key:value pairs with key being one of 'architecture',
+    'instance', 'job' or 'repository'.
+    """
     def __init__(self, filter_string):
         """
         EESSIBotActionFilter constructor
@@ -42,6 +54,9 @@ class EESSIBotActionFilter:
                 raise
 
     def clear_all(self):
+        """
+        Clears all filter components.
+        """
         self.action_filters = []
 
     def add_filter(self, component, pattern):
@@ -55,13 +70,16 @@ class EESSIBotActionFilter:
         # check if component is supported
         full_component = None
         for cis in FILTER_COMPONENTS:
+            # NOTE the below code assumes that no two filter share the same
+            # prefix (e.g., repository and request would have the same prefixes
+            # 'r' and 're')
             if cis.startswith(component):
                 full_component = cis
                 break
         if full_component:
             log(f"processing component {component}")
             # if full_component == architecture replace - with / in pattern
-            if full_component == 'architecture':
+            if full_component == FILTER_COMPONENT_ARCH:
                 pattern = pattern.replace('-', '/')
             self.action_filters.append(Filter(full_component, pattern))
         else:
@@ -94,6 +112,9 @@ class EESSIBotActionFilter:
         """
         index = 0
         for _filter in self.action_filters:
+            # NOTE the below code assumes that no two filter share the same
+            # prefix (e.g., repository and request would have the same prefixes
+            # 'r' and 're')
             if _filter.component.startswith(component) and pattern == _filter.pattern:
                 log(f"removing filter ({_filter.component}, {pattern})")
                 self.action_filters.pop(index)
@@ -139,7 +160,7 @@ class EESSIBotActionFilter:
             if af.component in context:
                 value = context[af.component]
                 # replace - with / in architecture component
-                if af.component == 'architecture':
+                if af.component == FILTER_COMPONENT_ARCH:
                     value = value.replace('-', '/')
                 if re.search(af.pattern, value):
                     # if the pattern of the filter matches

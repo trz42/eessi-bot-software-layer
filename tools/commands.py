@@ -39,6 +39,11 @@ class EESSIBotCommandError(Exception):
 
 
 class EESSIBotCommand:
+    """
+    Class for representing a bot command which includes the command itself and
+    a filter to limit for which architecture, repository and bot instance the
+    command should be applied to.
+    """
     def __init__(self, cmd_str):
         cmd_as_list = cmd_str.split()
         self.command = cmd_as_list[0]
@@ -46,9 +51,8 @@ class EESSIBotCommand:
             arg_str = " ".join(cmd_as_list[1:])
             try:
                 self.action_filters = EESSIBotActionFilter(arg_str)
-            except EESSIBotActionFilterError as baf:
-                reason = baf.args
-                log(f"ERROR: EESSIBotActionFilterError - {reason}")
+            except EESSIBotActionFilterError as err:
+                log(f"ERROR: EESSIBotActionFilterError - {err.args}")
                 self.action_filters = None
                 raise EESSIBotCommandError("invalid action filter")
             except Exception as err:
@@ -59,4 +63,4 @@ class EESSIBotCommand:
 
     def to_string(self):
         action_filters_str = self.action_filters.to_string()
-        return f"{' '.join([self.command, action_filters_str])}"
+        return f"{' '.join([self.command, action_filters_str]).rstrip()}"

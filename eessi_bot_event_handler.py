@@ -19,21 +19,23 @@ import tasks.build as build
 import tasks.deploy as deploy
 
 from connections import github
+from tasks.build import check_build_permission, get_architecture_targets, get_repo_cfg, submit_build_jobs
+from tasks.deploy import deploy_built_artefacts
 from tools import config
 from tools.args import event_handler_parse
-from tools.commands import get_bot_command, EESSIBotCommand, EESSIBotCommandError
+from tools.commands import EESSIBotCommand, EESSIBotCommandError, get_bot_command
 from tools.filter import EESSIBotActionFilter
 from tools.permissions import check_command_permission
-from tools.pr_comments import update_pr_comment
-from tasks.build import check_build_permission, submit_build_jobs, get_repo_cfg, get_architecturetargets
-from tasks.deploy import deploy_built_artefacts
+from tools.pr_comments import create_comment
 
 from pyghee.lib import PyGHee, create_app, get_event_info, read_event_from_json
 from pyghee.utils import log
 
 
-GITHUB = "github"
 APP_NAME = "app_name"
+BOT_CONTROL = "bot_control"
+COMMAND_RESPONSE_FMT = "command_response_fmt"
+GITHUB = "github"
 REPO_TARGET_MAP = "repo_target_map"
 
 
@@ -72,26 +74,27 @@ class EESSIBotSoftwareLayer(PyGHee):
         action = request_body['action']
         sender = request_body['sender']['login']
         owner = request_body['comment']['user']['login']
-        txt = request_body['comment']['body']
-        self.log(f"Comment in {issue_url} (owned by @{owner}) {action} by @{sender}: {txt}")
-        # check if addition to comment includes a command for the bot, e.g.,
-        #   bot: build [arch:intel] [instance:AWS]
-        #   bot: cancel [job:jobid]
-        #   bot: disable [arch:generic]
-        # actions: created, edited
-        # created -> comment.body
-        # edited -> comment.body - changes.body.from
-        # procedure:
-        #  - determine what's new (assume new is at the end)
-        #  - scan what's new for commands 'bot: COMMAND [ARGS*]'
-        #  - process commands
+        repo_name = request_body['repository']['full_name']
+        pr_number = request_body['issue']['number']
+
+        # FIXME add request body text (['comment']['body']) to log message when
+        # log level is set to debug
+        self.log(f"Comment in {issue_url} (owned by @{owner}) {action} by @{sender}")
+
+        # obtain app name and format for reporting about received & processed
+        # commands
+        app_name = self.cfg[GITHUB][APP_NAME]
+        command_response_fmt = self.cfg[BOT_CONTROL][COMMAND_RESPONSE_FMT]
+
+        # currently, only commands in new comments are supported
+        #  - commands have the syntax 'bot: COMMAND [ARGS*]'
 
         # first check if sender is authorized to send any command
-        # - double purpose:
+        # - this serves a double purpose:
         #   1. check permission
-        #   2. skip any comment updates that were done by the bot itself --> we
-        #      prevent the bot entering an endless loop where it reacts on
-        #      updates to comments it made itself
+        #   2. skip any comment updates that were done by the bot itself
+        #      --> thus we prevent the bot from entering an endless loop
+        #          where it reacts on updates to comments it made itself
         #      NOTE this assumes that the sender of the event is corresponding to
         #      the bot if the bot updates comments itself and that the bot is not
         #      given permission in the configuration setting 'command_permission'
@@ -100,82 +103,119 @@ class EESSIBotSoftwareLayer(PyGHee):
         #      run the update through the function checking for a bot command.
         if check_command_permission(sender) is False:
             self.log(f"account `{sender}` has NO permission to send commands to bot")
+            # need to ensure that the bot is not responding on its own comments
+            # as a quick implementation we check if the sender name contains '[bot]'
+            # FIXME improve this by querying (and caching) information about the sender of
+            #       an event ALTERNATIVELY we could postpone this test a bit until we
+            #       have parsed the comment and know if it contains any bot command
+            if not sender.endswith('[bot]'):
+                comment_response = f"\n- account `{sender}` has NO permission to send commands to the bot"
+                comment_body = command_response_fmt.format(
+                    app_name=app_name,
+                    comment_response=comment_response,
+                    comment_result=''
+                )
+                issue_comment = create_comment(repo_name, pr_number, comment_body)
+            else:
+                self.log(f"account `{sender}` seems to be a bot instance itself, hence not creating a new PR comment")
             return
         else:
             self.log(f"account `{sender}` has permission to send commands to bot")
 
-        # only scan for comments in newly created comments
+        # only scan for commands in newly created comments
         if action == 'created':
-            comment_new = request_body['comment']['body']
-            self.log(f"comment created:\n########\n{comment_new.rstrip()}\n########")
+            comment_received = request_body['comment']['body']
+            self.log(f"comment action '{action}' is handled")
         else:
+            # NOTE we do not report this with a new PR comment, because otherwise any update to a comment would
+            # let the bot add a response (would be very noisy); we might add a debug mode later
             self.log(f"comment action '{action}' not handled")
             return
 
-        # search for commands in what is new in comment
-        # init comment_update with an empty string or later split would fail if
-        # it is None
-        comment_update = ''
+        # search for commands in comment
+        comment_response = ''
         commands = []
-        for line in comment_new.split('\n'):
-            self.log(f"searching line '{line}' for bot command")
-            line_stripped = line.strip()
-            if line.isspace() or len(line_stripped) == 0:
-                self.log(f"line '{line}' is empty")
-                continue
+        # process non-empty (if x) lines (split) in comment
+        for line in [x for x in [y.strip() for y in comment_received.split('\n')] if x]:
+            # FIXME add processed line(s) to log when log level is set to debug
             bot_command = get_bot_command(line)
             if bot_command:
                 try:
                     ebc = EESSIBotCommand(bot_command)
                 except EESSIBotCommandError as bce:
                     self.log(f"ERROR: parsing bot command '{bot_command}' failed with {bce.args}")
-                    comment_update += f"\n- parsing bot command `{bot_command}` received"
-                    comment_update += f" from sender `{sender}` failed"
+                    # FIXME possibly add more information to log when log level is set to debug
+                    comment_response += f"\n- parsing the bot command `{bot_command}`, received"
+                    comment_response += f" from sender `{sender}`, failed"
                     continue
                 commands.append(ebc)
                 self.log(f"found bot command: '{bot_command}'")
-                comment_update += "\n- received bot command "
-                comment_update += f"`{bot_command}`"
-                comment_update += f" from `{sender}` (expanded command format: `{ebc.to_string()}`)"
-            else:
-                self.log(f"'{line}' is not considered to contain a bot command")
-                # TODO keep the below for debugging purposes
-                comment_update += f"\n- line <code>{line}</code> is not considered to contain a bot command"
-                comment_update += "\n- bot commands begin with `bot: `, make sure"
-                comment_update += "\n  there is no whitespace at the beginning of a line"
-        self.log(f"comment update: '{comment_update}'")
+                comment_response += f"\n- received bot command `{bot_command}`"
+                comment_response += f" from `{sender}`"
+                comment_response += f"\n  - expanded format: `{ebc.to_string()}`"
+            # FIXME add an else branch that logs information for comments not
+            # including a bot command; the logging should only be done when log
+            # level is set to debug
 
-        if comment_update == '':
+        if comment_response == '':
             # no update to be added, just log and return
-            self.log("update to comment is empty")
+            self.log("comment response is empty")
             return
+        else:
+            self.log(f"comment response: '{comment_response}'")
 
-        if not any(map(get_bot_command, comment_update.split('\n'))):
-            # the 'not any()' ensures that the update would not be considered a bot command itself
+        if not any(map(get_bot_command, comment_response.split('\n'))):
+            # the 'not any()' ensures that the response would not be considered a bot command itself
             # ... together with checking the sender of a comment update this aims
             # at preventing the bot to enter an endless loop in commenting on its own
             # comments
-            update_pr_comment(event_info, comment_update)
+            comment_body = command_response_fmt.format(
+                app_name=app_name,
+                comment_response=comment_response,
+                comment_result=''
+            )
+            issue_comment = create_comment(repo_name, pr_number, comment_body)
         else:
-            self.log(f"update '{comment_update}' is considered to contain bot command ... not updating PR comment")
+            self.log(f"update '{comment_response}' is considered to contain bot command ... not creating PR comment")
+            # FIXME we may want to report this back to the PR on GitHub, e.g.,
+            # "Oops response message seems to contain a bot command. It is not
+            # displayed here to prevent the bot from entering an endless loop
+            # of commands. Please, check the logs at the bot instance for more
+            # information."
 
         # process commands
+        comment_result = ''
         for cmd in commands:
             try:
                 update = self.handle_bot_command(event_info, cmd)
-                comment_update += f"\n- handling `{cmd.command}` resulted in: "
-                comment_update += update
-                update_pr_comment(event_info, comment_update)
-            except EESSIBotCommandError as bce:
-                self.log(f"ERROR: handling {cmd.command} failed with {bce.args}")
-                comment_update += f"\n- handling `{cmd.command}` failed with {bce.args}"
-                update_pr_comment(event_info, comment_update)
+                comment_result += f"\n- handling command `{cmd.to_string()}` resulted in: "
+                comment_result += update
+                self.log(f"handling command '{cmd.to_string()}' resulted in '{update}'")
+
+            except EESSIBotCommandError as err:
+                self.log(f"ERROR: handling command {cmd.command} failed with {err.args[0]}")
+                comment_result += f"\n- handling command `{cmd.command}` failed with message"
+                comment_result += f"\n  _{err.args[0]}_"
                 continue
             except Exception as err:
                 log(f"Unexpected err={err}, type(err)={type(err)}")
+                if comment_result:
+                    comment_body = command_response_fmt.format(
+                        app_name=app_name,
+                        comment_response=comment_response,
+                        comment_result=comment_result
+                    )
+                    issue_comment.edit(comment_body)
                 raise
+        # only update PR comment once
+        comment_body = command_response_fmt.format(
+            app_name=app_name,
+            comment_response=comment_response,
+            comment_result=comment_result
+        )
+        issue_comment.edit(comment_body)
 
-        self.log("issue_comment event handled!")
+        self.log(f"issue_comment event (url {issue_url}) handled!")
 
     def handle_installation_event(self, event_info, log_file=None):
         """
@@ -217,7 +257,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         app_name = self.cfg[GITHUB][APP_NAME]
         # TODO check if PR already has a comment with arch targets and
         # repositories
-        arch_map = get_architecturetargets(self.cfg)
+        arch_map = get_architecture_targets(self.cfg)
         repo_cfg = get_repo_cfg(self.cfg)
 
         comment = f"Instance `{app_name}` is configured to build:"
@@ -275,17 +315,19 @@ class EESSIBotSoftwareLayer(PyGHee):
             return handler(event_info, bot_command)
         else:
             self.log(f"No handler for command '{cmd}'")
-            raise EESSIBotCommandError(f"unknown command '{cmd}'; use `bot: help` for usage information")
+            raise EESSIBotCommandError(f"unknown command `{cmd}`; use `bot: help` for usage information")
 
     def handle_bot_command_help(self, event_info, bot_command):
+        """handles command 'bot: help' with a simple usage info"""
         help_msg = "\n  **How to send commands to bot instances**"
         help_msg += "\n  - Commands must be sent with a **new** comment (edits of existing comments are ignored)."
         help_msg += "\n  - A comment may contain multiple commands, one per line."
         help_msg += "\n  - Every command begins at the start of a line and has the syntax `bot: COMMAND [ARGUMENTS]*`"
-        help_msg += "\n  - Currently supported COMMANDs are: `help`, `build`, `showconfig`"
+        help_msg += "\n  - Currently supported COMMANDs are: `help`, `build`, `show_config`"
         return help_msg
 
     def handle_bot_command_build(self, event_info, bot_command):
+        """handles command 'bot: build [ARGS*]' by parsing arguments and submitting jobs"""
         gh = github.get_instance()
         self.log("repository: '%s'", event_info['raw_request_body']['repository']['full_name'])
         repo_name = event_info['raw_request_body']['repository']['full_name']
@@ -294,36 +336,29 @@ class EESSIBotSoftwareLayer(PyGHee):
         build_msg = ''
         if check_build_permission(pr, event_info):
             # use filter from command
-            build_msg = submit_build_jobs(pr, event_info, bot_command.action_filters)
+            submitted_jobs = submit_build_jobs(pr, event_info, bot_command.action_filters)
+            if submitted_jobs is None or len(submitted_jobs) == 0:
+                build_msg = "\n  - no jobs were submitted"
+            else:
+                for job_id, issue_comment in submitted_jobs.items():
+                    build_msg += f"\n  - submitted job `{job_id}`"
+                    if issue_comment:
+                        build_msg += f", for details & status see {issue_comment.html_url}"
         else:
             request_body = event_info['raw_request_body']
             sender = request_body['sender']['login']
-            build_msg = f"account {sender} has no permission to submit build jobs"
+            build_msg = f"\n  - account `{sender}` has NO permission to submit build jobs"
         return build_msg
 
-#    def handle_bot_command_deploy(self, event_info, bot_command):
-#        return
-
-#    def handle_bot_command_enable(self, event_info, bot_command):
-#        return
-
-#    def handle_bot_command_disable(self, event_info, bot_command):
-#        return
-
-#    def handle_bot_command_cancel(self, event_info, bot_command):
-#        return
-
-#    def handle_bot_command_status(self, event_info, bot_command):
-#        return
-
-    def handle_bot_command_showconfig(self, event_info, bot_command):
-        self.log("processing bot command 'showconfig'")
+    def handle_bot_command_show_config(self, event_info, bot_command):
+        """handles command 'bot: show_config' by printing a list of configured build targets"""
+        self.log("processing bot command 'show_config'")
         gh = github.get_instance()
         repo_name = event_info['raw_request_body']['repository']['full_name']
         pr_number = event_info['raw_request_body']['issue']['number']
         pr = gh.get_repo(repo_name).get_pull(pr_number)
         issue_comment = self.handle_pull_request_opened_event(event_info, pr)
-        return f"added comment {issue_comment.issue_url} to show configuration"
+        return f"\n  - added comment {issue_comment.html_url} to show configuration"
 
     def start(self, app, port=3000):
         """starts the app and log information in the log file

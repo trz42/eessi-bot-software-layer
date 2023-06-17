@@ -18,7 +18,7 @@ COMMAND_PERMISSION = "command_permission"
 
 
 def check_command_permission(account):
-    """check if the GH account is authorized to send commands to the bot
+    """check if the GitHub account is authorized to send commands to the bot
 
     Args:
         account (string): account for which permissions shall be checked

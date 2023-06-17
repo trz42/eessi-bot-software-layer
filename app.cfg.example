@@ -28,7 +28,21 @@ private_key = PATH_TO_PRIVATE_KEY
 # which GH accounts have the permission to send commands to the bot
 # if value is left/empty everyone can send commands
 # value can be a space delimited list of GH accounts
+#
+# NOTE, be careful to not list the bot's name (GH app name) or it may consider
+#   comments created/updated by itself as a bot command and thus enter an
+#   endless loop.
 command_permission =
+
+# format of the response when processing bot commands. NOTE, make sure the
+# placeholders {app_name}, {comment_response} and {comment_result} are included.
+command_response_fmt =
+    <details><summary>Updates by the bot instance <code>{app_name}</code>
+    <em>(click for details)</em></summary>
+
+    {comment_response}
+    {comment_result}
+    </details>
 
 
 [buildenv]
