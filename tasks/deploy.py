@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from pyghee.utils import log
 from tasks.build import get_build_env_cfg
 from tools import config, run_cmd, pr_comments
+from tools.job_metadata import read_job_metadata_from_file
 
 JOBS_BASE_DIR = "jobs_base_dir"
 DEPLOYCFG = "deploycfg"
@@ -140,46 +141,30 @@ def check_build_status(slurm_out, eessi_tarballs):
     return False
 
 
-def update_pr_comment(tarball, repo_name, pr_number, state, msg):
+def update_pr_comment(tarball, repo_name, pr_number, pr_comment_id, state, msg):
     """Update PR comment which contains specific tarball name.
 
     Args:
         tarball (string): name of tarball that is looked for in a PR comment
         repo_name (string): name of the repository (USER_ORG/REPOSITORY)
         pr_number (string): pull request number
+        pr_comment_id (int): pull request comment id
         state (string): state (upload) to be used in update
         msg (string): msg (succeeded or failed) describing upload result
     """
-    funcname = sys._getframe().f_code.co_name
-
     gh = github.get_instance()
     repo = gh.get_repo(repo_name)
     pull_request = repo.get_pull(pr_number)
 
-    # TODO does this always return all comments?
-    comments = pull_request.get_issue_comments()
-    for comment in comments:
-        # NOTE
-        # adjust search string if format changed by event handler
-        # (separate process running eessi_bot_event_handler.py)
-        re_tarball = f".*{tarball}.*"
-        comment_match = re.search(re_tarball, comment.body)
+    # adjust search string ".*{tarball}.*" if format of PR comment changed by event handler
+    issue_comment = pr_comments.determine_issue_comment(pull_request, pr_comment_id, tarball)
+    if issue_comment:
+        dt = datetime.now(timezone.utc)
+        comment_update = (f"\n|{dt.strftime('%b %d %X %Z %Y')}|{state}|"
+                          f"transfer of `{tarball}` to S3 bucket {msg}|")
 
-        if comment_match:
-            log(f"{funcname}(): found comment with id {comment.id}")
-
-            issue_comment = pull_request.get_issue_comment(int(comment.id))
-
-            dt = datetime.now(timezone.utc)
-            comment_update = (f"\n|{dt.strftime('%b %d %X %Z %Y')}|{state}|"
-                              f"transfer of `{tarball}` to S3 bucket {msg}|")
-
-            # append update to existing comment
-            issue_comment.edit(issue_comment.body + comment_update)
-
-            # leave for loop (only update one comment, because tarball
-            # should only be referenced in one comment)
-            break
+        # append update to existing comment
+        issue_comment.edit(issue_comment.body + comment_update)
 
 
 def append_tarball_to_upload_log(tarball, job_dir):
@@ -197,7 +182,7 @@ def append_tarball_to_upload_log(tarball, job_dir):
         upload_log.write(f"{job_plus_tarball}\n")
 
 
-def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number):
+def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number, pr_comment_id):
     """Upload built artefact to an S3 bucket.
 
     Args:
@@ -205,7 +190,8 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number):
         build_target (string): eessi-VERSION-COMPONENT-OS-ARCH
         timestamp (int): timestamp of the tarball
         repo_name (string): repository of the pull request
-        pr_number (string): number of the pull request
+        pr_number (int): number of the pull request
+        pr_comment_id (int): id of the pull request comment
     """
     funcname = sys._getframe().f_code.co_name
 
@@ -233,6 +219,7 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number):
         cmd_args.extend(['--endpoint-url', endpoint_url])
     cmd_args.extend(['--repository', repo_name])
     cmd_args.extend(['--pull-request', str(pr_number)])
+    cmd_args.extend(['--pr-comment-id', str(pr_comment_id)])
     cmd_args.append(abs_path)
     upload_cmd = ' '.join(cmd_args)
 
@@ -297,31 +284,46 @@ def determine_successful_jobs(job_dirs):
         job_dirs (list): list of job directories
 
     Returns:
-        successes (list): list of dictionaries representing successful jobs
+        successful_jobs (list): list of dictionaries representing successful jobs
     """
     funcname = sys._getframe().f_code.co_name
 
-    successes = []
+    successful_jobs = []
     for job_dir in job_dirs:
         slurm_out = determine_slurm_out(job_dir)
         eessi_tarballs = determine_eessi_tarballs(job_dir)
+        pr_comment_id = determine_pr_comment_id(job_dir)
+
         if check_build_status(slurm_out, eessi_tarballs):
             log(f"{funcname}(): SUCCESSFUL build in '{job_dir}'")
-            successes.append({'job_dir': job_dir,
-                              'slurm_out': slurm_out,
-                              'eessi_tarballs': eessi_tarballs})
+            successful_jobs.append({'job_dir': job_dir,
+                                    'slurm_out': slurm_out,
+                                    'pr_comment_id': pr_comment_id,
+                                    'eessi_tarballs': eessi_tarballs})
         else:
             log(f"{funcname}(): FAILED build in '{job_dir}'")
 
-    return successes
+    return successful_jobs
 
 
-def determine_tarballs_to_deploy(successes, upload_policy):
+def determine_pr_comment_id(job_dir):
+    """Determines pr_comment_id by reading _bot_job{JOBID}.metadata in job_dir."""
+    # assumes that last part of job_dir encodes the job's id
+    job_id = os.path.basename(os.path.normpath(job_dir))
+    job_metadata_file = os.path.join(job_dir, f"_bot_job{job_id}.metadata")
+    job_metadata = read_job_metadata_from_file(job_metadata_file)
+    if job_metadata and "pr_comment_id" in job_metadata:
+        return int(job_metadata["pr_comment_id"])
+    else:
+        return -1
+
+
+def determine_tarballs_to_deploy(successful_jobs, upload_policy):
     """Determines tarballs to deploy depending on upload policy
 
     Args:
-        successes (list): list of dictionaries
-                          {job_dir, slurm_out, eessi_tarballs}
+        successful_jobs (list): list of dictionaries
+                          {job_dir, slurm_out, eessi_tarballs, pr_comment_id}
         upload_policy (string): one of 'all', 'latest' or 'once'
             'all': deploy all
             'latest': deploy only the last for each build target
@@ -329,16 +331,16 @@ def determine_tarballs_to_deploy(successes, upload_policy):
                     been deployed before
     Returns:
         to_be_deployed (dictionary): dictionary of dictionaries
-                                     {job_dir, timestamp}
+                                     {job_dir, pr_comment_id, timestamp}
     """
     funcname = sys._getframe().f_code.co_name
 
-    log(f"{funcname}(): num successful jobs {len(successes)}")
+    log(f"{funcname}(): num successful jobs {len(successful_jobs)}")
 
     to_be_deployed = {}
-    for s in successes:
+    for job in successful_jobs:
         # all tarballs for successful job
-        tarballs = s["eessi_tarballs"]
+        tarballs = job["eessi_tarballs"]
         log(f"{funcname}(): num tarballs {len(tarballs)}")
 
         # full path to first tarball for successful job
@@ -371,7 +373,7 @@ def determine_tarballs_to_deploy(successes, upload_policy):
             else:
                 deploy = True
         elif upload_policy == "once":
-            uploaded = uploaded_before(build_target, s["job_dir"])
+            uploaded = uploaded_before(build_target, job["job_dir"])
             if uploaded is None:
                 deploy = True
             else:
@@ -380,7 +382,8 @@ def determine_tarballs_to_deploy(successes, upload_policy):
                     f"{indent_fname}has been uploaded through '{uploaded}'")
 
         if deploy:
-            to_be_deployed[build_target] = {"job_dir": s["job_dir"],
+            to_be_deployed[build_target] = {"job_dir": job["job_dir"],
+                                            "pr_comment_id": job["pr_comment_id"],
                                             "timestamp": timestamp}
 
     return to_be_deployed
@@ -438,11 +441,11 @@ def deploy_built_artefacts(pr, event_info):
 
     # 2) for each build check the status of jobs (SUCCESS or FAILURE)
     #    - scan slurm*out file for: 'No modules missing!' & 'created'
-    successes = determine_successful_jobs(job_dirs)
+    successful_jobs = determine_successful_jobs(job_dirs)
 
     # 3) for the successful ones, determine which to deploy depending on
     #    the upload policy
-    to_be_deployed = determine_tarballs_to_deploy(successes, upload_policy)
+    to_be_deployed = determine_tarballs_to_deploy(successful_jobs, upload_policy)
 
     # 4) call function to deploy a single artefact per software subdir
     #    - update PR comments (look for comments with build-ts.tar.gz)
@@ -451,4 +454,5 @@ def deploy_built_artefacts(pr, event_info):
     for target, job in to_be_deployed.items():
         job_dir = job['job_dir']
         timestamp = job['timestamp']
-        upload_tarball(job_dir, target, timestamp, repo_name, pr.number)
+        pr_comment_id = job['pr_comment_id']
+        upload_tarball(job_dir, target, timestamp, repo_name, pr.number, pr_comment_id)

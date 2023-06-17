@@ -8,14 +8,13 @@
 #
 # license: GPLv2
 #
+
 # from collections import namedtuple
 import configparser
 import os
 import sys
 
 from pyghee.utils import log
-# from tasks.build import Job
-# from tools.pr_comments import PRComment
 
 
 def create_metadata_file(job, job_id, pr_comment):
@@ -69,4 +68,29 @@ def read_metadata_file(metadata_path, log_file=None):
         return metadata
     else:
         log(f"No metadata file found at {metadata_path}.", log_file)
+        return None
+
+
+def read_job_metadata_from_file(filepath, log_file=None):
+    """
+    Check if metadata file exists, read it and return 'PR' section if so, return None if not.
+
+    Args:
+        filepath (string): path to job metadata file
+        log_file (string): path to job metadata file
+
+    Returns:
+        job_metadata (dict): dictionary containing job metadata or None
+    """
+
+    metadata = read_metadata_file(filepath, log_file=log_file)
+    if metadata:
+        # get PR section
+        if "PR" in metadata:
+            metadata_pr = metadata["PR"]
+        else:
+            metadata_pr = {}
+        return metadata_pr
+    else:
+        log(f"Metadata file '{filepath}' does not exist or could not be read")
         return None

@@ -28,7 +28,6 @@
 # license: GPLv2
 #
 
-# import configparser
 import os
 import re
 import time
@@ -39,6 +38,7 @@ from connections import github
 from tools.args import job_manager_parse
 from datetime import datetime, timezone
 from tools import config, run_cmd
+from tools.job_metadata import read_job_metadata_from_file
 from tools.pr_comments import get_submitted_job_comment, update_comment
 from tools.job_metadata import read_metadata_file
 
@@ -197,14 +197,9 @@ class EESSIBotSoftwareLayerJobManager:
 
     def read_job_pr_metadata(self, job_metadata_path):
         """
-        Check if metadata file exists, read it and return 'PR' section if so, return None if not.
+        Determine metadata of a job or None.
         """
-        # just use a function provided by module tools.job_metadata
-        metadata = read_metadata_file(job_metadata_path, self.logfile)
-        if metadata and "PR" in metadata:
-            return metadata["PR"]
-        else:
-            return None
+        return read_job_metadata_from_file(job_metadata_path, self.logfile)
 
     def read_job_result(self, job_result_file_path):
         """

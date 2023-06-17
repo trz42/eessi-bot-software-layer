@@ -13,6 +13,7 @@
 # license: GPLv2
 #
 import re
+import sys
 
 from collections import namedtuple
 from connections import github
@@ -81,6 +82,30 @@ def get_submitted_job_comment(pr, job_id):
     #      eessi_bot_event_handler.py)
     job_search_pattern = f"submitted.*job id `{job_id}`"
     return get_comment(pr, job_search_pattern)
+
+
+def determine_issue_comment(pull_request, pr_comment_id, search_pattern=None):
+    """Returns issue comment for a given id or using a search pattern."""
+
+    fn = sys._getframe().f_code.co_name
+
+    if pr_comment_id != -1:
+        return pull_request.get_issue_comment(pr_comment_id)
+    else:
+        # TODO does this always return all comments?
+        comments = pull_request.get_issue_comments()
+        for comment in comments:
+            # NOTE
+            # adjust search string if format changed by event handler
+            # (separate process running eessi_bot_event_handler.py)
+            re_pattern = f".*{search_pattern}.*"
+            comment_match = re.search(re_pattern, comment.body)
+
+            if comment_match:
+                log(f"{fn}(): found comment with id {comment.id}")
+
+                return pull_request.get_issue_comment(int(comment.id))
+    return None
 
 
 def update_comment(cmnt_id, pr, update, log_file=None):
