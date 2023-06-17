@@ -27,7 +27,7 @@ import pytest
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
 from tasks.build import Job, create_pr_comment
 from tools import run_cmd, run_subprocess
-from tools.pr_comments import get_submitted_job_comment, PRComment
+from tools.pr_comments import get_submitted_job_comment
 from tools.job_metadata import create_metadata_file
 
 # Local tests imports (reusing code from other tests)
