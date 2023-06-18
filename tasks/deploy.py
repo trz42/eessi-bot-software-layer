@@ -131,14 +131,14 @@ def check_build_status(slurm_out, eessi_tarballs):
     #   ^/eessi_bot_job/eessi-.*-software-.*.tar.gz created!$ -->
     #     tarball successfully created
     if os.path.exists(slurm_out):
-        re_missing_modules = re.compile("No missing installations")
+        re_missing_modules = re.compile(".*No missing installations, party time!.*")
         re_targz_created = re.compile("^/eessi_bot_job/eessi-.*-software-.*.tar.gz created!$")
         outfile = open(slurm_out, "r")
         for line in outfile:
             if re_missing_modules.match(line):
                 # no missing modules
                 no_missing_modules = True
-                log(f"{fn}(): line '{line}' matches 'No missing installations'")
+                log(f"{fn}(): line '{line}' matches '.*No missing installations, party time!.*'")
             if re_targz_created.match(line):
                 # tarball created
                 targz_created = True
