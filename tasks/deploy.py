@@ -242,11 +242,11 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number, pr_co
         # add file to 'job_dir/../uploaded.txt'
         append_tarball_to_upload_log(tarball, job_dir)
         # update pr comment
-        update_pr_comment(tarball, repo_name, pr_number, "uploaded",
+        update_pr_comment(tarball, repo_name, pr_number, pr_comment_id, "uploaded",
                           "succeeded")
     else:
         # update pr comment
-        update_pr_comment(tarball, repo_name, pr_number, "not uploaded",
+        update_pr_comment(tarball, repo_name, pr_number, pr_comment_id, "not uploaded",
                           "failed")
 
 
