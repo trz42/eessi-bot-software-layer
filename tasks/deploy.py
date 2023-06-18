@@ -110,6 +110,8 @@ def check_build_status(slurm_out, eessi_tarballs):
     Returns:
         (bool): True -> job succeeded, False -> job failed
     """
+    fn = sys._getframe().f_code.co_name
+
     # TODO use _bot_job<SLURM_JOBID>.result file to determine result status
     # cases:
     # (1) no result file --> add line with unknown status, found tarball xyz but no result file
@@ -128,16 +130,20 @@ def check_build_status(slurm_out, eessi_tarballs):
     #   ^/eessi_bot_job/eessi-.*-software-.*.tar.gz created!$ -->
     #     tarball successfully created
     if os.path.exists(slurm_out):
-        re_missing_modules = re.compile("^No missing installations")
+        re_missing_modules = re.compile("No missing installations")
         re_targz_created = re.compile("^/eessi_bot_job/eessi-.*-software-.*.tar.gz created!$")
         outfile = open(slurm_out, "r")
         for line in outfile:
             if re_missing_modules.match(line):
                 # no missing modules
                 no_missing_modules = True
+                log(f"{fn}(): line '{line}' matches 'No missing installations'")
             if re_targz_created.match(line):
                 # tarball created
                 targz_created = True
+                log(f"{fn}(): line '{line}' matches '^/eessi_bot_job/eessi-.*-software-.*.tar.gz created!$'")
+
+    log(f"{fn}(): found {len(eessi_tarballs)} tarballs for '{slurm_out}'")
 
     # we test results from the above check and if there is one tarball only
     if no_missing_modules and targz_created and len(eessi_tarballs) == 1:
