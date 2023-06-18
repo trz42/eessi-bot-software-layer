@@ -446,7 +446,7 @@ class EESSIBotSoftwareLayerJobManager:
         # returned None), it's also used (reused actually) in case the job
         # results do not have a preformatted comment
         job_result_unknown_fmt = finished_job_comments_cfg[JOB_RESULT_UNKNOWN_FMT]
-        comment_description = job_result_unknown_fmt.format(file=job_result_file)
+        comment_description = job_result_unknown_fmt.format(filename=job_result_file)
         if job_results:
             # get preformatted comment_description or use previously set default for unknown
             comment_description = job_results.get(JOB_RESULT_COMMENT_DESCRIPTION, comment_description)
