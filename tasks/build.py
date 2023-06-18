@@ -650,10 +650,10 @@ def submit_build_jobs(pr, event_info, action_filter):
         job_id, symlink = submit_job(job, cfg)
 
         # report submitted job
-        pr_comment = create_pr_comment(job, job_id, app_name, pr, gh, symlink)
-        job_id_to_comment_map[job_id] = pr_comment
+        issue_comment = create_pr_comment(job, job_id, app_name, pr, gh, symlink)
+        job_id_to_comment_map[job_id] = issue_comment
 
-        pr_comment = pr_comments.PRComment(pr.base.repo.full_name, pr.number, pr_comment_id)
+        pr_comment = pr_comments.PRComment(pr.base.repo.full_name, pr.number, issue_comment.id)
 
         # create _bot_job<jobid>.metadata file in submission directory
         create_metadata_file(job, job_id, pr_comment)
