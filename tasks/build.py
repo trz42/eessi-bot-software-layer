@@ -570,14 +570,14 @@ def submit_job(job, cfg):
     return job_id, symlink
 
 
-def create_metadata_file(job, job_id, pr, pr_comment_id):
+def create_metadata_file(job, job_id, pr, pr_comment):
     """Create metadata file in submission dir.
 
     Args:
         job (named tuple): key data about job that has been submitted
         job_id (string): id of submitted job
         pr (github.PullRequest.Pullrequest): object to interact with pull request
-        pr_comment_id (int): id of PR comment
+        pr_comment (github.IssueComment.IssueComment): instance containing a PR comment
     """
     fn = sys._getframe().f_code.co_name
 
@@ -585,6 +585,7 @@ def create_metadata_file(job, job_id, pr, pr_comment_id):
 
     # create _bot_job<jobid>.metadata file in submission directory
     bot_jobfile = configparser.ConfigParser()
+    pr_comment_id = pr_comment.id if pr_comment else -1
     bot_jobfile['PR'] = {'repo': repo_name, 'pr_number': pr.number, 'pr_comment_id': pr_comment_id}
     bot_jobfile_path = os.path.join(job.working_dir, f'_bot_job{job_id}.metadata')
     with open(bot_jobfile_path, 'w') as bjf:
@@ -671,11 +672,11 @@ def submit_build_jobs(pr, event_info, action_filter):
         job_id, symlink = submit_job(job, cfg)
 
         # report submitted job
-        pr_comment_id = create_pr_comment(job, job_id, app_name, pr, gh, symlink)
-        job_id_to_comment_map[job_id] = pr_comment_id
+        pr_comment = create_pr_comment(job, job_id, app_name, pr, gh, symlink)
+        job_id_to_comment_map[job_id] = pr_comment
 
         # create _bot_job<jobid>.metadata file in submission directory
-        create_metadata_file(job, job_id, pr, pr_comment_id)
+        create_metadata_file(job, job_id, pr, pr_comment)
 
     # return f"created jobs: {', '.join(job_ids)}"
     return job_id_to_comment_map

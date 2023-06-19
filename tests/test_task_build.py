@@ -411,10 +411,10 @@ def test_create_metadata_file(mocked_github, tmpdir):
     job_id = "123"
 
     repo_name = "test_repo"
-    pr_comment_id = 77
+    pr_comment = MockIssueComment("test_create_metadata_file", comment_id=77)
     repo = mocked_github.get_repo(repo_name)
     pr = repo.get_pull(pr_number)
-    create_metadata_file(job, job_id, pr, pr_comment_id)
+    create_metadata_file(job, job_id, pr, pr_comment)
 
     expected_file = f"_bot_job{job_id}.metadata"
     expected_file_path = os.path.join(tmpdir, expected_file)
@@ -434,14 +434,14 @@ def test_create_metadata_file(mocked_github, tmpdir):
     job2 = Job(dir_does_not_exist, "test/architecture", "EESSI-pilot", "--speed_up_job", ym, pr_number)
     job_id2 = "222"
     with pytest.raises(FileNotFoundError):
-        create_metadata_file(job2, job_id2, pr, pr_comment_id)
+        create_metadata_file(job2, job_id2, pr, pr_comment)
 
     # use directory without write permission
     dir_without_write_perm = os.path.join("/")
     job3 = Job(dir_without_write_perm, "test/architecture", "EESSI-pilot", "--speed_up_job", ym, pr_number)
     job_id3 = "333"
     with pytest.raises(OSError):
-        create_metadata_file(job3, job_id3, pr, pr_comment_id)
+        create_metadata_file(job3, job_id3, pr, pr_comment)
 
     # disk quota exceeded (difficult to create and unlikely to happen because
     # partition where file is stored is usually very large)
@@ -450,7 +450,7 @@ def test_create_metadata_file(mocked_github, tmpdir):
     # job_id = None
     job4 = Job(tmpdir, "test/architecture", "EESSI-pilot", "--speed_up_job", ym, pr_number)
     job_id4 = None
-    create_metadata_file(job4, job_id4, pr, pr_comment_id)
+    create_metadata_file(job4, job_id4, pr, pr_comment)
 
     expected_file4 = f"_bot_job{job_id}.metadata"
     expected_file_path4 = os.path.join(tmpdir, expected_file4)
@@ -466,4 +466,4 @@ def test_create_metadata_file(mocked_github, tmpdir):
     job5 = Job(None, "test/architecture", "EESSI-pilot", "--speed_up_job", ym, pr_number)
     job_id5 = "555"
     with pytest.raises(TypeError):
-        create_metadata_file(job5, job_id5, pr, pr_comment_id)
+        create_metadata_file(job5, job_id5, pr, pr_comment)
