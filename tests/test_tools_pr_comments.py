@@ -24,12 +24,12 @@ from tools.pr_comments import (
 
 
 class MockIssueComment:
-    def __init__(self, body, edit_raises='0', edit_exception=Exception):
+    def __init__(self, body, edit_raises='0', edit_exception=Exception, comment_id=1):
         self.body = body
         self.edit_raises = edit_raises
         self.edit_exception = edit_exception
         self.edit_call_count = 0
-        self.id = 1
+        self.id = comment_id
 
     def edit(self, body):
         def should_raise_exception():
