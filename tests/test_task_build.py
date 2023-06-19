@@ -413,7 +413,6 @@ def test_create_read_metadata_file(mocked_github, tmpdir):
 
     repo_name = "test_repo"
     pr_comment = PRComment(repo_name, pr_number, 77)
-    repo = mocked_github.get_repo(repo_name)
     create_metadata_file(job, job_id, pr_comment)
 
     expected_file = f"_bot_job{job_id}.metadata"
