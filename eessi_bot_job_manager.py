@@ -30,17 +30,16 @@
 
 import os
 import re
-import time
 import sys
+import time
 
 
 from connections import github
 from tools.args import job_manager_parse
 from datetime import datetime, timezone
 from tools import config, run_cmd
-from tools.job_metadata import read_job_metadata_from_file
+from tools.job_metadata import read_job_metadata_from_file, read_metadata_file
 from tools.pr_comments import get_submitted_job_comment, update_comment
-from tools.job_metadata import read_metadata_file
 
 from pyghee.utils import log
 
