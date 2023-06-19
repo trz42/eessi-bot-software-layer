@@ -27,7 +27,7 @@ import pytest
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
 from tasks.build import Job, create_pr_comment
 from tools import run_cmd, run_subprocess
-from tools.job_metadata import create_metadata_file
+from tools.job_metadata import create_metadata_file, read_metadata_file
 from tools.pr_comments import PRComment, get_submitted_job_comment
 
 # Local tests imports (reusing code from other tests)
@@ -402,7 +402,7 @@ def test_create_pr_comment_three_raises(mocked_github, tmpdir):
 
 @pytest.mark.repo_name("test_repo")
 @pytest.mark.pr_number(999)
-def test_create_metadata_file(mocked_github, tmpdir):
+def test_create_read_metadata_file(mocked_github, tmpdir):
     """Tests for function create_metadata_file."""
     # create some test data
     ym = datetime.today().strftime('%Y.%m')
@@ -428,6 +428,14 @@ def test_create_metadata_file(mocked_github, tmpdir):
     # pr_comment_id = 77
     test_file = "tests/test_bot_job123.metadata"
     assert filecmp.cmp(expected_file_path, test_file, shallow=False)
+
+    # also check reading back of metadata file
+    metadata = read_metadata_file(expected_file_path)
+    assert "PR" in metadata
+    assert metadata["PR"]["repo"] == "test_repo"
+    assert metadata["PR"]["pr_number"] == "999"
+    assert metadata["PR"]["pr_comment_id"] == "77"
+    assert sorted(metadata["PR"].keys()) == ["pr_comment_id", "pr_number", "repo"]
 
     # use directory that does not exist
     dir_does_not_exist = os.path.join(tmpdir, "dir_does_not_exist")
