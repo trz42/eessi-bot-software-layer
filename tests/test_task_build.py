@@ -25,9 +25,10 @@ from datetime import datetime
 import pytest
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
-from tasks.build import Job, create_metadata_file, create_pr_comment
+from tasks.build import Job, create_pr_comment
 from tools import run_cmd, run_subprocess
-from tools.pr_comments import get_submitted_job_comment
+from tools.job_metadata import create_metadata_file, read_metadata_file
+from tools.pr_comments import PRComment, get_submitted_job_comment
 
 # Local tests imports (reusing code from other tests)
 from tests.test_tools_pr_comments import MockIssueComment
@@ -401,7 +402,7 @@ def test_create_pr_comment_three_raises(mocked_github, tmpdir):
 
 @pytest.mark.repo_name("test_repo")
 @pytest.mark.pr_number(999)
-def test_create_metadata_file(mocked_github, tmpdir):
+def test_create_read_metadata_file(mocked_github, tmpdir):
     """Tests for function create_metadata_file."""
     # create some test data
     ym = datetime.today().strftime('%Y.%m')
@@ -411,10 +412,8 @@ def test_create_metadata_file(mocked_github, tmpdir):
     job_id = "123"
 
     repo_name = "test_repo"
-    pr_comment = MockIssueComment("test_create_metadata_file", comment_id=77)
-    repo = mocked_github.get_repo(repo_name)
-    pr = repo.get_pull(pr_number)
-    create_metadata_file(job, job_id, pr, pr_comment)
+    pr_comment = PRComment(repo_name, pr_number, 77)
+    create_metadata_file(job, job_id, pr_comment)
 
     expected_file = f"_bot_job{job_id}.metadata"
     expected_file_path = os.path.join(tmpdir, expected_file)
@@ -429,19 +428,27 @@ def test_create_metadata_file(mocked_github, tmpdir):
     test_file = "tests/test_bot_job123.metadata"
     assert filecmp.cmp(expected_file_path, test_file, shallow=False)
 
+    # also check reading back of metadata file
+    metadata = read_metadata_file(expected_file_path)
+    assert "PR" in metadata
+    assert metadata["PR"]["repo"] == "test_repo"
+    assert metadata["PR"]["pr_number"] == "999"
+    assert metadata["PR"]["pr_comment_id"] == "77"
+    assert sorted(metadata["PR"].keys()) == ["pr_comment_id", "pr_number", "repo"]
+
     # use directory that does not exist
     dir_does_not_exist = os.path.join(tmpdir, "dir_does_not_exist")
     job2 = Job(dir_does_not_exist, "test/architecture", "EESSI-pilot", "--speed_up_job", ym, pr_number)
     job_id2 = "222"
     with pytest.raises(FileNotFoundError):
-        create_metadata_file(job2, job_id2, pr, pr_comment)
+        create_metadata_file(job2, job_id2, pr_comment)
 
     # use directory without write permission
     dir_without_write_perm = os.path.join("/")
     job3 = Job(dir_without_write_perm, "test/architecture", "EESSI-pilot", "--speed_up_job", ym, pr_number)
     job_id3 = "333"
     with pytest.raises(OSError):
-        create_metadata_file(job3, job_id3, pr, pr_comment)
+        create_metadata_file(job3, job_id3, pr_comment)
 
     # disk quota exceeded (difficult to create and unlikely to happen because
     # partition where file is stored is usually very large)
@@ -450,7 +457,7 @@ def test_create_metadata_file(mocked_github, tmpdir):
     # job_id = None
     job4 = Job(tmpdir, "test/architecture", "EESSI-pilot", "--speed_up_job", ym, pr_number)
     job_id4 = None
-    create_metadata_file(job4, job_id4, pr, pr_comment)
+    create_metadata_file(job4, job_id4, pr_comment)
 
     expected_file4 = f"_bot_job{job_id}.metadata"
     expected_file_path4 = os.path.join(tmpdir, expected_file4)
@@ -466,4 +473,4 @@ def test_create_metadata_file(mocked_github, tmpdir):
     job5 = Job(None, "test/architecture", "EESSI-pilot", "--speed_up_job", ym, pr_number)
     job_id5 = "555"
     with pytest.raises(TypeError):
-        create_metadata_file(job5, job_id5, pr, pr_comment)
+        create_metadata_file(job5, job_id5, pr_comment)

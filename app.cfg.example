@@ -28,6 +28,7 @@ private_key = PATH_TO_PRIVATE_KEY
 # which GH accounts have the permission to send commands to the bot
 # if value is left/empty everyone can send commands
 # value can be a space delimited list of GH accounts
+#
 # NOTE, be careful to not list the bot's name (GH app name) or it may consider
 #   comments created/updated by itself as a bot command and thus enter an
 #   endless loop.
@@ -55,13 +56,13 @@ container_cachedir = PATH_TO_SHARED_DIRECTORY
 # it may happen that we need to customize some CVMFS configuration
 #   the value of cvmfs_customizations is a dictionary which maps a file
 #   name to an entry that needs to be added to that file
-cvmfs_customizations = { "/etc/cvmfs/default.local": "CVMFS_HTTP_PROXY=\"http://PROXY_DNS_NAME:3128|http://PROXY_IP_ADDRESS:3128\"" }
+# cvmfs_customizations = { "/etc/cvmfs/default.local": "CVMFS_HTTP_PROXY=\"http://PROXY_DNS_NAME:3128|http://PROXY_IP_ADDRESS:3128\"" }
 
 # if compute nodes have no internet connection, we need to set http(s)_proxy
 #   or commands such as pip3 cannot download software from package repositories
 #   for example, the temporary EasyBuild is installed via pip3 first
-http_proxy = http://PROXY_DNS:3128/
-https_proxy = http://PROXY_DNS:3128/
+# http_proxy = http://PROXY_DNS:3128/
+# https_proxy = http://PROXY_DNS:3128/
 
 # directory under which the bot prepares directories per job
 #   structure created is as follows: YYYY.MM/pr_PR_NUMBER/event_EVENT_ID/run_RUN_NUMBER/OS+SUBDIR
@@ -95,8 +96,11 @@ submit_command = /usr/bin/sbatch
 # the label 'bot:build' (apparently this cannot be restricted on GitHub)
 # if value is left/empty everyone can trigger the build
 # value can be a space delimited list of GH accounts
-build_permission = Hafsa-Naeem
+build_permission =
+
+# template for comment when user who set a label has no permission to trigger build jobs
 no_build_permission_comment = Label `bot:build` has been set by user `{build_labeler}`, but this person does not have permission to trigger builds
+
 
 [deploycfg]
 # script for uploading built software packages
@@ -128,7 +132,9 @@ upload_policy = once
 # the label 'bot:deploy' (apparently this cannot be restricted on GitHub)
 # if value is left/empty everyone can trigger the deployment
 # value can be a space delimited list of GH accounts
-deploy_permission = trz42
+deploy_permission =
+
+# template for comment when user who set a label has no permission to trigger deploying tarballs
 no_deploy_permission_comment = Label `bot:deploy` has been set by user `{deploy_labeler}`, but this person does not have permission to trigger deployments
 
 
@@ -136,6 +142,16 @@ no_deploy_permission_comment = Label `bot:deploy` has been set by user `{deploy_
 # defines both for which architectures the bot will build
 #   and what submission parameters shall be used
 arch_target_map = { "linux/x86_64/generic" : "--constraint shape=c4.2xlarge", "linux/x86_64/amd/zen2": "--constraint shape=c5a.2xlarge" }
+
+
+[repo_targets]
+# defines for which repository a arch_target should be build for
+#
+# EESSI/2021.12 and NESSI/2022.11
+repo_target_map = { "linux/x86_64/amd/zen2" : ["eessi-2021.12","nessi.no-2022.11"] }
+
+# points to definition of repositories (default EESSI-pilot defined by build container)
+repos_cfg_dir = PATH_TO_SHARED_DIRECTORY/cfg_bundles
 
 
 # configuration for event handler which receives events from a GitHub repository.
@@ -161,23 +177,34 @@ poll_interval = 60
 # full path to the command for manipulating existing jobs
 scontrol_command = /usr/bin/scontrol
 
-# variable 'initial_comment' under 'submitted_job_comments' should not be changed as the bot's code uses regular expression pattern to identify a matching comment
+
+# Note 1. The value of the setting 'initial_comment' in section
+#         '[submitted_job_comments]' should not be changed because the bot
+#         uses regular expression pattern to identify a comment with this
+#         format.
+# Note 2. Any name inside curly brackets is replaced by the bot with
+#         corresponding data. If the name is changed or the curly brackets
+#         are removed, the output (in PR comments) will lack important
+#         information.
 [submitted_job_comments]
-initial_comment = New job on instance `{app_name}` for architecture `{arch_name}` for repository `{repo_id}` in job dir `{symlink}` 
-awaits_release = job id `{job_id}` awaits release by job manager 
+initial_comment = New job on instance `{app_name}` for architecture `{arch_name}` for repository `{repo_id}` in job dir `{symlink}`
+awaits_release = job id `{job_id}` awaits release by job manager
+
 
 [new_job_comments]
 awaits_launch = job awaits launch by Slurm scheduler 
 
 [running_job_comments]
-running_job = job `{job_id}` is running 
+running_job = job `{job_id}` is running
+
 
 [finished_job_comments]
-success = :grin: SUCCESS tarball `{tarball_name}` ({tarball_size} GiB) in job dir 
-failure = :cry: FAILURE 
-no_slurm_out = No slurm output `{slurm_out}` in job dir 
-slurm_out = Found slurm output `{slurm_out}` in job dir 
-missing_modules = Slurm output lacks message "No missing modules!". 
-no_tarball_message = Slurm output lacks message about created tarball. 
-no_matching_tarball = No tarball matching `{tarball_pattern}` found in job dir. 
-multiple_tarballs = Found {num_tarballs} tarballs in job dir - only 1 matching `{tarball_pattern}` expected. 
+success = :grin: SUCCESS tarball `{tarball_name}` ({tarball_size} GiB) in job dir
+failure = :cry: FAILURE
+no_slurm_out = No slurm output `{slurm_out}` in job dir
+slurm_out = Found slurm output `{slurm_out}` in job dir
+missing_modules = Slurm output lacks message "No missing modules!".
+no_tarball_message = Slurm output lacks message about created tarball.
+no_matching_tarball = No tarball matching `{tarball_pattern}` found in job dir.
+multiple_tarballs = Found {num_tarballs} tarballs in job dir - only 1 matching `{tarball_pattern}` expected.
+job_result_unknown_fmt = <details><summary>:shrug: UNKNOWN _(click triangle for detailed information)_<summary/><ul><li>Job results file `{filename}` does not exist in job directory or reading it failed.</li><li>No artefacts were found/reported.</li></ul></details>

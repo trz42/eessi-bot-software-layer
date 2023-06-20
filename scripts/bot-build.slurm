@@ -23,10 +23,27 @@
 #    for example, repos.cfg and configuration file bundles for repositories
 
 echo "Starting bot-build.slurm"
-if [ -f bot/build.sh ]; then
-    echo "bot/build.sh script found in '${PWD}', so running it!"
-    bot/build.sh
+BOT_BUILD_SCRIPT=bot/build.sh
+if [ -f ${BOT_BUILD_SCRIPT} ]; then
+    echo "${BOT_BUILD_SCRIPT} script found in '${PWD}', so running it!"
+    ${BOT_BUILD_SCRIPT}
 else
-    echo "could not find bot/build.sh script in '${PWD}'" >&2
+    echo "could not find ${BOT_BUILD_SCRIPT} script in '${PWD}'" >&2
     exit 1
 fi
+echo "bot/build.sh finished"
+CHECK_RESULT_SCRIPT=bot/check-result.sh
+if [ -f ${CHECK_RESULT_SCRIPT} ]; then
+    echo "${CHECK_RESULT_SCRIPT} script found in '${PWD}', so running it!"
+    ${CHECK_RESULT_SCRIPT}
+else
+    echo "could not find ${CHECK_RESULT_SCRIPT} script in '${PWD}' ..."
+    echo "... depositing default _bot_job${SLURM_JOB_ID}.result file in '${PWD}'"
+    cat << 'EOF' > _bot_job${SLURM_JOB_ID}.result
+[RESULT]
+comment_description = <details><summary>:shrug: UNKNOWN _(click triangle for detailed information)_<summary/><ul><li>Did not find `bot/check-result.sh` script in job's work directory.</li><li>*Check job manually or ask an admin of the bot instance to assist you.*</li></ul></details>
+status = UNKNOWN
+artefacts =
+EOF
+fi
+echo "check result step finished"

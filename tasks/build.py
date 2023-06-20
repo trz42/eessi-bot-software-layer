@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from pyghee.utils import log, error
 from retry.api import retry_call
 from tools import config, run_cmd, pr_comments
+from tools.job_metadata import create_metadata_file
 
 APP_NAME = "app_name"
 AWAITS_RELEASE = "awaits_release"
@@ -570,29 +571,6 @@ def submit_job(job, cfg):
     return job_id, symlink
 
 
-def create_metadata_file(job, job_id, pr, pr_comment):
-    """Create metadata file in submission dir.
-
-    Args:
-        job (named tuple): key data about job that has been submitted
-        job_id (string): id of submitted job
-        pr (github.PullRequest.Pullrequest): object to interact with pull request
-        pr_comment (github.IssueComment.IssueComment): instance containing a PR comment
-    """
-    fn = sys._getframe().f_code.co_name
-
-    repo_name = pr.base.repo.full_name
-
-    # create _bot_job<jobid>.metadata file in submission directory
-    bot_jobfile = configparser.ConfigParser()
-    pr_comment_id = pr_comment.id if pr_comment else -1
-    bot_jobfile['PR'] = {'repo': repo_name, 'pr_number': pr.number, 'pr_comment_id': pr_comment_id}
-    bot_jobfile_path = os.path.join(job.working_dir, f'_bot_job{job_id}.metadata')
-    with open(bot_jobfile_path, 'w') as bjf:
-        bot_jobfile.write(bjf)
-    log(f"{fn}(): created job metadata file {bot_jobfile_path}")
-
-
 def create_pr_comment(job, job_id, app_name, pr, gh, symlink):
     """create pr comment for newly submitted job
 
@@ -675,8 +653,10 @@ def submit_build_jobs(pr, event_info, action_filter):
         pr_comment = create_pr_comment(job, job_id, app_name, pr, gh, symlink)
         job_id_to_comment_map[job_id] = pr_comment
 
+        pr_comment = pr_comments.PRComment(pr.base.repo.full_name, pr.number, pr_comment.id)
+
         # create _bot_job<jobid>.metadata file in submission directory
-        create_metadata_file(job, job_id, pr, pr_comment)
+        create_metadata_file(job, job_id, pr_comment)
 
     # return f"created jobs: {', '.join(job_ids)}"
     return job_id_to_comment_map
