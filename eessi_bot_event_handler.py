@@ -24,7 +24,7 @@ from tasks.deploy import deploy_built_artefacts
 from tools import config
 from tools.args import event_handler_parse
 from tools.commands import EESSIBotCommand, EESSIBotCommandError, get_bot_command
-from tools.filter import EESSIBotActionFilter
+# from tools.filter import EESSIBotActionFilter
 from tools.permissions import check_command_permission
 from tools.pr_comments import create_comment
 
@@ -241,6 +241,7 @@ class EESSIBotSoftwareLayer(PyGHee):
             msg = "Handling the label 'bot:build' is disabled. Use the command `bot: build [FILTER]*` instead."
             self.log(msg)
 
+            request_body = event_info['raw_request_body']
             repo_name = request_body['repository']['full_name']
             pr_number = request_body['pull_request']['number']
             app_name = self.cfg[GITHUB][APP_NAME]
