@@ -238,6 +238,10 @@ class EESSIBotSoftwareLayer(PyGHee):
         self.log("Process PR labeled event: PR#%s, label '%s'", pr.number, label)
 
         if label == "bot:build":
+            # # run function to build software stack
+            # if check_build_permission(pr, event_info):
+            #     # use an empty filter
+            #     submit_build_jobs(pr, event_info, EESSIBotActionFilter(""))
             msg = "Handling the label 'bot:build' is disabled. Use the command `bot: build [FILTER]*` instead."
             self.log(msg)
 
@@ -252,10 +256,6 @@ class EESSIBotSoftwareLayer(PyGHee):
                 comment_result=''
             )
             create_comment(repo_name, pr_number, comment_body)
-            # # run function to build software stack
-            # if check_build_permission(pr, event_info):
-            #     # use an empty filter
-            #     submit_build_jobs(pr, event_info, EESSIBotActionFilter(""))
         elif label == "bot:deploy":
             # run function to deploy built artefacts
             deploy_built_artefacts(pr, event_info)
