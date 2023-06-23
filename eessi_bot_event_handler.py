@@ -337,6 +337,8 @@ class EESSIBotSoftwareLayer(PyGHee):
         help_msg += "\n  - A comment may contain multiple commands, one per line."
         help_msg += "\n  - Every command begins at the start of a line and has the syntax `bot: COMMAND [ARGUMENTS]*`"
         help_msg += "\n  - Currently supported COMMANDs are: `help`, `build`, `show_config`"
+        help_msg += "\n"
+        help_msg += "\n  For more information, see https://www.eessi.io/docs/bot"
         return help_msg
 
     def handle_bot_command_build(self, event_info, bot_command):
