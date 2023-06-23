@@ -32,12 +32,12 @@ else
     exit 1
 fi
 echo "bot/build.sh finished"
-CHECK_RESULT_SCRIPT=bot/check-result.sh
-if [ -f ${CHECK_RESULT_SCRIPT} ]; then
-    echo "${CHECK_RESULT_SCRIPT} script found in '${PWD}', so running it!"
-    ${CHECK_RESULT_SCRIPT}
+CHECK_BUILD_SCRIPT=bot/check-build.sh
+if [ -f ${CHECK_BUILD_SCRIPT} ]; then
+    echo "${CHECK_BUILD_SCRIPT} script found in '${PWD}', so running it!"
+    ${CHECK_BUILD_SCRIPT}
 else
-    echo "could not find ${CHECK_RESULT_SCRIPT} script in '${PWD}' ..."
+    echo "could not find ${CHECK_BUILD_SCRIPT} script in '${PWD}' ..."
     echo "... depositing default _bot_job${SLURM_JOB_ID}.result file in '${PWD}'"
     cat << 'EOF' > _bot_job${SLURM_JOB_ID}.result
 [RESULT]
