@@ -429,7 +429,7 @@ class EESSIBotSoftwareLayerJobManager:
         os.rename(old_symlink, new_symlink)
 
         # REPORT status (to logfile in any case, to PR comment if accessible)
-        #   rely fully on what bot/check-result.sh has returned
+        #   rely fully on what bot/check-build.sh has returned
         #   check if file _bot_jobJOBID.result exists --> if so read it and
         #   update PR comment
         # contents of *.result file (here we only use section [RESULT])
