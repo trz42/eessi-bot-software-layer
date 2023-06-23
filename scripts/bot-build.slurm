@@ -33,14 +33,6 @@ else
 fi
 echo "bot/build.sh finished"
 CHECK_BUILD_SCRIPT=bot/check-build.sh
-
-# temporarily also still consider bot/check-result.sh script as a fallback
-CHECK_RESULT_SCRIPT=bot/check-results.sh
-if [ ! -f ${CHECK_BUILD_SCRIPT} ] && [ -f ${CHECK_RESULT_SCRIPT} ]; then
-    echo "${CHECK_BUILD_SCRIPT} not found in ${PWD}, but ${CHECK_RESULT_SCRIPT} is found, so using that as fallback..."
-    CHECK_BUILD_SCRIPT=${CHECK_RESULT_SCRIPT}
-fi
-
 if [ -f ${CHECK_BUILD_SCRIPT} ]; then
     echo "${CHECK_BUILD_SCRIPT} script found in '${PWD}', so running it!"
     ${CHECK_BUILD_SCRIPT}
