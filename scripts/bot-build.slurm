@@ -32,7 +32,7 @@ else
     exit 1
 fi
 echo "bot/build.sh finished"
-<<<<<<< HEAD
+
 CHECK_BUILD_SCRIPT=bot/check-build.sh
 if [ -f ${CHECK_BUILD_SCRIPT} ]; then
     echo "${CHECK_BUILD_SCRIPT} script found in '${PWD}', so running it!"
