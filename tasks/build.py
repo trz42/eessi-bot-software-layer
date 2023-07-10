@@ -29,6 +29,7 @@ APP_NAME = "app_name"
 AWAITS_RELEASE = "awaits_release"
 BUILDENV = "buildenv"
 BUILD_JOB_SCRIPT = "build_job_script"
+BUILD_LOGS_DIR = "build_logs_dir"
 CONTAINER_CACHEDIR = "container_cachedir"
 DEFAULT_JOB_TIME_LIMIT = "24:00:00"
 CVMFS_CUSTOMIZATIONS = "cvmfs_customizations"
@@ -114,6 +115,10 @@ def get_build_env_cfg(cfg):
     container_cachedir = buildenv.get(CONTAINER_CACHEDIR)
     log(f"{fn}(): container_cachedir '{container_cachedir}'")
     config_data[CONTAINER_CACHEDIR] = container_cachedir
+
+    build_logs_dir = buildenv.get(BUILD_LOGS_DIR)
+    log(f"{fn}(): build_logs_dir '{build_logs_dir}'")
+    config_data[BUILD_LOGS_DIR] = build_logs_dir
 
     cvmfs_customizations = {}
     try:
@@ -452,6 +457,7 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
     # create ini file job.cfg with entries:
     # [site_config]
     # local_tmp = LOCAL_TMP_VALUE
+    # build_logs_dir = BUILD_LOGS_DIR
     #
     # [repository]
     # repos_cfg_dir = JOB_CFG_DIR
@@ -475,6 +481,8 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
         job_cfg[JOB_SITECONFIG][JOB_HTTPS_PROXY] = build_env_cfg[HTTPS_PROXY]
     if build_env_cfg[LOAD_MODULES]:
         job_cfg[JOB_SITECONFIG][JOB_LOAD_MODULES] = build_env_cfg[LOAD_MODULES]
+    if build_env_cfg[BUILD_LOGS_DIR]:
+        job_cfg[JOB_SITECONFIG][BUILD_LOGS_DIR] = build_env_cfg[BUILD_LOGS_DIR]
 
     job_cfg[JOB_REPOSITORY] = {}
     # directory for repos.cfg
