@@ -9,12 +9,16 @@
 #
 # license: GPLv2
 #
+
+# Standard library imports
 import datetime
 import time
 
-
-from tools import config, logging
+# Third party imports (anything installed into the local Python environment)
 from github import Github, GithubIntegration
+
+# Local application imports (anything from EESSI/eessi-bot-software-layer)
+from tools import config, logging
 
 _token = None
 _gh = None
