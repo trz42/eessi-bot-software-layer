@@ -31,6 +31,9 @@ def get_token():
     to generate the token up to three times if the exception
     (NotImplementedError) is caught.
 
+    Note that installation access tokens last only for 1 hour. Expired tokens
+    need to be regenerated.
+
     Returns:
         - created token or None
     """
@@ -52,12 +55,11 @@ def get_token():
         # Returning NoneType token will stop the connection in get_instance
         try:
             github_integration = GithubIntegration(app_id, private_key)
-            # Note that installation access tokens last only for 1 hour,
-            # you will need to regenerate them after they expire.
             _token = github_integration.get_access_token(installation_id)
             break
         except NotImplementedError as err:
             if i < tries - 1:
+                # Increase wait times linearily for subsequent attempts.
                 n = 0.8
                 t = n*(i+1)
                 time.sleep(t)
@@ -82,6 +84,8 @@ def get_instance():
     in case the token has expired.
     """
     global _gh, _token
+    # TODO Possibly renew token already if expiry date is soon, not only
+    #      after it has expired.
     if not _gh or (_token and datetime.datetime.utcnow() > _token.expires_at):
         _gh = connect()
     return _gh
