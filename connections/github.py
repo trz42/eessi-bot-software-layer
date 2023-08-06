@@ -34,8 +34,11 @@ def get_token():
     Note that installation access tokens last only for 1 hour. Expired tokens
     need to be regenerated.
 
+    Args:
+        No arguments
+
     Returns:
-        - created token or None
+        Created token or None
     """
 
     global _token
@@ -73,15 +76,27 @@ def get_token():
 
 def connect():
     """
-    Creates and returns an instance of Github using a newly created token.
+    Creates an instance of Github using a newly created access token
+
+    Args:
+        No arguments
+
+    Returns:
+        Instance of Github
     """
     return Github(get_token().token)
 
 
 def get_instance():
     """
-    Returns an instance Github (connection to GitHub) which is renewed
-    in case the token has expired.
+    Returns an instance of Github (connection to GitHub) using an existing
+    instance or a renewed one if the access token has expired.
+
+    Args:
+        No arguments
+
+    Returns:
+        Instance of Github
     """
     global _gh, _token
     # TODO Possibly renew token already if expiry date is soon, not only
@@ -94,6 +109,12 @@ def get_instance():
 def token():
     """
     Returns the globally defined _token.
+
+    Args:
+        No arguments
+
+    Returns:
+        Token
     """
     global _token
     return _token
