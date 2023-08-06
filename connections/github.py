@@ -9,18 +9,38 @@
 #
 # license: GPLv2
 #
+
+# Standard library imports
 import datetime
 import time
 
-
-from tools import config, logging
+# Third party imports (anything installed into the local Python environment)
 from github import Github, GithubIntegration
+
+# Local application imports (anything from EESSI/eessi-bot-software-layer)
+from tools import config, logging
 
 _token = None
 _gh = None
 
 
 def get_token():
+    """
+    Generates a new access token for the installation (defined via app.cfg)
+    using the private key (path to key file defined via app.cfg). Attempts
+    to generate the token up to three times if the exception
+    (NotImplementedError) is caught.
+
+    Note that installation access tokens last only for 1 hour. Expired tokens
+    need to be regenerated.
+
+    Args:
+        No arguments
+
+    Returns:
+        Created token or None
+    """
+
     global _token
     cfg = config.read_config()
     github_cfg = cfg['github']
@@ -38,12 +58,11 @@ def get_token():
         # Returning NoneType token will stop the connection in get_instance
         try:
             github_integration = GithubIntegration(app_id, private_key)
-            # Note that installation access tokens last only for 1 hour,
-            # you will need to regenerate them after they expire.
             _token = github_integration.get_access_token(installation_id)
             break
         except NotImplementedError as err:
             if i < tries - 1:
+                # Increase wait times linearily for subsequent attempts.
                 n = 0.8
                 t = n*(i+1)
                 time.sleep(t)
@@ -56,16 +75,46 @@ def get_token():
 
 
 def connect():
+    """
+    Creates an instance of Github using a newly created access token
+
+    Args:
+        No arguments
+
+    Returns:
+        Instance of Github
+    """
     return Github(get_token().token)
 
 
 def get_instance():
+    """
+    Returns an instance of Github (connection to GitHub) using an existing
+    instance or a renewed one if the access token has expired.
+
+    Args:
+        No arguments
+
+    Returns:
+        Instance of Github
+    """
     global _gh, _token
+    # TODO Possibly renew token already if expiry date is soon, not only
+    #      after it has expired.
     if not _gh or (_token and datetime.datetime.utcnow() > _token.expires_at):
         _gh = connect()
     return _gh
 
 
 def token():
+    """
+    Returns the globally defined _token.
+
+    Args:
+        No arguments
+
+    Returns:
+        Token
+    """
     global _token
     return _token
