@@ -25,6 +25,16 @@ _gh = None
 
 
 def get_token():
+    """
+    Generates a new access token for the installation (defined via app.cfg)
+    using the private key (path to key file defined via app.cfg). Attempts
+    to generate the token up to three times if the exception
+    (NotImplementedError) is caught.
+
+    Returns:
+        - created token or None
+    """
+
     global _token
     cfg = config.read_config()
     github_cfg = cfg['github']
@@ -60,10 +70,17 @@ def get_token():
 
 
 def connect():
+    """
+    Creates and returns an instance of Github using a newly created token.
+    """
     return Github(get_token().token)
 
 
 def get_instance():
+    """
+    Returns an instance Github (connection to GitHub) which is renewed
+    in case the token has expired.
+    """
     global _gh, _token
     if not _gh or (_token and datetime.datetime.utcnow() > _token.expires_at):
         _gh = connect()
@@ -71,5 +88,8 @@ def get_instance():
 
 
 def token():
+    """
+    Returns the globally defined _token.
+    """
     global _token
     return _token
