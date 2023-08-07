@@ -19,6 +19,16 @@ import argparse
 
 
 def parse_common_args(args=None):
+    """
+    Create an ArgumentParser instance, add common arguments and parse them
+
+    Args:
+        args (list): arguments to be parsed (each being of type string)
+
+    Returns:
+        tuple of parsed arguments (populated Namespace) and unknown arguments
+            (list of strings)
+    """
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -33,6 +43,15 @@ def parse_common_args(args=None):
 
 
 def event_handler_parse(args=None):
+    """
+    Parses arguments of the event handler
+
+    Args:
+        args (list): arguments to be parsed (each being of type string)
+
+    Returns:
+        parsed arguments (Namespace)
+    """
     parsed_args, unknown_args = parse_common_args(args=args)
     parser = argparse.ArgumentParser()
 
@@ -67,6 +86,15 @@ def event_handler_parse(args=None):
 
 
 def job_manager_parse(args=None):
+    """
+    Parses arguments of the job manager
+
+    Args:
+        args (list): arguments to be parsed (each being of type string)
+
+    Returns:
+        parsed arguments (Namespace)
+    """
     parsed_args, unknown_args = parse_common_args(args=args)
     parser = argparse.ArgumentParser()
     parser.add_argument(
