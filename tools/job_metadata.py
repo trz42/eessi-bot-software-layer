@@ -21,12 +21,16 @@ from pyghee.utils import log
 
 
 def create_metadata_file(job, job_id, pr_comment):
-    """Create metadata file in submission dir.
+    """
+    Create job metadata file in job working directory
 
     Args:
         job (named tuple): key data about job that has been submitted
         job_id (string): id of submitted job
         pr_comment (PRComment): contains repo_name, pr_number and pr_comment_id
+
+    Returns:
+        does not return anything
     """
     fn = sys._getframe().f_code.co_name
 
@@ -47,14 +51,14 @@ def create_metadata_file(job, job_id, pr_comment):
 
 def read_metadata_file(metadata_path, log_file=None):
     """
-    Try to read metadata file and return it. Return None in
-    case of failure (treat all cases as if the file did not exist):
-    - file does not exist,
-    - file exists but parsing/reading resulted in an exception.
+    Read metadata file into ConfigParser instance
 
     Args:
         metadata_path (string): path to metadata file
         log_file (string): path to log file
+
+    Returns:
+        metadata as ConfigParser instance or None in case of failure
     """
     # check if metadata file exist
     if os.path.isfile(metadata_path):
