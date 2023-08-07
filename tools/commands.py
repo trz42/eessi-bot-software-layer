@@ -22,7 +22,8 @@ from tools.filter import EESSIBotActionFilter, EESSIBotActionFilterError
 
 def get_bot_command(line):
     """
-        Retrieve bot command from a line.
+    Retrieve bot command from a line.
+
     Args:
         line (string): string that is scanned for a command
 
@@ -40,6 +41,9 @@ def get_bot_command(line):
 
 
 class EESSIBotCommandError(Exception):
+    """
+    Exception to be raised when encountering an error with a bot command
+    """
     pass
 
 
@@ -49,7 +53,19 @@ class EESSIBotCommand:
     a filter to limit for which architecture, repository and bot instance the
     command should be applied to.
     """
+
     def __init__(self, cmd_str):
+        """
+        Initializes the command and action filters from a command string
+
+        Args:
+            cmd_str (string): full bot command (command itself and arguments)
+
+        Raises:
+            EESSIBotCommandError: if EESSIBotActionFilterError is caught while
+                creating and EESSIBotActionFilter
+            Exception: if any other exception was caught
+        """
         cmd_as_list = cmd_str.split()
         self.command = cmd_as_list[0]
         if len(cmd_as_list) > 1:
@@ -67,5 +83,14 @@ class EESSIBotCommand:
             self.action_filters = EESSIBotActionFilter("")
 
     def to_string(self):
+        """
+        Creates string representing the command including action filters if any
+
+        Args:
+            No arguments
+
+        Returns:
+            string: the string representation created by the method
+        """
         action_filters_str = self.action_filters.to_string()
         return f"{' '.join([self.command, action_filters_str]).rstrip()}"
