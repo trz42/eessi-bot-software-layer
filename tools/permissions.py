@@ -8,9 +8,14 @@
 #
 # license: GPLv2
 #
+
+# Standard library imports
 import sys
 
+# Third party imports (anything installed into the local Python environment)
 from pyghee.utils import log
+
+# Local application imports (anything from EESSI/eessi-bot-software-layer)
 from tools import config
 
 BOT_CONTROL = "bot_control"
@@ -18,11 +23,14 @@ COMMAND_PERMISSION = "command_permission"
 
 
 def check_command_permission(account):
-    """check if the GitHub account is authorized to send commands to the bot
+    """
+    Check if the GitHub account is authorized to send commands to the bot
 
     Args:
         account (string): account for which permissions shall be checked
 
+    Returns:
+        True if account has command permission, False otherwise
     """
     fn = sys._getframe().f_code.co_name
 
@@ -32,8 +40,7 @@ def check_command_permission(account):
 
     bot_ctrl = cfg[BOT_CONTROL]
 
-    # verify that the GH account that has sent a command (via a adding or editing
-    # a comment) has the permission to control the bot
+    # read command permission from configuration (defined in file app.cfg)
     command_permission = bot_ctrl.get(COMMAND_PERMISSION, '')
 
     log(f"{fn}(): command permission '{command_permission}'")
