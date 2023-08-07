@@ -40,8 +40,7 @@ def check_command_permission(account):
 
     bot_ctrl = cfg[BOT_CONTROL]
 
-    # verify that the GH account that has sent a command (via a adding or editing
-    # a comment) has the permission to control the bot
+    # read command permission from configuration (defined in file app.cfg)
     command_permission = bot_ctrl.get(COMMAND_PERMISSION, '')
 
     log(f"{fn}(): command permission '{command_permission}'")
