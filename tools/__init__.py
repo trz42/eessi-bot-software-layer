@@ -12,9 +12,12 @@
 #
 # license: GPLv2
 #
+
+# Standard library imports
 import os
 import subprocess
 
+# Third party imports (anything installed into the local Python environment)
 from pyghee.utils import log
 
 
