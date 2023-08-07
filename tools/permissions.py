@@ -23,11 +23,14 @@ COMMAND_PERMISSION = "command_permission"
 
 
 def check_command_permission(account):
-    """check if the GitHub account is authorized to send commands to the bot
+    """
+    Check if the GitHub account is authorized to send commands to the bot
 
     Args:
         account (string): account for which permissions shall be checked
 
+    Returns:
+        True if account has command permission, False otherwise
     """
     fn = sys._getframe().f_code.co_name
 
