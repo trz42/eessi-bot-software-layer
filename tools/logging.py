@@ -25,6 +25,14 @@ LOG = os.path.join(os.getenv('HOME'), 'eessi-bot-software-layer.log')
 def error(msg, rc=1):
     """
     Print an error and exit
+
+    Args:
+        msg (string): error message to be printed
+        rc (int): error code
+
+    Returns:
+        does not return anything (function never returns, but rather exits the
+        program)
     """
     sys.stderr.write(msg + "\n")
     sys.exit(rc)
@@ -33,6 +41,12 @@ def error(msg, rc=1):
 def log(msg):
     """
     Log message
+
+    Args:
+        msg (string): error message to be printed
+
+    Returns:
+        does not return anything
     """
     with open(LOG, 'a') as fh:
         timestamp = datetime.datetime.now().strftime("%Y%m%d-T%H:%M:%S")
