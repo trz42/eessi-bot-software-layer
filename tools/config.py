@@ -52,10 +52,14 @@ def check_required_cfg_settings(req_settings, path="app.cfg"):
     Returns:
         does not return anything
     """
+    # TODO argument path is not being used
     cfg = read_config()
+    # iterate over keys in req_settings which correspond to sections ([name])
+    # in the configuration file (.ini format)
     for section in req_settings.keys():
         if section not in cfg:
             error(f'Missing section "{section}" in configuration file {path}.')
+        # iterate over list elements required for the current section
         for item in req_settings[section]:
             if item not in cfg[section]:
                 error(f'Missing configuration item "{item}" in section "{section}" of configuration file {path}.')
