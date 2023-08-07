@@ -39,6 +39,10 @@ def run_cmd(cmd, log_msg='', working_dir=None, log_file=None, raise_on_error=Tru
         - stdout (string): stdout of the process
         - stderr (string): stderr of the process
         - exit_code (string): exit code of the process
+
+    Raises:
+        RuntimeError: raises a RuntimeError if exit code was not zero and
+            raise_on_error is True
     """
     # TODO use common method for logging function name in log messages
     stdout, stderr, exit_code = run_subprocess(cmd, log_msg, working_dir, log_file)
