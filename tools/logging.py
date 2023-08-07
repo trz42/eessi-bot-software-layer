@@ -8,10 +8,16 @@
 #
 # license: GPLv2
 #
+
+# Standard library imports
 import datetime
 import json
 import os
 import sys
+
+# Third party imports (anything installed into the local Python environment)
+
+# Local application imports (anything from EESSI/eessi-bot-software-layer)
 
 LOG = os.path.join(os.getenv('HOME'), 'eessi-bot-software-layer.log')
 
