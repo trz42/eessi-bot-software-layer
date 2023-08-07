@@ -22,14 +22,15 @@ from pyghee.utils import log
 
 
 def run_cmd(cmd, log_msg='', working_dir=None, log_file=None, raise_on_error=True):
-    """Runs a command in the shell, raising an error if one occurs.
+    """
+    Runs a command in the shell and raises an error if one occurs.
 
     Args:
         cmd (string): command to run
-        log_msg (string): purpose of the command
-        working_dir (string): location of arch_job_dir
+        log_msg (string): message describing the purpose of the command
+        working_dir (string): location of the job's working directory
         log_file (string): path to log file
-        raise_on_error (bool): raise an exception in case of error
+        raise_on_error (bool): if True raise an exception in case of error
 
     Returns:
         tuple of 3 elements containing
@@ -37,7 +38,6 @@ def run_cmd(cmd, log_msg='', working_dir=None, log_file=None, raise_on_error=Tru
         - stderr (string): stderr of the process
         - exit_code (string): exit code of the process
     """
-
     stdout, stderr, exit_code = run_subprocess(cmd, log_msg, working_dir, log_file)
 
     if exit_code != 0:
@@ -60,12 +60,13 @@ def run_cmd(cmd, log_msg='', working_dir=None, log_file=None, raise_on_error=Tru
 
 
 def run_subprocess(cmd, log_msg, working_dir, log_file):
-    """Runs a command in the shell. No error is raised if the command fails, the exit code is returned in all scenarios.
+    """
+    Runs a command in the shell. No error is raised if the command fails.
 
     Args:
         cmd (string): command to run
         log_msg (string): purpose of the command
-        working_dir (string): location of arch_job_dir
+        working_dir (string): location of the job's working directory
         log_file (string): path to log file
 
     Returns:
@@ -74,7 +75,6 @@ def run_subprocess(cmd, log_msg, working_dir, log_file):
         - stderr (string): stderr of the process
         - exit_code (string): exit code of the process
     """
-
     if working_dir is None:
         working_dir = os.getcwd()
 
