@@ -8,14 +8,16 @@
 #
 # license: GPLv2
 #
-# from collections import namedtuple
+
+# Standard library imports
 import configparser
 import os
 import sys
 
+# Third party imports (anything installed into the local Python environment)
 from pyghee.utils import log
-# from tasks.build import Job
-# from tools.pr_comments import PRComment
+
+# Local application imports (anything from EESSI/eessi-bot-software-layer)
 
 
 def create_metadata_file(job, job_id, pr_comment):
