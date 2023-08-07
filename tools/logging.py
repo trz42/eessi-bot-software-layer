@@ -18,6 +18,7 @@ import sys
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
 
+# TODO possibly replace 'HOME' (and log file name) with a configurable value
 LOG = os.path.join(os.getenv('HOME'), 'eessi-bot-software-layer.log')
 
 
