@@ -27,7 +27,8 @@ def read_config(path='app.cfg'):
         path (string): path to the configuration file
 
     Returns:
-        dict (str, dict): dictionary containing configuration settings
+        dict (str, dict): dictionary containing configuration settings or exit
+            if Exception is caught
     """
     fn = sys._getframe().f_code.co_name
 
