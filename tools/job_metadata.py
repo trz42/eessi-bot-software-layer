@@ -38,7 +38,7 @@ def create_metadata_file(job, job_id, pr_comment):
     pr_number = pr_comment.pr_number
     pr_comment_id = pr_comment.pr_comment_id
 
-    # create _bot_job<jobid>.metadata file in submission directory
+    # create _bot_job<jobid>.metadata file in the job's working directory
     bot_jobfile = configparser.ConfigParser()
     bot_jobfile['PR'] = {'repo': repo_name,
                          'pr_number': pr_number,
@@ -60,15 +60,18 @@ def read_metadata_file(metadata_path, log_file=None):
     Returns:
         metadata as ConfigParser instance or None in case of failure
     """
-    # check if metadata file exist
+    # TODO use function name in log messages
+
+    # check if metadata file exists
     if os.path.isfile(metadata_path):
         log(f"Found metadata file at {metadata_path}", log_file)
         metadata = configparser.ConfigParser()
         try:
             metadata.read(metadata_path)
         except Exception as err:
-            # error would let the process exist, this is too harsh,
-            # we return None and let the caller decide what to do.
+            # Using error() would let the process exit. This is too harsh.
+            # We just log() a message, return None and let the caller decide
+            # what to do.
             log(f"Unable to read metadata file {metadata_path}: {err}")
             return None
 
