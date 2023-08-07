@@ -20,9 +20,12 @@ from .logging import error
 
 
 def read_config(path='app.cfg'):
-    """Read the config file
+    """
+    Read the config file
+
     Args:
         path (string): path to the configuration file
+
     Returns:
         dict (str, dict): dictionary containing configuration settings
     """
@@ -39,12 +42,15 @@ def read_config(path='app.cfg'):
 
 def check_required_cfg_settings(req_settings, path="app.cfg"):
     """
-    Reads the config file and checks if it contains the required settings, signaling an error if not
+    Reads the config file, checks if it contains the required settings,
+    if not logs an error message and exits.
+
     Args:
         req_settings (dict (str, list)): required settings
         path (string): path to the configuration file
+
     Returns:
-        None
+        does not return anything
     """
     cfg = read_config()
     for section in req_settings.keys():
