@@ -8,9 +8,14 @@
 #
 # license: GPLv2
 #
+
+# Standard library imports
 import sys
 
+# Third party imports (anything installed into the local Python environment)
 from pyghee.utils import log
+
+# Local application imports (anything from EESSI/eessi-bot-software-layer)
 from tools import config
 
 BOT_CONTROL = "bot_control"
