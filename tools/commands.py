@@ -34,6 +34,7 @@ def get_bot_command(line):
 
     log(f"{fn}(): searching for bot command in '{line}'")
     match = re.search('^bot: (.*)$', line)
+    # TODO add log messages for both cases
     if match:
         return match.group(1).rstrip()
     else:
@@ -66,8 +67,10 @@ class EESSIBotCommand:
                 creating and EESSIBotActionFilter
             Exception: if any other exception was caught
         """
+        # TODO add function name to log messages
         cmd_as_list = cmd_str.split()
         self.command = cmd_as_list[0]
+        # TODO always init self.action_filters with empty EESSIBotActionFilter?
         if len(cmd_as_list) > 1:
             arg_str = " ".join(cmd_as_list[1:])
             try:
