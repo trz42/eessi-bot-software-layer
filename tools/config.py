@@ -8,18 +8,28 @@
 #
 # license: GPLv2
 #
+
+# Standard library imports
 import configparser
 import sys
 
+# Third party imports (anything installed into the local Python environment)
+# (none yet)
+
+# Local application imports (anything from EESSI/eessi-bot-software-layer)
 from .logging import error
 
 
 def read_config(path='app.cfg'):
-    """Read the config file
+    """
+    Read the config file
+
     Args:
         path (string): path to the configuration file
+
     Returns:
-        dict (str, dict): dictionary containing configuration settings
+        dict (str, dict): dictionary containing configuration settings or exit
+            if Exception is caught
     """
     fn = sys._getframe().f_code.co_name
 
@@ -34,17 +44,24 @@ def read_config(path='app.cfg'):
 
 def check_required_cfg_settings(req_settings, path="app.cfg"):
     """
-    Reads the config file and checks if it contains the required settings, signaling an error if not
+    Reads the config file, checks if it contains the required settings,
+    if not logs an error message and exits.
+
     Args:
         req_settings (dict (str, list)): required settings
         path (string): path to the configuration file
+
     Returns:
-        None
+        None (implicitly)
     """
+    # TODO argument path is not being used
     cfg = read_config()
+    # iterate over keys in req_settings which correspond to sections ([name])
+    # in the configuration file (.ini format)
     for section in req_settings.keys():
         if section not in cfg:
             error(f'Missing section "{section}" in configuration file {path}.')
+        # iterate over list elements required for the current section
         for item in req_settings[section]:
             if item not in cfg[section]:
                 error(f'Missing configuration item "{item}" in section "{section}" of configuration file {path}.')
