@@ -8,23 +8,30 @@
 #
 # license: GPLv2
 #
-# from collections import namedtuple
+
+# Standard library imports
 import configparser
 import os
 import sys
 
+# Third party imports (anything installed into the local Python environment)
 from pyghee.utils import log
-# from tasks.build import Job
-# from tools.pr_comments import PRComment
+
+# Local application imports (anything from EESSI/eessi-bot-software-layer)
+# (none yet)
 
 
 def create_metadata_file(job, job_id, pr_comment):
-    """Create metadata file in submission dir.
+    """
+    Create job metadata file in job working directory
 
     Args:
         job (named tuple): key data about job that has been submitted
         job_id (string): id of submitted job
         pr_comment (PRComment): contains repo_name, pr_number and pr_comment_id
+
+    Returns:
+        None (implicitly)
     """
     fn = sys._getframe().f_code.co_name
 
@@ -32,7 +39,7 @@ def create_metadata_file(job, job_id, pr_comment):
     pr_number = pr_comment.pr_number
     pr_comment_id = pr_comment.pr_comment_id
 
-    # create _bot_job<jobid>.metadata file in submission directory
+    # create _bot_job<jobid>.metadata file in the job's working directory
     bot_jobfile = configparser.ConfigParser()
     bot_jobfile['PR'] = {'repo': repo_name,
                          'pr_number': pr_number,
@@ -45,24 +52,27 @@ def create_metadata_file(job, job_id, pr_comment):
 
 def read_metadata_file(metadata_path, log_file=None):
     """
-    Try to read metadata file and return it. Return None in
-    case of failure (treat all cases as if the file did not exist):
-    - file does not exist,
-    - file exists but parsing/reading resulted in an exception.
+    Read metadata file into ConfigParser instance
 
     Args:
         metadata_path (string): path to metadata file
         log_file (string): path to log file
+
+    Returns:
+        metadata as ConfigParser instance or None in case of failure
     """
-    # check if metadata file exist
+    # TODO use function name in log messages
+
+    # check if metadata file exists
     if os.path.isfile(metadata_path):
         log(f"Found metadata file at {metadata_path}", log_file)
         metadata = configparser.ConfigParser()
         try:
             metadata.read(metadata_path)
         except Exception as err:
-            # error would let the process exist, this is too harsh,
-            # we return None and let the caller decide what to do.
+            # Using error() would let the process exit. This is too harsh.
+            # We just log() a message, return None and let the caller decide
+            # what to do.
             log(f"Unable to read metadata file {metadata_path}: {err}")
             return None
 
