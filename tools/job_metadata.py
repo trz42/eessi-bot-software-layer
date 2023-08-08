@@ -18,6 +18,7 @@ import sys
 from pyghee.utils import log
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
+# (none yet)
 
 
 def create_metadata_file(job, job_id, pr_comment):
@@ -30,7 +31,7 @@ def create_metadata_file(job, job_id, pr_comment):
         pr_comment (PRComment): contains repo_name, pr_number and pr_comment_id
 
     Returns:
-        does not return anything
+        None (implicitly)
     """
     fn = sys._getframe().f_code.co_name
 
