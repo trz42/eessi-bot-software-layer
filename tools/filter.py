@@ -8,10 +8,16 @@
 #
 # license: GPLv2
 #
+
+# Standard library imports
+from collections import namedtuple
 import re
 
-from collections import namedtuple
+# Third party imports (anything installed into the local Python environment)
 from pyghee.utils import log
+
+# Local application imports (anything from EESSI/eessi-bot-software-layer)
+# (none yet)
 
 
 # TODO because one can use a prefix to define a filter, we need to make sure that
