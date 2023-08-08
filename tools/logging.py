@@ -8,17 +8,33 @@
 #
 # license: GPLv2
 #
+
+# Standard library imports
 import datetime
-import json
 import os
 import sys
 
+# Third party imports (anything installed into the local Python environment)
+# (none yet)
+
+# Local application imports (anything from EESSI/eessi-bot-software-layer)
+# (none yet)
+
+# TODO Either reuse one of the 'log_path' configuration settings or change the
+# below when addressing issue https://github.com/EESSI/eessi-bot-software-layer/issues/91
 LOG = os.path.join(os.getenv('HOME'), 'eessi-bot-software-layer.log')
 
 
 def error(msg, rc=1):
     """
     Print an error and exit
+
+    Args:
+        msg (string): error message to be printed
+        rc (int): error code
+
+    Returns:
+        function never returns, but rather exits the program
     """
     sys.stderr.write(msg + "\n")
     sys.exit(rc)
@@ -27,22 +43,13 @@ def error(msg, rc=1):
 def log(msg):
     """
     Log message
+
+    Args:
+        msg (string): error message to be printed
+
+    Returns:
+        None (implicitly)
     """
     with open(LOG, 'a') as fh:
         timestamp = datetime.datetime.now().strftime("%Y%m%d-T%H:%M:%S")
         fh.write('[' + timestamp + '] ' + msg + '\n')
-
-
-def log_event(request):
-    """
-    Log event data
-    """
-    event_type = request.headers['X-GitHub-Event']
-    msg_txt = '\n'.join([
-        "Event type: %s" % event_type,
-        # "Request headers: %s" % pprint.pformat(dict(request.headers)),
-        # "Request body: %s" % pprint.pformat(request.json),
-        "Event data (JSON): %s" % json.dumps({'headers': dict(request.headers), 'json': request.json}, indent=4),
-        '',
-    ])
-    log(msg_txt)
