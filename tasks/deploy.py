@@ -50,10 +50,11 @@ def determine_job_dirs(pr_number):
 
     job_directories = []
 
-    # job directories are any job IDs under JOBS_BASE_DIR/YYYY.MM/pr_<id>
-    #  - we may have to scan multiple YYYY.MM directories if the PR was
-    #    processed over more than one month
-    #  - we assume that job IDs are positive integer numbers
+    # a job directory's name has the format cfg[JOBS_BASE_DIR]/YYYY.MM/pr_<id>/JOBID
+    #  - we may have to scan multiple YYYY.MM directories if the pull request was
+    #    processed over more than one month (that is jobs were run in two or more
+    #    months)
+    #  - we assume that a JOBID is a positive integer
     cfg = config.read_config()
     build_env_cfg = get_build_env_cfg(cfg)
     jobs_base_dir = build_env_cfg[JOBS_BASE_DIR]
@@ -85,7 +86,7 @@ def determine_slurm_out(job_dir):
     """
     funcname = sys._getframe().f_code.co_name
 
-    # we assume that the last element (basename) is the job ID
+    # we assume that the last element (basename) of a job directory is the job ID
     slurm_out = os.path.join(job_dir, f"slurm-{os.path.basename(job_dir)}.out")
     log(f"{funcname}(): slurm out path = '{slurm_out}'")
 
@@ -205,7 +206,7 @@ def update_pr_comment(tarball, repo_name, pr_number, state, msg):
             # append update to existing comment
             issue_comment.edit(issue_comment.body + comment_update)
 
-            # leave for loop (only update one comment, because tarball
+            # leave 'for' loop (only update one comment, because tarball
             # should only be referenced in one comment)
             break
 
@@ -278,11 +279,11 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number):
     if ec == 0:
         # add file to 'job_dir/../uploaded.txt'
         append_tarball_to_upload_log(tarball, job_dir)
-        # update pr comment
+        # update pull request comment
         update_pr_comment(tarball, repo_name, pr_number, "uploaded",
                           "succeeded")
     else:
-        # update pr comment
+        # update pull request comment
         update_pr_comment(tarball, repo_name, pr_number, "not uploaded",
                           "failed")
 
@@ -447,7 +448,7 @@ def deploy_built_artefacts(pr, event_info):
 
     labeler = event_info['raw_request_body']['sender']['login']
 
-    # verify that the GH account that set label bot:deploy has the
+    # verify that the GitHub account that set label bot:deploy has the
     # permission to trigger the deployment
     if labeler not in deploy_permission.split():
         log(f"{funcname}(): GH account '{labeler}' is not authorized to deploy")
@@ -467,20 +468,16 @@ def deploy_built_artefacts(pr, event_info):
     if upload_policy == "none":
         return
 
-    # 1) determine what has been built for the PR
-    # 2) for each build check the status of jobs (SUCCESS or FAILURE)
+    # 1) determine the jobs that have been run for the PR
+    # 2) for each job, check its status (SUCCESS or FAILURE)
     # 3) for the successful ones, determine which to deploy depending on policy
     # 4) call function to deploy a single artefact per software subdir
 
-    # 1) determine what has been built for the PR
-    #    - each job is stored in a directory given by its job ID
-    #    - these job directories are stored under jobs_base_dir/YYYY.MM/pr_<id>
-    #    - multiple YYYY.MM directories may need to be scanned
+    # 1) determine the jobs that have been run for the PR
     job_dirs = determine_job_dirs(pr.number)
     log(f"{funcname}(): job_dirs = {','.join(job_dirs)}")
 
-    # 2) for each build check the status of jobs (SUCCESS or FAILURE)
-    #    - scan slurm*out file for: 'No modules missing!' & 'created'
+    # 2) for each job, check its status (SUCCESS or FAILURE)
     successes = determine_successful_jobs(job_dirs)
 
     # 3) for the successful ones, determine which to deploy depending on
