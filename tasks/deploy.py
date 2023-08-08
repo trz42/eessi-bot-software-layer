@@ -26,14 +26,14 @@ from tasks.build import get_build_env_cfg
 from tools import config, pr_comments, run_cmd
 
 
-JOBS_BASE_DIR = "jobs_base_dir"
-DEPLOYCFG = "deploycfg"
-TARBALL_UPLOAD_SCRIPT = "tarball_upload_script"
-ENDPOINT_URL = "endpoint_url"
 BUCKET_NAME = "bucket_name"
-UPLOAD_POLICY = "upload_policy"
+DEPLOYCFG = "deploycfg"
 DEPLOY_PERMISSION = "deploy_permission"
+ENDPOINT_URL = "endpoint_url"
+JOBS_BASE_DIR = "jobs_base_dir"
 NO_DEPLOY_PERMISSION_COMMENT = "no_deploy_permission_comment"
+TARBALL_UPLOAD_SCRIPT = "tarball_upload_script"
+UPLOAD_POLICY = "upload_policy"
 
 
 def determine_job_dirs(pr_number):
