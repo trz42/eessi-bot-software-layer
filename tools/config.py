@@ -14,6 +14,7 @@ import configparser
 import sys
 
 # Third party imports (anything installed into the local Python environment)
+# (none yet)
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
 from .logging import error
@@ -51,7 +52,7 @@ def check_required_cfg_settings(req_settings, path="app.cfg"):
         path (string): path to the configuration file
 
     Returns:
-        does not return anything
+        None (implicitly)
     """
     # TODO argument path is not being used
     cfg = read_config()
