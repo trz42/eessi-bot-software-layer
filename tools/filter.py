@@ -44,9 +44,8 @@ class EESSIBotActionFilter:
     """
     Class for representing a filter that limits in which contexts bot commands
     are applied. A filter contains a list of key:value pairs where the key
-    corresponds to a component (currently one of 'architecture', 'instance',
-    'job' or 'repository') and the value is a pattern used to filter commands
-    based on the context a command is applied to.
+    corresponds to a component (see FILTER_COMPONENTS) and the value is a
+    pattern used to filter commands based on the context a command is applied to.
     """
     def __init__(self, filter_string):
         """
@@ -88,10 +87,10 @@ class EESSIBotActionFilter:
         Adds a filter given by a component and a pattern
 
         Args:
-            component (string): any prefix of 'architecture', 'instance', 'job'
-                or 'repository'
-            pattern (string): regex that is applied to a string representing
-                the component
+            component (string): any prefix of known filter components (see
+                FILTER_COMPONENTS)
+            pattern (string): regular expression pattern that is applied to a
+                string representing the component
 
         Returns:
             None (implicitly)
@@ -112,8 +111,8 @@ class EESSIBotActionFilter:
                 break
         if full_component:
             log(f"processing component {component}")
-            # if full_component == 'architecture' replace '-' with '/' in
-            # pattern (done to make sure that values are comparable)
+            # replace '-' with '/' in pattern when using 'architecture' filter
+            # component (done to make sure that values are comparable)
             if full_component == FILTER_COMPONENT_ARCH:
                 pattern = pattern.replace('-', '/')
             self.action_filters.append(Filter(full_component, pattern))
@@ -126,7 +125,7 @@ class EESSIBotActionFilter:
         Adds a filter provided as a string
 
         Args:
-            filter_string (string): filter provided as command:pattern string
+            filter_string (string): filter provided as component:pattern string
 
         Returns:
             None (implicitly)
@@ -174,7 +173,7 @@ class EESSIBotActionFilter:
             No arguments
 
         Returns:
-            string containing whitespace separated filters
+            string containing filters separated by whitespace
         """
         filter_str_list = []
         for _filter in self.action_filters:
