@@ -33,14 +33,20 @@ Filter = namedtuple('Filter', ('component', 'pattern'))
 
 
 class EESSIBotActionFilterError(Exception):
+    """
+    Exception to be raised when encountering an error in creating or adding a
+    filter
+    """
     pass
 
 
 class EESSIBotActionFilter:
     """
-    Class for representing a filter (for, e.g., bot commands). A filter contains
-    a list of key:value pairs with key being one of 'architecture',
-    'instance', 'job' or 'repository'.
+    Class for representing a filter that limits in which contexts bot commands
+    are applied. A filter contains a list of key:value pairs where the key
+    corresponds to a component (currently one of 'architecture', 'instance',
+    'job' or 'repository') and the value is a pattern used to filter commands
+    based on the context a command is applied to.
     """
     def __init__(self, filter_string):
         """
@@ -48,6 +54,12 @@ class EESSIBotActionFilter:
 
         Args:
             filter_string (string): string containing whitespace separated filters
+
+        Raises:
+            EESSIBotActionFilterError: raised if caught when adding filter from
+                string
+            Exception: logged and raised if caught when adding filter from
+                string
         """
         self.action_filters = []
         for _filter in filter_string.split():
@@ -61,17 +73,32 @@ class EESSIBotActionFilter:
 
     def clear_all(self):
         """
-        Clears all filter components.
+        Clears all filters
+
+        Args:
+            No arguments
+
+        Returns:
+            None (implicitly)
         """
         self.action_filters = []
 
     def add_filter(self, component, pattern):
         """
-        Adds a filter
+        Adds a filter given by a component and a pattern
 
         Args:
-            component (string): any prefix of 'architecture', 'instance', 'job' or 'repository'
-            pattern (string): regex that is applied to a string representing the component
+            component (string): any prefix of 'architecture', 'instance', 'job'
+                or 'repository'
+            pattern (string): regex that is applied to a string representing
+                the component
+
+        Returns:
+            None (implicitly)
+
+        Raises:
+           EESSIBotActionFilterError: raised if unknown component is provided
+                as argument
         """
         # check if component is supported
         full_component = None
@@ -94,10 +121,17 @@ class EESSIBotActionFilter:
 
     def add_filter_from_string(self, filter_string):
         """
-        Adds a filter from a string
+        Adds a filter provided as a string
 
         Args:
-            filter_string (string): filter provided as command:pattern
+            filter_string (string): filter provided as command:pattern string
+
+        Returns:
+            None (implicitly)
+
+        Raises:
+           EESSIBotActionFilterError: raised if filter_string does not conform
+               to 'component:pattern' format or pattern is empty
         """
         _filter_split = filter_string.split(':')
         if len(_filter_split) != 2:
@@ -115,6 +149,9 @@ class EESSIBotActionFilter:
         Args:
             component (string): any prefix of 'architecture', 'instance', 'job' or 'repository'
             pattern (string): regex that is applied to a string representing the component
+
+        Returns:
+            None (implicitly)
         """
         index = 0
         for _filter in self.action_filters:
@@ -130,6 +167,12 @@ class EESSIBotActionFilter:
     def to_string(self):
         """
         Convert filters to string
+
+        Args:
+            No arguments
+
+        Returns:
+            string containing whitespace separated filters
         """
         filter_str_list = []
         for _filter in self.action_filters:
@@ -144,11 +187,13 @@ class EESSIBotActionFilter:
         components (architecture, instance, job, repository)
 
         Args:
-            context (dict) : dictionary that maps component to value
+            context (dict) : dictionary that maps components to their value
 
         Returns:
-            True if all defined filters match corresponding component in given
-            context
+            True if no filters are defined or all defined filters match
+                their corresponding component in the given context
+            False if any defined filter does not match its corresponding
+                component in the given context
         """
         # if no filters are defined we return True
         if len(self.action_filters) == 0:
