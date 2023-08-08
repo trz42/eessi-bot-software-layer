@@ -30,15 +30,17 @@ PRComment = namedtuple('PRComment', ('repo_name', 'pr_number', 'pr_comment_id'))
 
 
 def create_comment(repo_name, pr_number, comment):
-    """create a comment on a pr
+    """
+    Create a comment to a pull request on GitHub
 
     Args:
-        repo_name (str): name of the repo with the pr
-        pr_number (int): number of the pr within the repo
-        comment (string): new comment
+        repo_name (string): name of the repository
+        pr_number (int): number of the pull request within the repository
+        comment (string): comment body
 
     Returns:
-        IssueComment: data structure representing the created issue comment
+        github.IssueComment.IssueComment instance or None (note, github refers to
+            PyGithub, not the github from the internal connections module)
     """
     gh = github.get_instance()
     repo = gh.get_repo(repo_name)
@@ -48,14 +50,17 @@ def create_comment(repo_name, pr_number, comment):
 
 @retry(Exception, tries=5, delay=1, backoff=2, max_delay=30)
 def get_comment(pr, search_pattern):
-    """get comment using the search pattern
+    """
+    Determine instance for comment to a pull request using a search pattern
 
     Args:
-        pr (object): data of pr
-        search_pattern (string): search pattern containing job id
+        pr (github.PullRequest.PullRequest): instance representing the pull
+            request that is searched for a comment
+        search_pattern (string): search pattern to identify comment
 
     Returns:
-        comment (string): comment for the submitted job
+        github.IssueComment.IssueComment instance or None (note, github refers to
+            PyGithub, not the github from the internal connections module)
     """
     comments = pr.get_issue_comments()
     for comment in comments:
@@ -69,17 +74,18 @@ def get_comment(pr, search_pattern):
 
 # Note, no @retry decorator used here because it is already used with get_comment.
 def get_submitted_job_comment(pr, job_id):
-    """get comment of the submitted job id
+    """
+    Determine instance for comment to a pull request using the id of a submitted
+    job
 
     Args:
-        pr (object): data of pr
+        pr (github.PullRequest.PullRequest): instance representing the pull
+            request that is searched for a comment
         job_id (string): job id of submitted job
 
     Returns:
-        tuple of 2 elements containing
-
-        - pr (object): data of pr
-        - job_search_pattern(string): search pattern containing job id
+        github.IssueComment.IssueComment instance or None (note, github refers to
+            PyGithub, not the github from the internal connections module)
     """
     # NOTE adjust search string if format changed by event
     #      handler (separate process running
@@ -89,13 +95,18 @@ def get_submitted_job_comment(pr, job_id):
 
 
 def update_comment(cmnt_id, pr, update, log_file=None):
-    """update comment of the job
+    """
+    Update a comment to a pull request
 
     Args:
-        cmnt_id (int): comment id for the submitted job
-        pr (object): data of pr
-        update (string): updated comment
+        cmnt_id (int): id of the comment to be updated
+        pr (github.PullRequest.PullRequest): instance representing the pull
+            request the comment to be updated belongs to
+        update (string): update to be added to the existing comment
         log_file (string): path to log file
+
+    Returns:
+        None (implicitly)
     """
     issue_comment = retry_call(pr.get_issue_comment, fargs=[cmnt_id], exceptions=Exception,
                                tries=5, delay=1, backoff=2, max_delay=30)
@@ -113,7 +124,10 @@ def update_pr_comment(event_info, update):
 
     Args:
         event_info (dict): storing all information of an event
-        update (string): the update for the comment associated with the event
+        update (string): update to be added to the comment associated with the event
+
+    Returns:
+        None (implicitly)
     """
     request_body = event_info['raw_request_body']
     if 'issue' not in request_body:
