@@ -12,13 +12,18 @@
 #
 # license: GPLv2
 #
+
+# Standard library imports
+from collections import namedtuple
 import re
 
-from collections import namedtuple
-from connections import github
+# Third party imports (anything installed into the local Python environment)
 from pyghee.utils import log
 from retry import retry
 from retry.api import retry_call
+
+# Local application imports (anything from EESSI/eessi-bot-software-layer)
+from connections import github
 
 
 PRComment = namedtuple('PRComment', ('repo_name', 'pr_number', 'pr_comment_id'))
