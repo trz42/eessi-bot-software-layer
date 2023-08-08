@@ -14,13 +14,15 @@
 import argparse
 
 # Third party imports (anything installed into the local Python environment)
+# (none yet)
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
+# (none yet)
 
 
 def parse_common_args(args=None):
     """
-    Create an ArgumentParser instance, add common arguments and parse them
+    Parse common arguments that are shared by event handler and job manager
 
     Args:
         args (list): arguments to be parsed (each being of type string)
