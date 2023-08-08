@@ -20,9 +20,9 @@ from pyghee.utils import log
 # (none yet)
 
 
-# TODO because one can use a prefix to define a filter, we need to make sure that
-# no two filters share the same prefix OR we have to change the handling of
-# filters.
+# NOTE because one can use any prefix of one of the four components below to
+# define a filter, we need to make sure that no two filters share the same
+# prefix OR we have to change the handling of filters.
 FILTER_COMPONENT_ARCH = 'architecture'
 FILTER_COMPONENT_INST = 'instance'
 FILTER_COMPONENT_JOB = 'job'
@@ -100,18 +100,20 @@ class EESSIBotActionFilter:
            EESSIBotActionFilterError: raised if unknown component is provided
                 as argument
         """
-        # check if component is supported
+        # check if component is supported (i.e., it is a prefix of one of the
+        # elements in FILTER_COMPONENTS)
         full_component = None
         for cis in FILTER_COMPONENTS:
             # NOTE the below code assumes that no two filter share the same
-            # prefix (e.g., repository and request would have the same prefixes
-            # 'r' and 're')
+            # prefix (e.g., 'repository' and 'request' would have the same
+            # prefixes 'r' and 're')
             if cis.startswith(component):
                 full_component = cis
                 break
         if full_component:
             log(f"processing component {component}")
-            # if full_component == architecture replace - with / in pattern
+            # if full_component == 'architecture' replace '-' with '/' in
+            # pattern (done to make sure that values are comparable)
             if full_component == FILTER_COMPONENT_ARCH:
                 pattern = pattern.replace('-', '/')
             self.action_filters.append(Filter(full_component, pattern))
@@ -156,8 +158,8 @@ class EESSIBotActionFilter:
         index = 0
         for _filter in self.action_filters:
             # NOTE the below code assumes that no two filter share the same
-            # prefix (e.g., repository and request would have the same prefixes
-            # 'r' and 're')
+            # prefix (e.g., 'repository' and 'request' would have the same
+            # prefixes 'r' and 're')
             if _filter.component.startswith(component) and pattern == _filter.pattern:
                 log(f"removing filter ({_filter.component}, {pattern})")
                 self.action_filters.pop(index)
@@ -203,9 +205,12 @@ class EESSIBotActionFilter:
         check = False
 
         # examples:
-        #   arch:intel instance:AWS --> rebuild for all repos for intel architectures on AWS
-        #   arch:generic --> rebuild for all repos for generic architectures anywhere
-        #   repository:nessi.no-2022.11 --> disable all builds for nessi.no-2022.11
+        #   filter: 'arch:intel instance:AWS' --> evaluates to True if
+        #       context['architecture'] matches 'intel' and if
+        #       context['instance'] matches 'AWS'
+        #   filter: 'repository:eessi-2023.06' --> evaluates to True if
+        #       context['repository'] matches 'eessi-2023.06'
+
         # we iterate over all defined filters
         for af in self.action_filters:
             if af.component in context:
