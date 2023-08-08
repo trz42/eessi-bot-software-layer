@@ -9,16 +9,22 @@
 #
 # license: GPLv2
 #
+
+# Standard library imports
+from datetime import datetime, timezone
 import glob
 import os
 import re
 import sys
 
-from connections import github
-from datetime import datetime, timezone
+# Third party imports (anything installed into the local Python environment)
 from pyghee.utils import log
+
+# Local application imports (anything from EESSI/eessi-bot-software-layer)
+from connections import github
 from tasks.build import get_build_env_cfg
-from tools import config, run_cmd, pr_comments
+from tools import config, pr_comments, run_cmd
+
 
 JOBS_BASE_DIR = "jobs_base_dir"
 DEPLOYCFG = "deploycfg"
