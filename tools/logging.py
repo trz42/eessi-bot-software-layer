@@ -15,10 +15,13 @@ import os
 import sys
 
 # Third party imports (anything installed into the local Python environment)
+# (none yet)
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
+# (none yet)
 
-# TODO possibly replace 'HOME' (and log file name) with a configurable value
+# TODO Either reuse one of the 'log_path' configuration settings or change the
+# below when addressing issue https://github.com/EESSI/eessi-bot-software-layer/issues/91
 LOG = os.path.join(os.getenv('HOME'), 'eessi-bot-software-layer.log')
 
 
@@ -31,8 +34,7 @@ def error(msg, rc=1):
         rc (int): error code
 
     Returns:
-        does not return anything (function never returns, but rather exits the
-        program)
+        function never returns, but rather exits the program
     """
     sys.stderr.write(msg + "\n")
     sys.exit(rc)
@@ -46,7 +48,7 @@ def log(msg):
         msg (string): error message to be printed
 
     Returns:
-        does not return anything
+        None (implicitly)
     """
     with open(LOG, 'a') as fh:
         timestamp = datetime.datetime.now().strftime("%Y%m%d-T%H:%M:%S")
