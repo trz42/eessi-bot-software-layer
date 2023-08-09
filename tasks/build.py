@@ -11,19 +11,25 @@
 #
 # license: GPLv2
 #
+
+# Standard library imports
+from collections import namedtuple
 import configparser
+from datetime import datetime, timezone
 import json
 import os
 import shutil
 import sys
 
-from collections import namedtuple
-from connections import github
-from datetime import datetime, timezone
-from pyghee.utils import log, error
+# Third party imports (anything installed into the local Python environment)
+from pyghee.utils import error, log
 from retry.api import retry_call
-from tools import config, run_cmd, pr_comments
+
+# Local application imports (anything from EESSI/eessi-bot-software-layer)
+from connections import github
+from tools import config, pr_comments, run_cmd
 from tools.job_metadata import create_metadata_file
+
 
 APP_NAME = "app_name"
 AWAITS_RELEASE = "awaits_release"
