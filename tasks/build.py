@@ -294,7 +294,7 @@ def create_pr_dir(pr, cfg, event_info):
     #   https://github.com/EESSI/eessi-bot-software-layer/issues/7)
     #
     #   JOBS_BASE_DIR/<year>.<month>/pr_<pr number>/event_<event id>/run_<run number>
-    # 
+    #
     #   where JOBS_BASE_DIR is defined in the configuration (see 'app.cfg'), year
     #   contains four digits, and month contains two digits
 
