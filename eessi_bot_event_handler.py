@@ -13,23 +13,26 @@
 #
 # license: GPLv2
 #
-import waitress
-import sys
-import tasks.build as build
-import tasks.deploy as deploy
 
+# Standard library imports
+import sys
+
+# Third party imports (anything installed into the local Python environment)
+from pyghee.lib import create_app, get_event_info, PyGHee, read_event_from_json
+from pyghee.utils import log
+import waitress
+
+# Local application imports (anything from EESSI/eessi-bot-software-layer)
 from connections import github
+import tasks.build as build
 from tasks.build import check_build_permission, get_architecture_targets, get_repo_cfg, submit_build_jobs
+import tasks.deploy as deploy
 from tasks.deploy import deploy_built_artefacts
 from tools import config
 from tools.args import event_handler_parse
 from tools.commands import EESSIBotCommand, EESSIBotCommandError, get_bot_command
-# from tools.filter import EESSIBotActionFilter
 from tools.permissions import check_command_permission
 from tools.pr_comments import create_comment
-
-from pyghee.lib import PyGHee, create_app, get_event_info, read_event_from_json
-from pyghee.utils import log
 
 
 APP_NAME = "app_name"
