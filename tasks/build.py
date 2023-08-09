@@ -84,13 +84,16 @@ repo_cfg = {}
 
 
 def get_build_env_cfg(cfg):
-    """Gets build environment values
+    """
+    Gets build environment values from configuration and process some
+    (slurm_params and cvmfs_customizations)
 
     Args:
-        cfg (dict): dictionary holding full configuration (by default defined in app.cfg)
+        cfg (ConfigParser): ConfigParser instance holding full configuration
+            (typically read from 'app.cfg')
 
     Returns:
-         dict(str, dict): dictionary of configuration data
+         (dict): dictionary with configuration settings in the 'buildenv' section
     """
     fn = sys._getframe().f_code.co_name
 
@@ -157,14 +160,17 @@ def get_build_env_cfg(cfg):
 
 
 def get_architecture_targets(cfg):
-    """get architecture_targets and set arch_target_map
+    """
+    Obtain mappings of architecture targets to Slurm parameters
 
     Args:
-        cfg (dict): dictionary holding full configuration (by default defined in app.cfg)
+        cfg (ConfigParser): ConfigParser instance holding full configuration
+            (typically read from 'app.cfg')
 
     Returns:
-        dict(str, dict): dictionary of arch_target_map which contains entries of the format
-                         OS/SUBDIR : ADDITIONAL_SBATCH_PARAMETERS
+        (dict): dictionary mapping architecture targets (format
+            OS/SOFTWARE_SUBDIR) to architecture specific Slurm job submission
+            parameters
     """
     fn = sys._getframe().f_code.co_name
 
@@ -177,13 +183,20 @@ def get_architecture_targets(cfg):
 
 
 def get_repo_cfg(cfg):
-    """get repository config settings
+    """
+    Obtain mappings of architecture targets to repository identifiers and
+    associated repository configuration settings
 
     Args:
-        cfg (dict): dictionary holding full configuration (by default defined in app.cfg)
+        cfg (ConfigParser): ConfigParser instance holding full configuration
+            (typically read from 'app.cfg')
 
     Returns:
-        dict: dictionary with config entries
+        (dict): dictionary containing repository settings as follows
+           - {REPOS_CFG_DIR: path to repository config directory as defined in 'app.cfg'}
+           - {REPO_TARGET_MAP: json of REPO_TARGET_MAP value as defined in 'app.cfg'}
+           - for all sections [REPO_ID] defined in REPOS_CFG_DIR/repos.cfg add a
+             mapping {REPO_ID: dictionary containing settings of that section}
     """
     fn = sys._getframe().f_code.co_name
 
@@ -257,19 +270,28 @@ def get_repo_cfg(cfg):
 
 
 def create_pr_dir(pr, cfg, event_info):
-    """Create directory for Pull Request
+    """
+    Create working directory for job to be submitted. Full path to the working
+    directory has the format
+
+    JOBS_BASE_DIR/<year>.<month>/pr_<pr number>/event_<event id>/run_<run number>
+
+    where JOBS_BASE_DIR is defined in the configuration (see 'app.cfg'), year
+    contains four digits, and month contains two digits
 
     Args:
-        pr (github.PullRequest.Pullrequest): object to interact with pull request
-        cfg (dict): dictionary holding full configuration (by default defined in app.cfg)
+        pr (github.PullRequest.PullRequest): instance representing the pull request
+        cfg (ConfigParser): ConfigParser instance holding full configuration
+            (typically read from 'app.cfg')
         event_info (dict): event received by event_handler
 
     Returns:
         tuple of 3 elements containing
-
-        - year_month (string): string with datestamp (<year>.<month>)
-        - pr_id (int): pr number
-        - run_dir (string): path to run_dir
+        - (string): year_month with format '<year>.<month>' (year with four
+              digits, month with two digits)
+        - (string): pr_id with format 'pr_<pr number>'
+        - (string): run_dir which is the complete path to the created directory
+              with format as described above
     """
     # fn = sys._getframe().f_code.co_name
 
@@ -299,13 +321,17 @@ def create_pr_dir(pr, cfg, event_info):
 
 
 def download_pr(repo_name, branch_name, pr, arch_job_dir):
-    """Download pull request to arch_job_dir
+    """
+    Download pull request to job working directory
 
     Args:
-        repo_name (string): pr base repo name
-        branch_name (string): pr branch name
-        pr (github.PullRequest.Pullrequest): object to interact with pull request
-        arch_job_dir (string): location of arch_job_dir
+        repo_name (string): name of the repository (format USER_OR_ORGANISATION/REPOSITORY)
+        branch_name (string): name of the base branch of the pull request
+        pr (github.PullRequest.PullRequest): instance representing the pull request
+        arch_job_dir (string): working directory of the job to be submitted
+
+    Returns:
+        None (implicitly)
     """
     # fn = sys._getframe().f_code.co_name
 
@@ -340,11 +366,16 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
 
 
 def apply_cvmfs_customizations(cvmfs_customizations, arch_job_dir):
-    """if cvmfs_customizations are defined then applies it
+    """
+    Apply cvmfs_customizations to job
 
     Args:
-        cvmfs_customizations (dictionary): maps a file name to an entry that needs to be appended to that file.
-        arch_job_dir ((string): location of arch_job_dir
+        cvmfs_customizations (dict): defines both the CVMFS configuration files
+            and the contents to be appended to these files
+        arch_job_dir (string): path to working directory of the job
+
+    Returns:
+        None (implicitly)
     """
     # fn = sys._getframe().f_code.co_name
 
@@ -362,17 +393,19 @@ def apply_cvmfs_customizations(cvmfs_customizations, arch_job_dir):
 
 
 def prepare_jobs(pr, cfg, event_info, action_filter):
-    """prepare job directory with pull request and cfg/job.cfg as well as
-       additional config files
+    """
+    Prepare all jobs whose context matches the given filter. Preparation includes
+    creating a working directory for a job, downloading the pull request into
+    that directory and creating a job specific configuration file.
 
     Args:
-        pr (github.PullRequest.Pullrequest): object to interact with pull request
-        cfg (dict): dictionary holding full configuration (by default defined in app.cfg)
+        pr (github.PullRequest.PullRequest): instance representing the pull request
+        cfg (ConfigParser): instance holding full configuration (typically read from 'app.cfg')
         event_info (dict): event received by event_handler
-        action_filter (EESSIBotActionFilter instance): used to filter which jobs shall be prepared
+        action_filter (EESSIBotActionFilter): used to filter which jobs shall be prepared
 
     Returns:
-        jobs: list of the created jobs
+        (list): list of the prepared jobs
     """
     fn = sys._getframe().f_code.co_name
 
@@ -447,15 +480,18 @@ def prepare_jobs(pr, cfg, event_info, action_filter):
 
 def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir, os_type):
     """
-    Set up job configuration file 'cfg/job.cfg'
+    Set up job configuration file 'job.cfg' in directory <job_dir>/cfg
 
     Args:
-        job_dir (string): directory of job
-        build_env_cfg (dictionary): build environment configuration
-        repos_cfg (dictionary):  configuration settings for all repositories
-        repo_id (string):  identifier of the repository to build for
-        software_subdir (string): software subdirectory to build for (CPU arch)
-        os_type (string): type of the os (e.g., linux)
+        job_dir (string): working directory of the job
+        build_env_cfg (dict): build environment settings
+        repos_cfg (dict): configuration settings for all repositories
+        repo_id (string): identifier of the repository to build for
+        software_subdir (string): software subdirectory to build for (e.g., 'x86_64/generic')
+        os_type (string): type of the os (e.g., 'linux')
+
+    Returns:
+        None (implicitly)
     """
     fn = sys._getframe().f_code.co_name
 
@@ -536,16 +572,18 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
 
 
 def submit_job(job, cfg):
-    """Parse job id and submit jobs from directory
+    """
+    Submit a job, obtain its id and create a symlink for easier management
 
     Args:
-        job (list): jobs to be submitted
-        cfg (dict): dictionary holding full configuration (by default defined in app.cfg)
+        job (Job): namedtuple containing all information about job to be submitted
+        cfg (ConfigParser): instance holding full configuration (typically read from 'app.cfg')
 
     Returns:
         tuple of 2 elements containing
-            - job_id(string):  job_id of submitted job
-            - symlink(string): symlink from main pr_<ID> dir to job dir (job[0])
+        - (string): id of the submitted job
+        - (string): path JOBS_BASE_DIR/job.year_month/job.pr_id/SLURM_JOBID which
+          is a symlink to the job's working directory (job[0] or job.working_dir)
     """
     fn = sys._getframe().f_code.co_name
 
@@ -586,15 +624,20 @@ def submit_job(job, cfg):
 
 
 def create_pr_comment(job, job_id, app_name, pr, gh, symlink):
-    """create pr comment for newly submitted job
+    """
+    Create a comment to the pull request for a newly submitted job
 
     Args:
-        job (named tuple): key data about job that has been submitted
-        job_id (string): id of submitted job
+        job (Job): namedtuple containing information about submitted job
+        job_id (string): id of the submitted job
         app_name (string): name of the app
-        pr (github.PullRequest.Pullrequest): object to interact with pull request
+        pr (github.PullRequest.PullRequest): instance representing the pull request
         gh (object): github instance
         symlink (string): symlink from main pr_<ID> dir to job dir
+
+    Returns:
+        github.IssueComment.IssueComment instance or None (note, github refers to
+            PyGithub, not the github from the internal connections module)
     """
     fn = sys._getframe().f_code.co_name
 
@@ -632,13 +675,20 @@ def create_pr_comment(job, job_id, app_name, pr, gh, symlink):
 
 
 def submit_build_jobs(pr, event_info, action_filter):
-    """Build from the pr by fetching data for build environment cofinguration, downloading pr,
-       running jobs and adding comments
+    """
+    Create build jobs for a pull request by preparing jobs which match the given
+    filters, submitting them, adding comments to the pull request on GitHub and
+    creating a metadata file in the job's working directory
 
     Args:
-        pr (github.PullRequest.Pullrequest instance): object to interact with pull request
-        event_info (string): event received by event_handler
-        action_filter (EESSIBotActionFilter instance): used to filter which jobs shall be prepared
+        pr (github.PullRequest.PullRequest): instance representing the pull request
+        event_info (dict): event received by event_handler
+        action_filter (EESSIBotActionFilter): used to filter which jobs shall be prepared
+
+    Returns:
+        (dict): dictionary mapping a job id to a github.IssueComment.IssueComment
+            instance (corresponding to the pull request comment for the submitted
+            job) or an empty dictionary if there were no jobs to be submitted
     """
     fn = sys._getframe().f_code.co_name
 
@@ -677,12 +727,17 @@ def submit_build_jobs(pr, event_info, action_filter):
 
 
 def check_build_permission(pr, event_info):
-    """check if the GH account is authorized to trigger build
+    """
+    Check if GitHub account whom's action resulted in an event is authorized to
+    trigger a build job
 
     Args:
-        pr (github.PullRequest.Pullrequest): object to interact with pull request
-        event_info (string): event received by event_handler
+        pr (github.PullRequest.PullRequest): instance representing the pull request
+        event_info (dict): event received by event_handler
 
+    Returns:
+        (bool): True -> GitHub account is authorized, False -> GitHub account is
+            not authorized
     """
     fn = sys._getframe().f_code.co_name
 
