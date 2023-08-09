@@ -97,7 +97,6 @@ def get_build_env_cfg(cfg):
     """
     fn = sys._getframe().f_code.co_name
 
-    # cfg = config.read_config()
     buildenv = cfg[BUILDENV]
 
     jobs_base_dir = buildenv.get(JOBS_BASE_DIR)
@@ -174,7 +173,6 @@ def get_architecture_targets(cfg):
     """
     fn = sys._getframe().f_code.co_name
 
-    # cfg = config.read_config()
     architecture_targets = cfg[ARCHITECTURE_TARGETS]
 
     arch_target_map = json.loads(architecture_targets.get('arch_target_map'))
@@ -242,7 +240,6 @@ def get_repo_cfg(cfg):
         if repo_id in repo_cfg:
             error(f"{fn}(): repo id '{repo_id}' in '{repos_cfg_file}' clashes with bot config")
 
-        # repo_cfg[repo_id] = repos_cfg[repo_id]
         repo_cfg[repo_id] = {}
         for (key, val) in repos_cfg.items(repo_id):
             repo_cfg[repo_id][key] = val
@@ -293,11 +290,13 @@ def create_pr_dir(pr, cfg, event_info):
         - (string): run_dir which is the complete path to the created directory
               with format as described above
     """
-    # fn = sys._getframe().f_code.co_name
-
-    # create directory structure according to alternative described in
-    #   https://github.com/EESSI/eessi-bot-software-layer/issues/7
-    #   jobs_base_dir/YYYY.MM/pr<id>/event_<id>/run_<id>/target_<cpuarch>
+    # create directory structure (see discussion of options in
+    #   https://github.com/EESSI/eessi-bot-software-layer/issues/7)
+    #
+    #   JOBS_BASE_DIR/<year>.<month>/pr_<pr number>/event_<event id>/run_<run number>
+    # 
+    #   where JOBS_BASE_DIR is defined in the configuration (see 'app.cfg'), year
+    #   contains four digits, and month contains two digits
 
     build_env_cfg = get_build_env_cfg(cfg)
     jobs_base_dir = build_env_cfg[JOBS_BASE_DIR]
@@ -306,9 +305,10 @@ def create_pr_dir(pr, cfg, event_info):
     pr_id = 'pr_%s' % pr.number
     event_id = 'event_%s' % event_info['id']
     event_dir = os.path.join(jobs_base_dir, year_month, pr_id, event_id)
-    # the makedirs cannot be deferred to a later os.makedirs because the
-    # condition in the while loop below takes the state of the directory
-    # contents into account
+    # NOTE the first call of os.makedirs cannot be deferred (i.e., to only
+    # after it has been determined that any job will be created due to the
+    # filters provided), because the condition in the 'while' loop below
+    # takes the contents of the directory event_dir into account
     os.makedirs(event_dir, exist_ok=True)
 
     run = 0
@@ -333,21 +333,12 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
     Returns:
         None (implicitly)
     """
-    # fn = sys._getframe().f_code.co_name
-
     # download pull request to arch_job_dir
-    #  - PyGitHub doesn't seem capable of doing that (easily);
-    #  - for now, keep it simple and just execute the commands (anywhere) (note 'git clone' requires that
+    # - 'git clone' repository into arch_job_dir (NOTE 'git clone' requires that
     #    destination is an empty directory)
-    #    * patching method
-    #      git clone https://github.com/REPO_NAME arch_job_dir
-    #      git checkout BRANCH (is stored as ref for base record in PR)
-    #      curl -L https://github.com/REPO_NAME/pull/PR_NUMBER.patch > arch_job_dir/PR_NUMBER.patch
-    #    (execute the next one in arch_job_dir)
-    #      git am PR_NUMBER.patch
-    #
-    #  - REPO_NAME is repo_name
-    #  - PR_NUMBER is pr.number
+    # - 'git checkout' base branch of pull request
+    # - 'curl' diff for pull request
+    # - 'git apply' diff file
     git_clone_cmd = ' '.join(['git clone', f'https://github.com/{repo_name}', arch_job_dir])
     clone_output, clone_error, clone_exit_code = run_cmd(git_clone_cmd, "Clone repo", arch_job_dir)
 
@@ -377,10 +368,8 @@ def apply_cvmfs_customizations(cvmfs_customizations, arch_job_dir):
     Returns:
         None (implicitly)
     """
-    # fn = sys._getframe().f_code.co_name
-
     if len(cvmfs_customizations) > 0:
-        # for each entry/key, append value to file
+        # for each key, append value to file defined by key
         for key in cvmfs_customizations.keys():
             basename = os.path.basename(key)
             jobcfgfile = os.path.join(arch_job_dir, basename)
@@ -423,9 +412,9 @@ def prepare_jobs(pr, cfg, event_info, action_filter):
     # create run dir (base directory for potentially several jobs)
     # TODO may still be too early (before we get to any actual job being
     #      prepared below when calling 'download_pr')
-    # instead of using a run_dir, maybe just create a unique dir for each
-    # job to be submitted? thus we could easily postpone the create_pr_dir
-    # call to just before download_pr
+    #      instead of using a run_dir, maybe just create a unique dir for each
+    #      job to be submitted? thus we could easily postpone the create_pr_dir
+    #      call to just before download_pr
     year_month, pr_id, run_dir = create_pr_dir(pr, cfg, event_info)
 
     jobs = []
@@ -461,7 +450,7 @@ def prepare_jobs(pr, cfg, event_info, action_filter):
             # TODO optimisation? download once, copy and cleanup initial copy?
             download_pr(base_repo_name, base_branch_name, pr, job_dir)
 
-            # prepare ./cfg/job.cfg
+            # prepare job configuration file 'job.cfg' in directory <job_dir>/cfg
             cpu_target = '/'.join(arch.split('/')[1:])
             os_type = arch.split('/')[0]
             log(f"{fn}(): arch = '{arch}' => cpu_target = '{cpu_target}' , os_type = '{os_type}'")
@@ -528,14 +517,15 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
 
     job_cfg[JOB_REPOSITORY] = {}
     # directory for repos.cfg
-    # note REPOS_CFG_DIR is a global cfg for all repositories, hence it is stored
-    # in repos_cfg (not in config for a specific repository, i.e., repo_cfg)
+    # NOTE REPOS_CFG_DIR is a global configuration setting for all repositories,
+    #      hence it is stored in repos_cfg whereas repo_cfg used further below
+    #      contains setting for a specific repository
     if REPOS_CFG_DIR in repos_cfg and repos_cfg[REPOS_CFG_DIR]:
         job_cfg[JOB_REPOSITORY][JOB_REPOS_CFG_DIR] = jobcfg_dir
     # repo id
     job_cfg[JOB_REPOSITORY][JOB_REPO_ID] = repo_id
 
-    # settings for specific repo
+    # settings for a specific repository
     if repo_id in repos_cfg:
         repo_cfg = repos_cfg[repo_id]
         if repo_cfg[REPOS_CONTAINER]:
@@ -549,16 +539,14 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
     job_cfg[JOB_ARCHITECTURE][JOB_SOFTWARE_SUBDIR] = software_subdir
     job_cfg[JOB_ARCHITECTURE][JOB_OS_TYPE] = os_type
 
-    # copy repository config bundle to directory cfg
-    # TODO verify that app.cfg defines 'repos_cfg_dir'
-    # copy repos_cfg[REPOS_CFG_DIR]/repos.cfg to jobcfg_dir
-    # copy repos_cfg[REPOS_CFG_DIR]/*.tgz to jobcfg_dir
+    # copy repos_cfg[REPOS_CFG_DIR]/repos.cfg to <jobcfg_dir>
+    # copy repos_cfg[REPOS_CFG_DIR]/*.tgz to <jobcfg_dir>
     if REPOS_CFG_DIR in repos_cfg and repos_cfg[REPOS_CFG_DIR] and os.path.isdir(repos_cfg[REPOS_CFG_DIR]):
         src = repos_cfg[REPOS_CFG_DIR]
         shutil.copytree(src, jobcfg_dir)
         log(f"{fn}(): copied {src} to {jobcfg_dir}")
 
-    # make sure that job cfg dir exists
+    # make sure that <jobcfg_dir> exists
     os.makedirs(jobcfg_dir, exist_ok=True)
 
     jobcfg_file = os.path.join(jobcfg_dir, 'job.cfg')
@@ -589,7 +577,8 @@ def submit_job(job, cfg):
 
     build_env_cfg = get_build_env_cfg(cfg)
 
-    # Add a default time limit of 24h to the command if nothing else is specified by the user
+    # add a default time limit of 24h to the job submit command if no other time
+    # limit is specified already
     all_opts_str = " ".join([build_env_cfg[SLURM_PARAMS], job.slurm_opts])
     all_opts_list = all_opts_str.split(" ")
     if any([(opt.startswith("--time") or opt.startswith("-t")) for opt in all_opts_list]):
@@ -610,7 +599,9 @@ def submit_job(job, cfg):
                                                                working_dir=job.working_dir)
 
     # sbatch output is 'Submitted batch job JOBID'
-    #   parse job id & add it to array of submitted jobs PLUS create a symlink from main pr_<ID> dir to job dir (job[0])
+    #   parse job id, add it to array of submitted jobs and create a symlink
+    #   from JOBS_BASE_DIR/job.year_month/job.pr_id/SLURM_JOBID to the job's
+    #   working directory
     log(f"{fn}(): sbatch out: {cmdline_output}")
     log(f"{fn}(): sbatch err: {cmdline_error}")
 
@@ -644,7 +635,7 @@ def create_pr_comment(job, job_id, app_name, pr, gh, symlink):
     # obtain arch from job.arch_target which has the format OS/ARCH
     arch_name = '-'.join(job.arch_target.split('/')[1:])
 
-    # get current data/time
+    # get current date and time
     dt = datetime.now(timezone.utc)
 
     # construct initial job comment
@@ -692,14 +683,13 @@ def submit_build_jobs(pr, event_info, action_filter):
     """
     fn = sys._getframe().f_code.co_name
 
-    # retrieve some settings from 'app.cfg' in bot directory
     cfg = config.read_config()
     app_name = cfg[GITHUB].get(APP_NAME)
 
-    # setup job directories (one per elem in product of architecture % repositories)
+    # setup job directories (one per element in product of architecture x repositories)
     jobs = prepare_jobs(pr, cfg, event_info, action_filter)
 
-    # return if no jobs to be submitted
+    # return if there are no jobs to be submitted
     if not jobs:
         log(f"{fn}(): no jobs ({len(jobs)}) to be submitted")
         return {}
@@ -707,22 +697,22 @@ def submit_build_jobs(pr, event_info, action_filter):
     # obtain handle to GitHub
     gh = github.get_instance()
 
-    # process prepared jobs: submit, create metadata file and add comment to PR
+    # process prepared jobs: submit, create metadata file and add comment to pull
+    # request on GitHub
     job_id_to_comment_map = {}
     for job in jobs:
         # submit job
         job_id, symlink = submit_job(job, cfg)
 
-        # report submitted job
+        # create pull request comment to report about the submitted job
         pr_comment = create_pr_comment(job, job_id, app_name, pr, gh, symlink)
         job_id_to_comment_map[job_id] = pr_comment
 
         pr_comment = pr_comments.PRComment(pr.base.repo.full_name, pr.number, pr_comment.id)
 
-        # create _bot_job<jobid>.metadata file in submission directory
+        # create _bot_job<jobid>.metadata file in the job's working directory
         create_metadata_file(job, job_id, pr_comment)
 
-    # return f"created jobs: {', '.join(job_ids)}"
     return job_id_to_comment_map
 
 
@@ -747,8 +737,6 @@ def check_build_permission(pr, event_info):
 
     buildenv = cfg[BUILDENV]
 
-    # verify that the GH account that set label bot:build has the
-    # permission to trigger the build
     build_permission = buildenv.get(BUILD_PERMISSION, '')
 
     log(f"{fn}(): build permission '{build_permission}'")
