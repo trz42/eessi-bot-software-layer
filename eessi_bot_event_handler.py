@@ -43,10 +43,17 @@ REPO_TARGET_MAP = "repo_target_map"
 
 
 class EESSIBotSoftwareLayer(PyGHee):
+    """
+    Class for representing the event handler of the build-and-deploy bot. It
+    receives events from GitHub via PyGHee and processes them. It is
+    multi-threaded (via waitress) to ensure that it can respond to concurrent
+    events. It also avoids keeping any event related information in memory.
+    """
 
     def __init__(self, *args, **kwargs):
         """
-        EESSIBotSoftwareLayer constructor.
+        EESSIBotSoftwareLayer constructor. Calls constructor of PyGHee and
+        initializes some configuration settings.
         """
         super(EESSIBotSoftwareLayer, self).__init__(*args, **kwargs)
 
@@ -56,11 +63,15 @@ class EESSIBotSoftwareLayer(PyGHee):
 
     def log(self, msg, *args):
         """
-        Logs a message incl the caller's function name by passing msg and *args to PyGHee's log method.
+        Logs a message incl the caller's function name by passing msg and
+        *args to PyGHee's log method.
 
         Args:
-            msg (string): message (format) to log to event handler log
+            msg (string): message to log to event handler log
             *args (any): any values to be substituted into msg
+
+        Returns:
+            None (implicitly)
         """
         funcname = sys._getframe().f_back.f_code.co_name
         if args:
@@ -70,7 +81,18 @@ class EESSIBotSoftwareLayer(PyGHee):
 
     def handle_issue_comment_event(self, event_info, log_file=None):
         """
-        Handle adding/removing of comment in issue or PR.
+        Handle events of type issue_comment. Main action is to parse new issue
+        comments for any bot command and execute it if one is found.
+
+        Args:
+            event_info (dict): event received by event_handler
+            log_file (string): path to log messages to
+
+        Returns:
+            None (implicitly)
+
+        Raises:
+            Exception: raises any exception that is not of type EESSIBotCommandError
         """
         request_body = event_info['raw_request_body']
         issue_url = request_body['issue']['url']
@@ -222,7 +244,14 @@ class EESSIBotSoftwareLayer(PyGHee):
 
     def handle_installation_event(self, event_info, log_file=None):
         """
-        Handle installation of app.
+        Handle events of type installation. Main action is to log the event.
+
+        Args:
+            event_info (dict): event received by event_handler
+            log_file (string): path to log messages to
+
+        Returns:
+            None (implicitly)
         """
         request_body = event_info['raw_request_body']
         user = request_body['sender']['login']
@@ -233,7 +262,15 @@ class EESSIBotSoftwareLayer(PyGHee):
 
     def handle_pull_request_labeled_event(self, event_info, pr):
         """
-        Handle adding of a label to a pull request.
+        Handle events of type pull_request with the action labeled. Main action
+        is to process the label 'bot:deploy'.
+
+        Args:
+            event_info (dict): event received by event_handler
+            pr (github.PullRequest.PullRequest): instance representing the pull request
+
+        Returns:
+            None (implicitly)
         """
 
         # determine label
@@ -267,7 +304,17 @@ class EESSIBotSoftwareLayer(PyGHee):
 
     def handle_pull_request_opened_event(self, event_info, pr):
         """
-        Handle opening of a pull request.
+        Handle events of type pull_request with the action opened. Main action
+        is to report for which architectures and repositories a bot instance is
+        configured to build for.
+
+        Args:
+            event_info (dict): event received by event_handler
+            pr (github.PullRequest.PullRequest): instance representing the pull request
+
+        Returns:
+            github.IssueComment.IssueComment instance or None (note, github refers to
+                PyGithub, not the github from the internal connections module)
         """
         self.log("PR opened: waiting for label bot:build")
         app_name = self.cfg[GITHUB][APP_NAME]
@@ -298,7 +345,15 @@ class EESSIBotSoftwareLayer(PyGHee):
 
     def handle_pull_request_event(self, event_info, log_file=None):
         """
-        Handle 'pull_request' event
+        Handle events of type pull_request for all kinds of actions by
+        determining a handler for it.
+
+        Args:
+            event_info (dict): event received by event_handler
+            log_file (string): path to log messages to
+
+        Returns:
+            None (implicitly)
         """
         action = event_info['action']
         gh = github.get_instance()
@@ -317,11 +372,21 @@ class EESSIBotSoftwareLayer(PyGHee):
 
     def handle_bot_command(self, event_info, bot_command, log_file=None):
         """
-        Handle bot command
+        Handle a bot command. Main purpose is to determine a handler for the
+        specific bot_command given.
 
         Args:
-            event_info (dict): object containing all information of the event
+            event_info (dict): event received by event_handler
             bot_command (EESSIBotCommand): command to be handled
+            log_file (string): path to log messages to
+
+        Returns:
+            (string): update to be reported back to GitHub as the (immediate)
+                result of the bot command
+
+        Raises:
+            EESSIBotCommandError: if no handler for the specific command is
+                defined
         """
         cmd = bot_command.command
         handler_name = f"handle_bot_command_{cmd}"
@@ -334,7 +399,17 @@ class EESSIBotSoftwareLayer(PyGHee):
             raise EESSIBotCommandError(f"unknown command `{cmd}`; use `bot: help` for usage information")
 
     def handle_bot_command_help(self, event_info, bot_command):
-        """handles command 'bot: help' with a simple usage info"""
+        """
+        Handles bot command 'help' providing basic information about bot
+        commands.
+
+        Args:
+            event_info (dict): event received by event_handler
+            bot_command (EESSIBotCommand): command to be handled
+
+        Returns:
+            (string): basic information about sending commands to the bot
+        """
         help_msg = "\n  **How to send commands to bot instances**"
         help_msg += "\n  - Commands must be sent with a **new** comment (edits of existing comments are ignored)."
         help_msg += "\n  - A comment may contain multiple commands, one per line."
@@ -345,7 +420,17 @@ class EESSIBotSoftwareLayer(PyGHee):
         return help_msg
 
     def handle_bot_command_build(self, event_info, bot_command):
-        """handles command 'bot: build [ARGS*]' by parsing arguments and submitting jobs"""
+        """
+        Handles bot command 'build [ARGS*]' by parsing arguments and submitting jobs
+
+        Args:
+            event_info (dict): event received by event_handler
+            bot_command (EESSIBotCommand): command to be handled
+
+        Returns:
+            (string): immediate result of command (any jobs or no jobs being
+                submitted) and a link to the issue comment for submitted jobs
+        """
         gh = github.get_instance()
         self.log("repository: '%s'", event_info['raw_request_body']['repository']['full_name'])
         repo_name = event_info['raw_request_body']['repository']['full_name']
@@ -369,7 +454,18 @@ class EESSIBotSoftwareLayer(PyGHee):
         return build_msg
 
     def handle_bot_command_show_config(self, event_info, bot_command):
-        """handles command 'bot: show_config' by printing a list of configured build targets"""
+        """
+        Handles bot command 'show_config' by running the handler for events of
+        type pull_request with the action opened.
+
+        Args:
+            event_info (dict): event received by event_handler
+            bot_command (EESSIBotCommand): command to be handled
+
+        Returns:
+            (string): list item with a link to the issue comment that was created
+                by the handler for events of type pull_request with the action opened
+        """
         self.log("processing bot command 'show_config'")
         gh = github.get_instance()
         repo_name = event_info['raw_request_body']['repository']['full_name']
@@ -379,11 +475,17 @@ class EESSIBotSoftwareLayer(PyGHee):
         return f"\n  - added comment {issue_comment.html_url} to show configuration"
 
     def start(self, app, port=3000):
-        """starts the app and log information in the log file
+        """
+        Logs startup information to shell and log file and starts the app using
+        waitress.
 
         Args:
-            app (object): instance of class EESSIBotSoftwareLayer
-            port (int, optional): Defaults to 3000.
+            app (EESSIBotSoftwareLayer): instance of class EESSIBotSoftwareLayer
+            port (int, optional): defaults to 3000
+
+        Returns:
+            None (implictly), Note it only returns once the call to waitress has
+                terminated.
         """
         start_msg = "EESSI bot for software layer started!"
         print(start_msg)
@@ -401,7 +503,11 @@ class EESSIBotSoftwareLayer(PyGHee):
 
 
 def main():
-    """Main function."""
+    """
+    Main function which parses command line arguments, verifies if required
+    configuration settings are defined, creates an instance of EESSIBotSoftwareLayer
+    and starts it.
+    """
     opts = event_handler_parse()
 
     required_config = {
