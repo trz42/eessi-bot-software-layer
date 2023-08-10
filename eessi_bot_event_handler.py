@@ -102,12 +102,10 @@ class EESSIBotSoftwareLayer(PyGHee):
         repo_name = request_body['repository']['full_name']
         pr_number = request_body['issue']['number']
 
-        # FIXME add request body text (['comment']['body']) to log message when
-        # log level is set to debug
+        # TODO add request body text (['comment']['body']) to log message when
+        #      log level is set to debug
         self.log(f"Comment in {issue_url} (owned by @{owner}) {action} by @{sender}")
 
-        # obtain app name and format for reporting about received & processed
-        # commands
         app_name = self.cfg[GITHUB][APP_NAME]
         command_response_fmt = self.cfg[BOT_CONTROL][COMMAND_RESPONSE_FMT]
 
@@ -118,21 +116,25 @@ class EESSIBotSoftwareLayer(PyGHee):
         # - this serves a double purpose:
         #   1. check permission
         #   2. skip any comment updates that were done by the bot itself
-        #      --> thus we prevent the bot from entering an endless loop
-        #          where it reacts on updates to comments it made itself
-        #      NOTE this assumes that the sender of the event is corresponding to
-        #      the bot if the bot updates comments itself and that the bot is not
-        #      given permission in the configuration setting 'command_permission'
-        #      ... in order to prevent surprises we should be careful what the bot
-        #      adds to comments, for example, before updating a comment it could
-        #      run the update through the function checking for a bot command.
+        #      - thus we prevent the bot from entering an endless loop
+        #        where it reacts on updates to comments it made itself
+        #      - this assumes that the sender of an event is corresponding
+        #        to the bot if the bot updates or creates comments itself
+        #        and that the bot is not given permission in the
+        #        configuration setting 'command_permission'
+        #      - in order to prevent surprises we should be very careful
+        #        about what the bot adds to comments, for example, before
+        #        updating a comment it could run the update through the
+        #        function get_bot_command to determine if the comment
+        #        includes a bot command
         if check_command_permission(sender) is False:
             self.log(f"account `{sender}` has NO permission to send commands to bot")
             # need to ensure that the bot is not responding on its own comments
             # as a quick implementation we check if the sender name contains '[bot]'
-            # FIXME improve this by querying (and caching) information about the sender of
-            #       an event ALTERNATIVELY we could postpone this test a bit until we
-            #       have parsed the comment and know if it contains any bot command
+            # TODO improve this by querying (and caching) information about the sender of
+            #      an event
+            #      ALTERNATIVELY we could postpone this test a bit until we
+            #      have parsed the comment and know if it contains any bot command
             if not sender.endswith('[bot]'):
                 comment_response = f"\n- account `{sender}` has NO permission to send commands to the bot"
                 comment_body = command_response_fmt.format(
@@ -152,24 +154,27 @@ class EESSIBotSoftwareLayer(PyGHee):
             comment_received = request_body['comment']['body']
             self.log(f"comment action '{action}' is handled")
         else:
-            # NOTE we do not report this with a new PR comment, because otherwise any update to a comment would
-            # let the bot add a response (would be very noisy); we might add a debug mode later
+            # NOTE we do not respond to an updated PR comment with yet another
+            #      new PR comment, because it would make the bot very noisy or
+            #      worse could result in letting the bot enter an endless loop
             self.log(f"comment action '{action}' not handled")
             return
 
         # search for commands in comment
         comment_response = ''
         commands = []
-        # process non-empty (if x) lines (split) in comment
+        # process any non-empty lines in comment (inner comprehension splits
+        # comment into lines, outer comprehension ensures only non-empty lines
+        # are processed further)
         for line in [x for x in [y.strip() for y in comment_received.split('\n')] if x]:
-            # FIXME add processed line(s) to log when log level is set to debug
+            # TODO add processed line(s) to log when log level is set to debug
             bot_command = get_bot_command(line)
             if bot_command:
                 try:
                     ebc = EESSIBotCommand(bot_command)
                 except EESSIBotCommandError as bce:
                     self.log(f"ERROR: parsing bot command '{bot_command}' failed with {bce.args}")
-                    # FIXME possibly add more information to log when log level is set to debug
+                    # TODO possibly add more information to log when log level is set to debug
                     comment_response += f"\n- parsing the bot command `{bot_command}`, received"
                     comment_response += f" from sender `{sender}`, failed"
                     continue
@@ -178,7 +183,7 @@ class EESSIBotSoftwareLayer(PyGHee):
                 comment_response += f"\n- received bot command `{bot_command}`"
                 comment_response += f" from `{sender}`"
                 comment_response += f"\n  - expanded format: `{ebc.to_string()}`"
-            # FIXME add an else branch that logs information for comments not
+            # TODO add an else branch that logs information for comments not
             # including a bot command; the logging should only be done when log
             # level is set to debug
 
@@ -190,10 +195,11 @@ class EESSIBotSoftwareLayer(PyGHee):
             self.log(f"comment response: '{comment_response}'")
 
         if not any(map(get_bot_command, comment_response.split('\n'))):
-            # the 'not any()' ensures that the response would not be considered a bot command itself
-            # ... together with checking the sender of a comment update this aims
-            # at preventing the bot to enter an endless loop in commenting on its own
-            # comments
+            # the 'not any()' ensures that the response would not be considered
+            # a bot command itself
+            # this, together with checking the sender of a comment update, aims
+            # at preventing the bot to enter an endless loop in commenting on
+            # its own comments
             comment_body = command_response_fmt.format(
                 app_name=app_name,
                 comment_response=comment_response,
@@ -202,7 +208,7 @@ class EESSIBotSoftwareLayer(PyGHee):
             issue_comment = create_comment(repo_name, pr_number, comment_body)
         else:
             self.log(f"update '{comment_response}' is considered to contain bot command ... not creating PR comment")
-            # FIXME we may want to report this back to the PR on GitHub, e.g.,
+            # TODO we may want to report this back to the PR on GitHub, e.g.,
             # "Oops response message seems to contain a bot command. It is not
             # displayed here to prevent the bot from entering an endless loop
             # of commands. Please, check the logs at the bot instance for more
@@ -232,7 +238,8 @@ class EESSIBotSoftwareLayer(PyGHee):
                     )
                     issue_comment.edit(comment_body)
                 raise
-        # only update PR comment once
+        # only update PR comment once, that is, a single call to
+        # issue_comment.edit is made in the entire function
         comment_body = command_response_fmt.format(
             app_name=app_name,
             comment_response=comment_response,
@@ -256,7 +263,6 @@ class EESSIBotSoftwareLayer(PyGHee):
         request_body = event_info['raw_request_body']
         user = request_body['sender']['login']
         action = request_body['action']
-        # repo_name = request_body['repositories'][0]['full_name'] # not every action has that attribute
         self.log("App installation event by user %s with action '%s'", user, action)
         self.log("installation event handled!")
 
@@ -278,10 +284,6 @@ class EESSIBotSoftwareLayer(PyGHee):
         self.log("Process PR labeled event: PR#%s, label '%s'", pr.number, label)
 
         if label == "bot:build":
-            # # run function to build software stack
-            # if check_build_permission(pr, event_info):
-            #     # use an empty filter
-            #     submit_build_jobs(pr, event_info, EESSIBotActionFilter(""))
             msg = "Handling the label 'bot:build' is disabled. Use the command `bot: build [FILTER]*` instead."
             self.log(msg)
 
