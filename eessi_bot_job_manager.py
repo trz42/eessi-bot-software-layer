@@ -49,9 +49,11 @@ from tools.pr_comments import get_submitted_job_comment, update_comment
 AWAITS_LAUNCH = "awaits_launch"
 FAILURE = "failure"
 FINISHED_JOB_COMMENTS = "finished_job_comments"
-NEW_JOB_COMMENTS = "new_job_comments"
+JOB_RESULT_COMMENT_DESCRIPTION = "comment_description"
+JOB_RESULT_UNKNOWN_FMT = "job_result_unknown_fmt"
 MISSING_MODULES = "missing_modules"
 MULTIPLE_TARBALLS = "multiple_tarballs"
+NEW_JOB_COMMENTS = "new_job_comments"
 NO_MATCHING_TARBALL = "no_matching_tarball"
 NO_SLURM_OUT = "no_slurm_out"
 NO_TARBALL_MESSAGE = "no_tarball_message"
@@ -60,15 +62,13 @@ RUNNING_JOB_COMMENTS = "running_job_comments"
 SLURM_OUT = "slurm_out"
 SUCCESS = "success"
 
-JOB_RESULT_UNKNOWN_FMT = "job_result_unknown_fmt"
-JOB_RESULT_COMMENT_DESCRIPTION = "comment_description"
-
 REQUIRED_CONFIG = {
+    FINISHED_JOB_COMMENTS: [FAILURE, JOB_RESULT_UNKNOWN_FMT, MISSING_MODULES,
+                            MULTIPLE_TARBALLS, NO_MATCHING_TARBALL,
+                            NO_SLURM_OUT, NO_TARBALL_MESSAGE, SLURM_OUT,
+                            SUCCESS],
     NEW_JOB_COMMENTS: [AWAITS_LAUNCH],
-    RUNNING_JOB_COMMENTS: [RUNNING_JOB],
-    FINISHED_JOB_COMMENTS: [SUCCESS, FAILURE, NO_SLURM_OUT, SLURM_OUT, MISSING_MODULES,
-                            NO_TARBALL_MESSAGE, NO_MATCHING_TARBALL, MULTIPLE_TARBALLS,
-                            JOB_RESULT_UNKNOWN_FMT]
+    RUNNING_JOB_COMMENTS: [RUNNING_JOB]
 }
 
 
