@@ -28,20 +28,23 @@
 # license: GPLv2
 #
 
+# Standard library imports
+from datetime import datetime, timezone
 import os
 import re
 import sys
 import time
 
+# Third party imports (anything installed into the local Python environment)
+from pyghee.utils import log
 
+# Local application imports (anything from EESSI/eessi-bot-software-layer)
 from connections import github
-from tools.args import job_manager_parse
-from datetime import datetime, timezone
 from tools import config, run_cmd
+from tools.args import job_manager_parse
 from tools.job_metadata import read_metadata_file
 from tools.pr_comments import get_submitted_job_comment, update_comment
 
-from pyghee.utils import log
 
 AWAITS_LAUNCH = "awaits_launch"
 FAILURE = "failure"
