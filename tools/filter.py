@@ -8,15 +8,21 @@
 #
 # license: GPLv2
 #
+
+# Standard library imports
+from collections import namedtuple
 import re
 
-from collections import namedtuple
+# Third party imports (anything installed into the local Python environment)
 from pyghee.utils import log
 
+# Local application imports (anything from EESSI/eessi-bot-software-layer)
+# (none yet)
 
-# TODO because one can use a prefix to define a filter, we need to make sure that
-# no two filters share the same prefix OR we have to change the handling of
-# filters.
+
+# NOTE because one can use any prefix of one of the four components below to
+# define a filter, we need to make sure that no two filters share the same
+# prefix OR we have to change the handling of filters.
 FILTER_COMPONENT_ARCH = 'architecture'
 FILTER_COMPONENT_INST = 'instance'
 FILTER_COMPONENT_JOB = 'job'
@@ -27,14 +33,19 @@ Filter = namedtuple('Filter', ('component', 'pattern'))
 
 
 class EESSIBotActionFilterError(Exception):
+    """
+    Exception to be raised when encountering an error in creating or adding a
+    filter
+    """
     pass
 
 
 class EESSIBotActionFilter:
     """
-    Class for representing a filter (for, e.g., bot commands). A filter contains
-    a list of key:value pairs with key being one of 'architecture',
-    'instance', 'job' or 'repository'.
+    Class for representing a filter that limits in which contexts bot commands
+    are applied. A filter contains a list of key:value pairs where the key
+    corresponds to a component (see FILTER_COMPONENTS) and the value is a
+    pattern used to filter commands based on the context a command is applied to.
     """
     def __init__(self, filter_string):
         """
@@ -42,6 +53,12 @@ class EESSIBotActionFilter:
 
         Args:
             filter_string (string): string containing whitespace separated filters
+
+        Raises:
+            EESSIBotActionFilterError: raised if caught when adding filter from
+                string
+            Exception: logged and raised if caught when adding filter from
+                string
         """
         self.action_filters = []
         for _filter in filter_string.split():
@@ -55,30 +72,47 @@ class EESSIBotActionFilter:
 
     def clear_all(self):
         """
-        Clears all filter components.
+        Clears all filters
+
+        Args:
+            No arguments
+
+        Returns:
+            None (implicitly)
         """
         self.action_filters = []
 
     def add_filter(self, component, pattern):
         """
-        Adds a filter
+        Adds a filter given by a component and a pattern
 
         Args:
-            component (string): any prefix of 'architecture', 'instance', 'job' or 'repository'
-            pattern (string): regex that is applied to a string representing the component
+            component (string): any prefix of known filter components (see
+                FILTER_COMPONENTS)
+            pattern (string): regular expression pattern that is applied to a
+                string representing the component
+
+        Returns:
+            None (implicitly)
+
+        Raises:
+           EESSIBotActionFilterError: raised if unknown component is provided
+                as argument
         """
-        # check if component is supported
+        # check if component is supported (i.e., it is a prefix of one of the
+        # elements in FILTER_COMPONENTS)
         full_component = None
         for cis in FILTER_COMPONENTS:
             # NOTE the below code assumes that no two filter share the same
-            # prefix (e.g., repository and request would have the same prefixes
-            # 'r' and 're')
+            # prefix (e.g., 'repository' and 'request' would have the same
+            # prefixes 'r' and 're')
             if cis.startswith(component):
                 full_component = cis
                 break
         if full_component:
             log(f"processing component {component}")
-            # if full_component == architecture replace - with / in pattern
+            # replace '-' with '/' in pattern when using 'architecture' filter
+            # component (done to make sure that values are comparable)
             if full_component == FILTER_COMPONENT_ARCH:
                 pattern = pattern.replace('-', '/')
             self.action_filters.append(Filter(full_component, pattern))
@@ -88,10 +122,17 @@ class EESSIBotActionFilter:
 
     def add_filter_from_string(self, filter_string):
         """
-        Adds a filter from a string
+        Adds a filter provided as a string
 
         Args:
-            filter_string (string): filter provided as command:pattern
+            filter_string (string): filter provided as component:pattern string
+
+        Returns:
+            None (implicitly)
+
+        Raises:
+           EESSIBotActionFilterError: raised if filter_string does not conform
+               to 'component:pattern' format or pattern is empty
         """
         _filter_split = filter_string.split(':')
         if len(_filter_split) != 2:
@@ -109,12 +150,15 @@ class EESSIBotActionFilter:
         Args:
             component (string): any prefix of 'architecture', 'instance', 'job' or 'repository'
             pattern (string): regex that is applied to a string representing the component
+
+        Returns:
+            None (implicitly)
         """
         index = 0
         for _filter in self.action_filters:
             # NOTE the below code assumes that no two filter share the same
-            # prefix (e.g., repository and request would have the same prefixes
-            # 'r' and 're')
+            # prefix (e.g., 'repository' and 'request' would have the same
+            # prefixes 'r' and 're')
             if _filter.component.startswith(component) and pattern == _filter.pattern:
                 log(f"removing filter ({_filter.component}, {pattern})")
                 self.action_filters.pop(index)
@@ -124,6 +168,12 @@ class EESSIBotActionFilter:
     def to_string(self):
         """
         Convert filters to string
+
+        Args:
+            No arguments
+
+        Returns:
+            string containing filters separated by whitespace
         """
         filter_str_list = []
         for _filter in self.action_filters:
@@ -138,11 +188,13 @@ class EESSIBotActionFilter:
         components (architecture, instance, job, repository)
 
         Args:
-            context (dict) : dictionary that maps component to value
+            context (dict) : dictionary that maps components to their value
 
         Returns:
-            True if all defined filters match corresponding component in given
-            context
+            True if no filters are defined or all defined filters match
+                their corresponding component in the given context
+            False if any defined filter does not match its corresponding
+                component in the given context
         """
         # if no filters are defined we return True
         if len(self.action_filters) == 0:
@@ -152,9 +204,12 @@ class EESSIBotActionFilter:
         check = False
 
         # examples:
-        #   arch:intel instance:AWS --> rebuild for all repos for intel architectures on AWS
-        #   arch:generic --> rebuild for all repos for generic architectures anywhere
-        #   repository:nessi.no-2022.11 --> disable all builds for nessi.no-2022.11
+        #   filter: 'arch:intel instance:AWS' --> evaluates to True if
+        #       context['architecture'] matches 'intel' and if
+        #       context['instance'] matches 'AWS'
+        #   filter: 'repository:eessi-2023.06' --> evaluates to True if
+        #       context['repository'] matches 'eessi-2023.06'
+
         # we iterate over all defined filters
         for af in self.action_filters:
             if af.component in context:
