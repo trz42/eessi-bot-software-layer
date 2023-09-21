@@ -307,6 +307,22 @@ build_job_script = PATH_TO_EESSI_BOT/scripts/bot-build.slurm
 This points to the job script which will be submitted by the event handler.
 
 ```
+shared_fs_path = PATH_TO_SHARED_DIRECTORY
+```
+
+Via `shared_fs_path` the path to a directory on a shared filesystem (NFS, etc.) can be provided,
+which can be leveraged by the `bot/build.sh` script to store files that should be available across build jobs
+(software source tarballs, for example).
+
+```
+build_logs_dir = PATH_TO_BUILD_LOGS_DIR
+```
+
+If build logs should be copied to a particular (shared) directory under certain conditions,
+for example when a build failed, the `build_logs_dir` can be set to the path to which logs
+should be copied by the `bot/build.sh` script.
+
+```
 container_cachedir = PATH_TO_SHARED_DIRECTORY
 ```
 The `container_cachedir` may be used to reuse downloaded container image files
