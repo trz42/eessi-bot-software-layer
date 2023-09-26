@@ -1,23 +1,12 @@
-A bot to help with requests to add software installations to the [EESSI software layer](https://github.com/EESSI/software-layer)
+> [!NOTE]
+> In the future the installation and configuration of the bot will be moved
+> to the EESSI docs, likely under [Build-test-deploy bot](https://www.eessi.io/docs/bot/).
 
-GitHub App implemented in ``eessi_bot_event_handler.py``
-
-Script to start app: ``event_handler.sh``
-
-Requires:
-
-* Python 3
-* **PyGitHub**: Python library to use GitHub API v3
-  * https://github.com/PyGithub/PyGithub
-  * API: https://pygithub.readthedocs.io/en/latest/reference.html
-* **Waitress**: production-quality pure-Python WSGI server
-  * https://docs.pylonsproject.org/projects/waitress/en/stable/
-* **PyGHee**: Python library to facilitate creating a GitHub App implemented in Python
-  * https://github.com/boegel/PyGHee
-
-```
-pip3 install --user -r requirements.txt
-```
+The bot helps automating tasks to build, to test and to deploy components of the
+EESSI layers ([compatibility](https://github.com/EESSI/compatibility-layer) and
+[software](https://github.com/EESSI/software-layer)). In the future, the bot may
+be used with any repository that provides some scripts for building, testing and
+deployment.
 
 # Instructions to set up the EESSI bot components
 
@@ -33,57 +22,18 @@ two main components provided in this repository:
 - GitHub account(s) (two needed for a development scenario), referring to them as `YOU_1` and `YOU_2` below
 - A fork, say `YOU_1/software-layer`, of [EESSI/software-layer](https://github.com/EESSI/software-layer) and a fork, say `YOU_2/software-layer` of your first fork if you want to emulate the bot's behaviour but not change EESSI's repository. The EESSI bot will act on events triggered for the first fork (`YOU_1/software-layer`).
 - Access to a frontend/login node/service node of a Slurm cluster where the EESSI bot components shall run. For the sake of brevity, we call this node simply `bot machine`.
-- `singularity` with version 3.6 or newer on the compute nodes of the Slurm cluster.
-- The EESSI bot components and the (build) jobs will frequently access the Internet. Hence, worker nodes and `bot machine` of the Slurm cluster need access to the Internet.
+- `singularity` with version 3.6 or newer _OR_ `apptainer` with version 1.0 or newer on the compute nodes of the Slurm cluster.
+- The EESSI bot components and the (build) jobs will frequently access the
+  Internet. Hence, worker nodes and the `bot machine` of the Slurm cluster need
+access to the Internet (either directly or via an HTTP proxy).
 
 ## <a name="step1"></a>Step 1: Smee.io channel and smee client
 
 We use smee.io as a service to relay events from GitHub to the EESSI bot. To do so, create a new channel on the page https://smee.io and note the URL, e.g., https://smee.io/CHANNEL-ID
 
-On the `bot machine` we need a tool which receives events relayed from https://smee.io/CHANNEL-ID and forwards it to the EESSI bot. We use the Smee client for this. The Smee client can be installed globally with
-
-```
-npm install -g smee-client
-```
-
-or per user
-
-```
-npm install smee-client
-```
-
-If you don't have `npm` on your system and don't have sudo access to easily install it, you may use a container as follows
-
-```
-mkdir smee
-cd smee
-singularity pull docker://node
-singularity exec node_latest.sif npm install smee-client
-cat << 'EOF' > smee
-#!/usr/bin/env bash
-
-BASEDIR=$(dirname "$0")
-
-singularity exec $BASEDIR/node_latest.sif $BASEDIR/node_modules/smee-client/bin/smee.js "$@"
-EOF
-
-chmod 700 smee
-export PATH=$PATH:$PWD
-```
-
-Finally, run the Smee client as follows
-
-```
-smee --url https://smee.io/CHANNEL-ID
-```
-
-If the event handler (see [Step 6.1](#step6.1)) receives events on a port different than the default (3000), you need to specify the port via the parameter `--port PORTNUMBER`, for example,
-
-```
-smee --url https://smee.io/CHANNEL-ID --port 3030
-```
-
-Alternatively, you may use a container providing the smee client. For example,
+On the `bot machine` we need a tool which receives events relayed from
+https://smee.io/CHANNEL-ID and forwards it to the EESSI bot. We use the Smee
+client for this. The Smee client can be run via a container as follows
 
 ```
 singularity pull docker://deltaprojects/smee-client
@@ -112,11 +62,11 @@ At the [app settings page](https://github.com/settings/apps) click "New GitHub A
   python3 -c 'import secrets; print(secrets.token_hex(64))'
   ```
 - Permissions: assign permissions to the app it needs (e.g., read access to commits, issues, pull requests);
-  -  Make sure to assign read and write access to the Pull request in Repository permissions section; These  permisions can be changed later on; 
-  -  Make sure to accept the new permissions  from the install app section. Select Install App option from the menu on the left hand side. 
-  -  Then select the wheel right next to your installed app or use the link https://github.com/settings/installations/INSTALLATION_ID 
-  -  Once the page open you’ll be able to accept the new permissions there. 
-  -  Some permissions (e.g., metadata) will be selected automatically because of others you have chosen.
+  - Make sure to assign read and write access to the Pull request in Repository permissions section; These permisions can be changed later on;
+  - Make sure to accept the new permissions from the install app section. Select Install App option from the menu on the left hand side.
+  - Then select the wheel right next to your installed app or use the link https://github.com/settings/installations/INSTALLATION_ID
+  - Once the page open you'll be able to accept the new permissions there.
+  - Some permissions (e.g., metadata) will be selected automatically because of others you have chosen.
 
 - Events: subscribe the app to events it shall react on (e.g., related to pull requests)
 - Select that the app can only be installed by this (your) GitHub account
@@ -145,7 +95,9 @@ Determine full path to bot directory
 cd eessi-bot-software-layer
 pwd
 ```
-Note the output of `pwd`. This will be used to replace `PATH_TO_EESSI_BOT` in the configuration file `app.cfg` (see [Step 5.4](#step5.4)).
+Note the output of `pwd`. This will be used to replace `PATH_TO_EESSI_BOT` in the
+configuration file `app.cfg` (see [Step 5.4](#step5.4)). In the remainder of this
+page we will refer to this directory as `PATH_TO_EESSI_BOT`.
 
 If you want to develop the EESSI bot, it is recommended that you fork the repository and use the fork on the `bot machine`.
 
@@ -172,36 +124,11 @@ pip install -r requirements.txt
 
 Note, before you can start the bot components (see below), you have to activate the virtual environment with `source venv_bot_p37/bin/activate`. You can deactivate it simply by running `deactivate`.
 
-**Troubles installing some of the requirements or their dependencies?**
-You may try to upgrade `pip` first with
-```
-python3 -m pip install --user --upgrade pip
-```
-Then try to install the requirements with
-```
-pip3 install --user -r requirements.txt
-```
-
-Alternatively, you may try to install some of the dependencies by fixing their version. For example, on the [EESSI CitC cluster](https://github.com/EESSI/hackathons/tree/main/2021-12/citc) installing PyGithub failed due to some problem installing its dependency PyNaCl. Apparently, PyGithub only required version 1.4.0 of PyNaCl but the most recent version 1.5.0 failed to install. Hence, when installing PyNaCl version 1.4.0 first, then PyGithub could be installed. Example commands
-
-```
-pip3 install --user PyNaCl==1.4.0
-pip3 install --user -r requirements.txt
-```
-
-### <a name="step4.1"></a>Step 4.1 Using a development version/branch of PyGHee
-
-The above command `pip3 install --user -r requirements.txt` installs the latest release of the PyGHee library. If you want to use a development version/branch, i.e., what is available from GitHub or your own local copy, you have to set `$PYTHONPATH` correctly. Assuming the library's main directory is `SOME_PATH/PyGHee` do the following in the terminal/shell/script where you run the bot:
-  
-```
-export PYTHONPATH=SOME_PATH/PyGHee:$PYTHONPATH
-```
-
-### <a name="step4.2"></a>Step 4.2: Installing tools to access S3 bucket
+### <a name="step4.1"></a>Step 4.1: Installing tools to access S3 bucket
 
 The script `scripts/eessi-upload-to-staging` uploads a tarball and an associated metadata file to an S3 bucket. It needs two tools for this, `aws` to actually upload the files and `jq` to create the metadata file. This section describes how these tools are installed and configured on the `bot machine`.
 
-Create a new directory, say `BOT_ROOT/tools` and change into the directory.
+Create a new directory, say `PATH_TO_EESSI_BOT/tools` and change into the directory.
 
 For installing the AWS Command Line Interface, including the tool `aws`,
 please follow the instructions at the
@@ -264,11 +191,12 @@ The private key is needed to let the app authenticate when updating information 
 
 Open the page https://github.com/settings/apps and then click on the icon left to the name of the GitHub App for the EESSI bot or the "Edit" button for the app. Near the end of the page you will find a section "Private keys" where you can create a private key by clicking on the button "Generate a private key". The private key should be automatically downloaded to your local computer. Copy it to the `bot machine` and note the full path to it (`PATH_TO_PRIVATE_KEY`).
 
-For example: the private key is in the LOCAL computer. To copy it to the bot machine 
+For example: the private key is on your LOCAL computer. To transfer it to the
+`bot machine` run
 ```
 scp PATH_TO_PRIVATE_KEY_FILE_LOCAL_COMPUTER REMOTE_USERNAME@TARGET_HOST:TARGET/PATH
 ```
-the `TARGET/PATH` of the bot machine should be noted for PATH_TO_PRIVATE_KEY.
+the `TARGET/PATH` of the bot machine should be noted for `PATH_TO_PRIVATE_KEY`.
 
 ### <a name="step5.4"></a>Step 5.4: Create the configuration file `app.cfg`
 
@@ -324,7 +252,7 @@ The CVMFS configuration could be commented out unless there is a need to customi
 http_proxy = http://PROXY_DNS:3128/
 https_proxy = http://PROXY_DNS:3128/
 ```
-If compute nodes have no internet connection, we need to set `http(s)_proxy`
+If compute nodes have no direct internet connection, we need to set `http(s)_proxy`
 or commands such as `pip3` and `eb` (EasyBuild) cannot download software from
 package repositories. Typically these settings are set in the prologue of a
 Slurm job. However, when entering the Gentoo Prefix, most environment settings
@@ -344,11 +272,16 @@ read by the bot and handed over to `build_job_script` via the parameter
 ```
 local_tmp = /tmp/$USER/EESSI
 ```
-This is the path to a temporary directory on the node building the stack, i.e., on a compute/worker node. You may have to change this if temporary storage under '/tmp' does not exist or is too small. This setting will be used for the environment variable `EESSI_TMPDIR`. Variables in the value may be esaped with '\' to delay their expansion to the start of the build_job_script. This can be used for referencing environment variables that are only set inside a Slurm job.
+This is the path to a temporary directory on the node building the stack, i.e.,
+on a compute/worker node. You may have to change this if temporary storage under
+`/tmp` does not exist or is too small. This setting will be used for the
+environment variable `EESSI_TMPDIR`. The value is expanded only inside a running
+job. Thus, typical job environment variables may be used to isolate jobs running
+simultaneously on the same compute node.
 ```
 slurm_params = "--hold"
 ```
-This defines additional parameters for submitting batch jobs. "--hold" should be kept or the bot might not work as intended (the release step would be circumvented). Additional parameters, for example, to specify an account, a partition or any other parameters supported by `sbatch`, may be added to customize the submission to your environment.
+This defines additional parameters for submitting batch jobs. `"--hold"` should be kept or the bot might not work as intended (the release step would be circumvented). Additional parameters, for example, to specify an account, a partition or any other parameters supported by `sbatch`, may be added to customize the submission to your environment.
 ```
 submit_command = /usr/bin/sbatch
 ```
@@ -368,7 +301,7 @@ commands.
 command_response_fmt = FORMAT_MARKDOWN_AND_HTML
 ```
 This allows to customize the format of the comments about the handling of bot
-commands. The format needs to include `{sender}`, `{comment_response}` and
+commands. The format needs to include `{app_name}`, `{comment_response}` and
 `{comment_result}`. `{app_name}` is replaced with the name of the bot instance.
 `{comment_response}` is replaced with information about parsing the comment
 for commands before any command is run. `{comment_result}` is replaced with
@@ -410,17 +343,63 @@ The option `deploy_permission` defines which GitHub accounts can trigger the
 deployment procedure. The value can be empty (any GH account can trigger the
 deployment) or a space delimited list of GH accounts.
 
+```
+no_deploy_permission_comment = Label `bot:deploy` has been set by user `{deploy_labeler}`, but this person does not have permission to trigger deployments
+```
+This defines a message that is added to the status table in a PR comment
+corresponding to a job whose tarball should have been uploaded (e.g., after
+setting the `bot:deploy` label).
+
 ### Section `[architecturetargets]`
 The section `[architecturetargets]` defines for which targets (OS/SUBDIR), e.g., `linux/amd/zen2` the EESSI bot should submit jobs and what additional `sbatch` parameters will be used for requesting a compute node with the CPU microarchitecture needed to build the software stack.
 ```
 arch_target_map = { "linux/x86_64/generic" : "--constraint shape=c4.2xlarge", "linux/x86_64/amd/zen2" : "--constraint shape=c5a.2xlarge" }
 ```
-The map has one to many entries of the format `OS/SUBDIR : ADDITIONAL_SBATCH_PARAMETERS`. For your cluster, you will have to figure out which microarchitectures (`SUBDIR`) are available (as `OS` only `linux` is currently supported) and how to instruct Slurm to request them (`ADDITIONAL_SBATCH_PARAMETERS`).
+The map has one to many entries of the format `OS/SUBDIR :
+ADDITIONAL_SBATCH_PARAMETERS`. For your cluster, you will have to figure out
+which microarchitectures (`SUBDIR`) are available (as `OS` only `linux` is
+currently supported) and how to instruct Slurm to allocate nodes with that
+architecture to a job (`ADDITIONAL_SBATCH_PARAMETERS`).
 
 Note, if you do not have to specify additional parameters to `sbatch` to request a compute node with a specific microarchitecture, you can just write something like
 ```
 arch_target_map = { "linux/x86_64/generic" : "" }
 ```
+
+### Section `[repo_targets]`
+This section defines for what repositories and architectures the bot can run job.
+Repositories are referenced by IDs (or `repo_id`). Architectures are identified
+by `OS/SUBDIR` which correspond to settings in the `arch_target_map`.
+
+```
+repo_target_map = {
+    "OS_SUBDIR_1" : ["REPO_ID_1_1","REPO_ID_1_2"],
+    "OS_SUBDIR_2" : ["REPO_ID_2_1","REPO_ID_2_2"] }
+```
+For each `OS/SUBDIR` combination a list of available repository IDs can be
+provided.
+
+The repository IDs are defined in a separate file, say `repos.cfg` which is
+stored in the directory defined via
+```
+repos_cfg_dir = PATH_TO_SHARED_DIRECTORY/cfg_bundles
+```
+The `repos.cfg` file also uses the `ini` format as follows
+```
+[eessi-2023.06]
+repo_name = pilot.eessi-hpc.org
+repo_version = 2023.06
+config_bundle = eessi-hpc.org-cfg_files.tgz
+config_map = { "eessi-hpc.org/cvmfs-config.eessi-hpc.org.pub":"/etc/cvmfs/keys/eessi-hpc.org/cvmfs-config.eessi-hpc.org.pub", "eessi-hpc.org/ci.eessi-hpc.org.pub":"/etc/cvmfs/keys/eessi-hpc.org/ci.eessi-hpc.org.pub", "eessi-hpc.org/pilot.eessi-hpc.org.pub":"/etc/cvmfs/keys/eessi-hpc.org/pilot.eessi-hpc.org.pub", "default.local":"/etc/cvmfs/default.local", "eessi-hpc.org.conf":"/etc/cvmfs/domain.d/eessi-hpc.org.conf"}
+container = docker://ghcr.io/eessi/build-node:debian11
+```
+The repository id is given in brackets. Then the name of the repository and the
+version are defined. Next a tarball containing configuration files for CernVM-FS
+is provided. The `config_map` maps entries of that tarball to locations inside
+the file system of the container which is used when running the job. Finally, the
+container to be used is given.
+
+The `repos.cfg` file may contain multiple definitions of repositories.
 
 ### Section `[event_handler]`
 The section contains information needed by the event handler
@@ -454,6 +433,81 @@ scontrol_command = /usr/bin/scontrol
 ```
 This is the full path to the Slurm command used for manipulating existing jobs. You may want to verify if `scontrol` is provided at that path or determine its actual location (`which scontrol`).
 
+### Section `[submitted_job_comments]`
+Sets templates for messages about newly submitted jobs.
+```
+initial_comment = New job on instance `{app_name}` for architecture `{arch_name}` for repository `{repo_id}` in job dir `{symlink}`
+```
+Is used to create a comment to a PR when a new job has been created.
+
+```
+awaits_release = job id `{job_id}` awaits release by job manager
+```
+Is used to provide a status update of a job (shown as a row in the job's status
+table).
+
+### Section `[new_job_comments]`
+Sets templates for messages about jobs whose `hold` flag was released.
+```
+awaits_launch = job awaits launch by Slurm scheduler
+```
+Status update that is used when the `hold` flag of a job has been removed.
+
+### Section `[running_job_comments]`
+Sets templates for messages about jobs that are running.
+```
+running_job = job `{job_id}` is running
+```
+Status update for a job that started running.
+
+### Section `[finished_job_comments]`
+Sets templates for messages about finished jobs.
+```
+success = :grin: SUCCESS tarball `{tarball_name}` ({tarball_size} GiB) in job dir
+```
+Message for a successful job that produced a tarball.
+
+```
+failure = :cry: FAILURE
+```
+Message for a failed job.
+
+```
+no_slurm_out = No slurm output `{slurm_out}` in job dir
+```
+Message for missing Slurm output file.
+
+```
+slurm_out = Found slurm output `{slurm_out}` in job dir
+```
+Message for found Slurm output file.
+
+```
+missing_modules = Slurm output lacks message "No missing modules!".
+```
+Template concerning the lack of a message signaling that all modules were built.
+
+```
+no_tarball_message = Slurm output lacks message about created tarball.
+```
+Template concerning the lack of a message about a created tarball.
+
+```
+no_matching_tarball = No tarball matching `{tarball_pattern}` found in job dir.
+```
+Template about a missing tarball.
+
+```
+multiple_tarballs = Found {num_tarballs} tarballs in job dir - only 1 matching `{tarball_pattern}` expected.
+```
+Template to report that multiple tarballs have been found.
+
+```
+job_result_unknown_fmt = <details><summary>:shrug: UNKNOWN _(click triangle for details)_</summary><ul><li>Job results file `{filename}` does not exist in job directory or reading it failed.</li><li>No artefacts were found/reported.</li></ul></details>
+```
+Template to be used in case no result file (produced by `bot/check-build.sh`
+provided by target repository) was found.
+
 # Instructions to run the bot components
 
 The bot consists of three components, the Smee client, the event handler and the job manager. Running the Smee client was explained in [Step 1](#step1).
@@ -474,7 +528,8 @@ If multiple instances on the `bot machine` are being executed, you may need to r
 ```
 See [Step 1](#step1) for telling the Smee client on which port the event handler receives events.
 
-The event handler writes log information to the file `pyghee.log`.
+The event handler writes log information to the files `pyghee.log` and
+`eessi_bot_event_handler.log`.
 
 Note, if you run the bot on a frontend of a cluster with multiple frontends make sure that both the Smee client and the event handler run on the same machine.
 
@@ -489,7 +544,7 @@ The job manager is provided by the Python script `eessi_bot_job_manager_layer.py
 
 It will run in an infinite loop monitoring jobs and acting on their state changes.
 
-If you want to control how the job manager works, you can add two parameters:
+If you want to limit the execution of the job manager, you can add two parameters:
 |Option|Argument|
 |------|--------|
 |`-i` / `--max-manager-iterations`|Any number _z_: _z_ < 0 - run the main loop indefinitely, _z_ == 0 - don't run the main loop, _z_ > 0 - run the main loop _z_ times|
@@ -508,70 +563,6 @@ The job manager can run on a different machine than the event handler as long as
 
 # Example pull request on software-layer
 
-Now that the bot is running on your cluster, we want to provide a little demo about how to use it to add a new package to the software layer. We assume that you have forked [EESSI/software-layer](https://github.com/EESSI/software-layer) to `YOUR_GITHUB_ACCOUNT/software-layer` Following methods can be used to test the bot.
-Method 1:
-   - open the link https://github.com/YOUR_GITHUB_ACCOUNT/software-layer/compare/main...EESSI:software-layer:add-CaDiCaL-9.3.0?expand=1
-   - create the label bot:build if it's not there.
-   - Create the pull request.
-   - Don’t merge the Pull request. It is important to close the pull request or delete the bot:build label after testing it. It can be added again for the other test. 
-If the above method is followed then there will be no need to create another Github account for the test which is shown in the following Method 2.
-
-Method 2:
-Forked `YOU_1/software-layer` to `YOU_2/software-layer`.
-
-Clone into the second fork and create a new branch:
-
-```
-git clone https://github.com/YOU_2/software-layer
-cd software-layer
-git branch add-CaDiCaL-9.3.0
-git checkout add-CaDiCaL-9.3.0
-```
-
-Open `EESSI-pilot-install-software.sh` and add the section
-
-```
-export CaDiCaL_EC="CaDiCaL-1.3.0-GCC-9.3.0.eb"
-echo ">> Installing ${CaDiCaL_EC}..."
-ok_msg="${CaDiCaL_EC} installed, let's solve some problems!"
-fail_msg="Installation of ${CaDiCaL_EC} failed, that's a pity..."
-$EB ${CaDiCaL_EC} --robot
-check_exit_code $? "${ok_msg}" "${fail_msg}"
-```
-
-just before the line
-```
-echo ">> Creating/updating Lmod cache..."
-```
-
-Open `eessi-2021.12.yml` and append the section
-
-```
-  CaDiCaL:
-     toolchains:
-       GCC-9.3.0:
-         versions: ['1.3.0']
-```
-
-Commit the changes and push them to `YOU_1/software-layer`. Create the pull request by opening the link shown by `git push`. Make sure that you request to merge into `YOU_1/software-layer` - your bot receives events for this repository only (and while you experiment you may not wish to create too much noise on EESSI's software-layer repository).
-
-At first, the page for the pull request will look like normal pull request. The event handler will already have received an event, but it will wait until the label `bot:build` is set for the pull request.
-
-Add the label `bot:build`. Now, the event handler will submit jobs - one for each target architecture. For each submitted job it will add a comment such as
-
-IMAGE-SCREENSHOT
-
-The jobs are submitted with the parameter `--hold`. They will not start immediately, but rather are required to be released explicitly by the job manager. This can be very useful to control the processing of jobs, for example, when developing the EESSI bot components. If you want to control the execution, the job manager shall not run in an endless loop.
-
-Next the job manager notes the submitted job(s), releases them and updates the comments corresponding to the released jobs. An example update could look like this
-
-IMAGE-SCREENSHOT
-
-When the job has finished, the job manager analyses the result of job (checking if no missing modules were found and if a tarball was generated) and updates the job's comment in the PR. An example update could look like (in case of success)
-
-IMAGE-SCREENSHOT
-
-or in case of failure
-
-IMAGE-SCREENSHOT
+For information on how to make pull requests and let the bot build software, see
+[build-test-deploy bot](https://www.eessi.io/docs/bot/).
 
