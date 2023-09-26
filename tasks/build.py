@@ -72,6 +72,7 @@ REPOS_CONFIG_MAP = "config_map"
 REPOS_CONTAINER = "container"
 REPO_TARGETS = "repo_targets"
 REPO_TARGET_MAP = "repo_target_map"
+SHARED_FS_PATH = "shared_fs_path"
 SLURM_PARAMS = "slurm_params"
 SUBMITTED_JOB_COMMENTS = "submitted_job_comments"
 SUBMIT_COMMAND = "submit_command"
@@ -119,6 +120,10 @@ def get_build_env_cfg(cfg):
     slurm_params += ' --hold'
     log(f"{fn}(): slurm_params '{slurm_params}'")
     config_data[SLURM_PARAMS] = slurm_params
+
+    shared_fs_path = buildenv.get(SHARED_FS_PATH)
+    log(f"{fn}(): shared_fs_path: '{shared_fs_path}'")
+    config_data[SHARED_FS_PATH] = shared_fs_path
 
     container_cachedir = buildenv.get(CONTAINER_CACHEDIR)
     log(f"{fn}(): container_cachedir '{container_cachedir}'")
@@ -488,6 +493,7 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
     # create ini file job.cfg with entries:
     # [site_config]
     # local_tmp = LOCAL_TMP_VALUE
+    # shared_fs_path = SHARED_FS_PATH
     # build_logs_dir = BUILD_LOGS_DIR
     #
     # [repository]
@@ -502,18 +508,18 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
     # os_type = OS_TYPE
     job_cfg = configparser.ConfigParser()
     job_cfg[JOB_SITECONFIG] = {}
-    if build_env_cfg[CONTAINER_CACHEDIR]:
-        job_cfg[JOB_SITECONFIG][CONTAINER_CACHEDIR] = build_env_cfg[CONTAINER_CACHEDIR]
-    if build_env_cfg[LOCAL_TMP]:
-        job_cfg[JOB_SITECONFIG][JOB_LOCAL_TMP] = build_env_cfg[LOCAL_TMP]
-    if build_env_cfg[HTTP_PROXY]:
-        job_cfg[JOB_SITECONFIG][JOB_HTTP_PROXY] = build_env_cfg[HTTP_PROXY]
-    if build_env_cfg[HTTPS_PROXY]:
-        job_cfg[JOB_SITECONFIG][JOB_HTTPS_PROXY] = build_env_cfg[HTTPS_PROXY]
-    if build_env_cfg[LOAD_MODULES]:
-        job_cfg[JOB_SITECONFIG][JOB_LOAD_MODULES] = build_env_cfg[LOAD_MODULES]
-    if build_env_cfg[BUILD_LOGS_DIR]:
-        job_cfg[JOB_SITECONFIG][BUILD_LOGS_DIR] = build_env_cfg[BUILD_LOGS_DIR]
+    build_env_to_job_cfg_keys = {
+        BUILD_LOGS_DIR: BUILD_LOGS_DIR,
+        CONTAINER_CACHEDIR: CONTAINER_CACHEDIR,
+        HTTP_PROXY: JOB_HTTP_PROXY,
+        HTTPS_PROXY: JOB_HTTPS_PROXY,
+        LOAD_MODULES: JOB_LOAD_MODULES,
+        LOCAL_TMP: JOB_LOCAL_TMP,
+        SHARED_FS_PATH: SHARED_FS_PATH,
+    }
+    for build_env_key, job_cfg_key in build_env_to_job_cfg_keys.items():
+        if build_env_cfg[build_env_key]:
+            job_cfg[JOB_SITECONFIG][job_cfg_key] = build_env_cfg[build_env_key]
 
     job_cfg[JOB_REPOSITORY] = {}
     # directory for repos.cfg
