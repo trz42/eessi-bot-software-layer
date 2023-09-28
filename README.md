@@ -163,7 +163,7 @@ follow the instructions at the
 
 Add the directory that contains `aws` to the `$PATH` environment variable.
 Make sure that `$PATH` is set correctly for newly spawned shells, e.g.,
-it should be exported in startup file such as `$HOME/.bash_profile`.
+it should be exported in a startup file such as `$HOME/.bash_profile`.
 
 Verify that `aws` executes by running `aws --version`. Then, run
 `aws configure` to set credentials for accessing the S3 bucket.
@@ -214,7 +214,7 @@ On the result page, take note/copy the resulting token string -- it will only be
 
 On the `bot machine` set the environment variable `$GITHUB_TOKEN`:
 ```
-export $GITHUB_TOKEN='THE_TOKEN_STRING'
+export GITHUB_TOKEN='THE_TOKEN_STRING'
 ```
 
 in which you replace `THE_TOKEN_STRING` with the actual token.
@@ -270,7 +270,7 @@ Replace '`123456`' with the id of your GitHub App. You can find the id of your G
 ```
 app_name = 'MY-bot'
 ```
-The `app_name` specified a short name for your bot. It will appear in comments to a pull request. For example, it could include the name of the cluster where the bot runs and a label representing the user that runs the bot, like `hal9000-bot`.
+The `app_name` specifies a short name for your bot. It will appear in comments to a pull request. For example, it could include the name of the cluster where the bot runs and a label representing the user that runs the bot, like `hal9000-bot`.
 
 *Note: avoid putting an actual username here as it will be visible on potentially publicly accessible GitHub pages.*
 
@@ -308,7 +308,7 @@ It may happen that we need to customize the [CernVM-FS](https://cernvm.cern.ch/f
 job. The value of `cvmfs_customizations` is a dictionary which maps a file name
 to an entry that needs to be appended to that file. In the example line above, the
 configuration of `CVMFS_HTTP_PROXY` is appended to the file `/etc/cvmfs/default.local`.
-The CernVM-FS configuration can commented out, unless there is a need to customize the CernVM-FS configuration.
+The CernVM-FS configuration can be commented out, unless there is a need to customize the CernVM-FS configuration.
 
 ```
 http_proxy = http://PROXY_DNS:3128/
@@ -437,7 +437,7 @@ arch_target_map = { "linux/x86_64/generic" : "" }
 
 #### `[repo_targets]` section
 
-The `[repo_targets]` section defines for which repositories and architectures the bot can run job.
+The `[repo_targets]` section defines for which repositories and architectures the bot can run a job.
 Repositories are referenced by IDs (or `repo_id`). Architectures are identified
 by `OS/SUBDIR` which correspond to settings in the `arch_target_map`.
 
