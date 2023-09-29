@@ -1,0 +1,29 @@
+This file contains a description of the major changes to the EESSI
+build-and-deploy bot. For more detailed information, please see the git log.
+
+v0.1.0 (29 september 2023)
+--------------------------
+
+This is the first release of the EESSI build-and-deploy bot, which consists of
+an event handler (implemented as a GitHub app, see https://docs.github.com/en/apps),
+and a job manager component (implemented as Python script).
+
+It provides support for:
+
+* building software via jobs submitted to a Slurm cluster;
+* building software for a GitHub repository that includes a `bot/build.sh` and `bot/check-build.sh` script;
+* acting on certain GitHub events:
+  * opening of pull requests;
+  * pull request comment being posted that include bot commands (like `help`, `build`, `show_config`);
+  * labeling of pull requests;
+* status updates of build jobs via pull request comments;
+* access control for sending commands, submitting build jobs, triggering deploys via GitHub accounts;
+* uploading of tarballs with built software artefacts to an S3 bucket;
+* wide range of configuration settings to run the bot in different Slurm-based environments;
+
+Multiple bot instances can be run in parallel for a single GitHub repository.
+
+For documentation, see:
+* high-level overview of the bot: https://www.eessi.io/docs/bot
+* instructions for installing and configuring the bot: https://github.com/EESSI/eessi-bot-software-layer/blob/v0.1.0/README.md
+* how to use the bot to add software to EESSI: https://www.eessi.io/docs/software_layer/adding_software
