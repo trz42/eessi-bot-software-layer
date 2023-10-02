@@ -76,8 +76,8 @@ done
 # restore potentially parsed filename(s) into $*
 set -- "${POSITIONAL_ARGS[@]}"
 
-if [[ $# -lt 1 ]]; then
-    echo "Error: no PR number provided"
+if [[ $# -ne 1 ]]; then
+    echo "Error: exactly one PR number should be provided as argument"
     display_help
     exit 3
 fi
@@ -127,6 +127,7 @@ do
     if ${dry_run} = true ; then
       echo "DRY_RUN: rm '$f' ($(ls -lh $f | awk '{print $5}'))"
     else
+      echo "Removing file '$f'"
       rm $f
     fi
   done
@@ -145,6 +146,7 @@ do
     if ${dry_run} = true ; then
       echo "DRY_RUN: rm '$f' ($(ls -lh $f | awk '{print $5}'))"
     else
+      echo "Removing file '$f'"
       rm $f
     fi
   done
