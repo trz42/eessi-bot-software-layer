@@ -127,8 +127,8 @@ class EESSIBotSoftwareLayerJobManager:
         # get job info, logging any Slurm issues
         # Note, all output lines of squeue are processed because we run it with
         # --noheader.
-        for i in range(0, len(lines)):
-            job = lines[i].rstrip().split()
+        for line in lines:
+            job = line.rstrip().split()
             if len(job) >= 9:
                 job_id = job[0]
                 state = job[4]
