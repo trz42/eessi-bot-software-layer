@@ -106,7 +106,7 @@ class EESSIBotSoftwareLayerJobManager:
         if username is None:
             raise Exception("Unable to find username")
 
-        squeue_cmd = "%s --long --user=%s" % (self.poll_command, username)
+        squeue_cmd = "%s --long --noheader --user=%s" % (self.poll_command, username)
         squeue_output, squeue_err, squeue_exitcode = run_cmd(
             squeue_cmd,
             "get_current_jobs(): squeue command",
@@ -125,9 +125,9 @@ class EESSIBotSoftwareLayerJobManager:
         }
 
         # get job info, logging any Slurm issues
-        # Note, the first two lines of the output are skipped ("range(2,...)")
-        #     because they contain header information.
-        for i in range(2, len(lines)):
+        # Note, all output lines of squeue are processed because we run it with
+        # --noheader.
+        for i in range(0, len(lines)):
             job = lines[i].rstrip().split()
             if len(job) >= 9:
                 job_id = job[0]
