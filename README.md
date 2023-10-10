@@ -67,13 +67,13 @@ At the [app settings page](https://github.com/settings/apps) click "`New GitHub 
   python3 -c 'import secrets; print(secrets.token_hex(64))'
   ```
 - Permissions: assign the required permissions to the app (e.g., read access to commits, issues, pull requests);
-  - Make sure to assign read and write access to the Pull request in "Repository permissions" section; these permisions can be changed later on;
+  - Make sure to assign read and write access to the Pull requests and Issues in "Repository permissions" section; these permisions can be changed later on;
   - Make sure to accept the new permissions from the "Install App" section that you can reach via the menu on the left hand side.
   - Then select the wheel right next to your installed app, or use the link `https://github.com/settings/installations/INSTALLATION_ID`
   - Once the page is open you will be able to accept the new permissions there.
   - Some permissions (e.g., metadata) will be selected automatically because of others you have chosen.
 
-- Events: subscribe the app to events it shall react on (e.g., related to pull requests)
+- Events: subscribe the app to events it shall react on (e.g., related to pull requests and Issue comment)
 - Select that the app can only be installed by this (your) GitHub account or organisation.
 
 Click on "`Create GitHub App`" to complete this step.
