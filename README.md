@@ -73,7 +73,7 @@ At the [app settings page](https://github.com/settings/apps) click "`New GitHub 
   - Once the page is open you will be able to accept the new permissions there.
   - Some permissions (e.g., metadata) will be selected automatically because of others you have chosen.
 
-- Events: subscribe the app to events it shall react on (e.g., related to pull requests and Issue comment)
+- Events: subscribe the app to events it shall react on (e.g., related to pull requests and comments)
 - Select that the app can only be installed by this (your) GitHub account or organisation.
 
 Click on "`Create GitHub App`" to complete this step.
