@@ -600,6 +600,12 @@ job_result_unknown_fmt = <details><summary>:shrug: UNKNOWN _(click triangle for 
 `job_result_unknown_fmt` is used in case no result file (produced by `bot/check-build.sh`
 provided by target repository) was found.
 
+```
+job_test_unknown_fmt = <details><summary>:shrug: UNKNOWN _(click triangle for details)_</summary><ul><li>Job test file `{filename}` does not exist in job directory or reading it failed.</li></ul></details>
+```
+`job_test_unknown_fmt` is used in case no test file (produced by `bot/check-test.sh`
+provided by target repository) was found.
+
 # Instructions to run the bot components
 
 The bot consists of three components:
