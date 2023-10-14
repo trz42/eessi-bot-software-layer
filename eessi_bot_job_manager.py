@@ -301,7 +301,7 @@ class EESSIBotSoftwareLayerJobManager:
         # reuse function from module tools.job_metadata to read metadata file
         test = read_metadata_file(job_test_file_path, self.logfile)
         if test and "TEST" in test:
-            return result["TEST"]
+            return test["TEST"]
         else:
             return None
 
