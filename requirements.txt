@@ -1,4 +1,4 @@
-PyGithub
+PyGithub>=2.1.1
 Waitress
 cryptography
 PyGHee>=0.0.3

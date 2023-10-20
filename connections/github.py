@@ -11,7 +11,7 @@
 #
 
 # Standard library imports
-import datetime
+from datetime import datetime, timezone
 import time
 
 # Third party imports (anything installed into the local Python environment)
@@ -101,7 +101,7 @@ def get_instance():
     global _gh, _token
     # TODO Possibly renew token already if expiry date is soon, not only
     #      after it has expired.
-    if not _gh or (_token and datetime.datetime.utcnow() > _token.expires_at):
+    if not _gh or (_token and datetime.now(timezone.utc) > _token.expires_at):
         _gh = connect()
     return _gh
 
