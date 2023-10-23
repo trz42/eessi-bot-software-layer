@@ -103,10 +103,10 @@ def get_instance():
     #      after it has expired.
 
     # Check if PyGithub version is < 1.56
-    if hasattr(github, 'GithubRetry' is False:
+    if hasattr(github, 'GithubRetry') is False:
         if not _gh or (_token and datetime.utcnow() > _token.expires_at):
             _gh = connect()
-    elif hasattr(github, 'GithubRetry' is True:
+    elif hasattr(github, 'GithubRetry') is True:
         if not _gh or (_token and datetime.now(timezone.utc) > _token.expires_at):
             _gh = connect()
     return _gh
