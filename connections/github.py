@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 import time
 
 # Third party imports (anything installed into the local Python environment)
-from github import Github, GithubIntegration
+import github
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
 from tools import config, logging
@@ -57,7 +57,7 @@ def get_token():
         # If the config keys are not set, get_access_token will raise a NotImplementedError
         # Returning NoneType token will stop the connection in get_instance
         try:
-            github_integration = GithubIntegration(app_id, private_key)
+            github_integration = github.GithubIntegration(app_id, private_key)
             _token = github_integration.get_access_token(installation_id)
             break
         except NotImplementedError as err:
@@ -84,7 +84,7 @@ def connect():
     Returns:
         Instance of Github
     """
-    return Github(get_token().token)
+    return github.Github(get_token().token)
 
 
 def get_instance():
@@ -102,11 +102,13 @@ def get_instance():
     # TODO Possibly renew token already if expiry date is soon, not only
     #      after it has expired.
 
-    # Check if PyGithub version is <1.56
-    if  
-
-    if not _gh or (_token and datetime.datetime.now(datetimezone.utc) > _token.expires_at):
-        _gh = connect()
+    # Check if PyGithub version is < 1.56
+    if hasattr(github, 'GithubRetry' is False:
+        if not _gh or (_token and datetime.utcnow() > _token.expires_at):
+            _gh = connect()
+    elif hasattr(github, 'GithubRetry' is True:
+        if not _gh or (_token and datetime.now(timezone.utc) > _token.expires_at):
+            _gh = connect()
     return _gh
 
 
