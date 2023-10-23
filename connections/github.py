@@ -101,7 +101,11 @@ def get_instance():
     global _gh, _token
     # TODO Possibly renew token already if expiry date is soon, not only
     #      after it has expired.
-    if not _gh or (_token and datetime.now(timezone.utc) > _token.expires_at):
+
+    # Check if PyGithub version is <1.56
+    if  
+
+    if not _gh or (_token and datetime.datetime.now(datetimezone.utc) > _token.expires_at):
         _gh = connect()
     return _gh
 
