@@ -7,7 +7,7 @@ v0.1.1 (14 November 2023)
 This is a patch release of the EESSI build-and-deploy bot.
 
 Bug fixes:
-* omit header in output of squeue run by the job manager (#220)
+* omit header in output of `squeue` command run by the job manager (#220)
 * make bot compatible with more recent versions of PyGithub (#224)
 
 Improvements:
