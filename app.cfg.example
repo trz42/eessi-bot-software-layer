@@ -157,7 +157,7 @@ arch_target_map = { "linux/x86_64/generic" : "--constraint shape=c4.2xlarge", "l
 # EESSI/2021.12 and NESSI/2022.11
 repo_target_map = { "linux/x86_64/amd/zen2" : ["eessi-2021.12","nessi.no-2022.11"] }
 
-# points to definition of repositories (default EESSI-pilot defined by build container)
+# points to definition of repositories (default repository defined by build container)
 repos_cfg_dir = PATH_TO_SHARED_DIRECTORY/cfg_bundles
 
 
