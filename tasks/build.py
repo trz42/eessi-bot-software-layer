@@ -345,21 +345,28 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
     # - 'curl' diff for pull request
     # - 'git apply' diff file
     git_clone_cmd = ' '.join(['git clone', f'https://github.com/{repo_name}', arch_job_dir])
-    clone_output, clone_error, clone_exit_code = run_cmd(git_clone_cmd, "Clone repo", arch_job_dir)
+    clone_output, clone_error, clone_exit_code = run_cmd(git_clone_cmd, "Clone repo", arch_job_dir, raise_on_error=False)
+    if clone_exit_code != 0:
+        return clone_output, clone_error, clone_exit_code
 
     git_checkout_cmd = ' '.join([
         'git checkout',
         branch_name,
     ])
     checkout_output, checkout_err, checkout_exit_code = run_cmd(git_checkout_cmd,
-                                                                "checkout branch '%s'" % branch_name, arch_job_dir)
+                                                                "checkout branch '%s'" % branch_name, arch_job_dir, raise_on_error=False)
+    if checkout_exit_code != 0:
+        return  checkout_output, checkout_err, checkout_exit_code
 
     curl_cmd = f'curl -L https://github.com/{repo_name}/pull/{pr.number}.diff > {pr.number}.diff'
-    curl_output, curl_error, curl_exit_code = run_cmd(curl_cmd, "Obtain patch", arch_job_dir)
-
+    curl_output, curl_error, curl_exit_code = run_cmd(curl_cmd, "Obtain patch", arch_job_dir, raise_on_error=False)
+    if curl_exit_code != 0:
+        return  curl_output, curl_error, curl_exit_code
+    
     git_apply_cmd = f'git apply {pr.number}.diff'
-    git_apply_output, git_apply_error, git_apply_exit_code = run_cmd(git_apply_cmd, "Apply patch", arch_job_dir)
-
+    git_apply_output, git_apply_error, git_apply_exit_code = run_cmd(git_apply_cmd, "Apply patch", arch_job_dir, raise_on_error=False)
+    if git_apply_exit_code != 0:
+        return git_apply_output, git_apply_error, git_apply_exit_code
 
 def apply_cvmfs_customizations(cvmfs_customizations, arch_job_dir):
     """
@@ -453,7 +460,17 @@ def prepare_jobs(pr, cfg, event_info, action_filter):
             log(f"{fn}(): job_dir '{job_dir}'")
 
             # TODO optimisation? download once, copy and cleanup initial copy?
-            download_pr(base_repo_name, base_branch_name, pr, job_dir)
+            download_pr_output, download_pr_error, download_pr_exit_code = download_pr(base_repo_name, base_branch_name,
+                                                                                       pr, job_dir)
+
+            if download_pr_exit_code != 0:
+                download_comment = f"Download failed with error: {download_pr_error}"
+                download_comment = pr_comments.create_comment(repo_name=base_repo_name,pr_number=pr.number,comment=download_comment)
+                if download_comment:
+                    log(f"{fn}(): created PR issue comment with id {download_comment.id}")
+                else:
+                    log(f"{fn}(): failed to create PR issue comment ")
+                raise RuntimeError(download_pr_error)
 
             # prepare job configuration file 'job.cfg' in directory <job_dir>/cfg
             cpu_target = '/'.join(arch.split('/')[1:])
@@ -491,7 +508,7 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
 
     jobcfg_dir = os.path.join(job_dir, 'cfg')
     # create ini file job.cfg with entries:
-    # [site_config]
+    # [site_config
     # local_tmp = LOCAL_TMP_VALUE
     # shared_fs_path = SHARED_FS_PATH
     # build_logs_dir = BUILD_LOGS_DIR
