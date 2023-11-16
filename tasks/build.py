@@ -464,9 +464,9 @@ def prepare_jobs(pr, cfg, event_info, action_filter):
                                                                                        pr, job_dir)
 
             if download_pr_exit_code != 0:
-                download_comment = (f"{download_pr_error}"
-                                    f"\nUnable to download or merge changes between source branch and the destination branch.\n"
-                                    f"\nTip: This can usually be resolved by syncing your branch and solving any merge conflics")
+                download_comment = (f"`{download_pr_error}`"
+                                    f"\nUnable to download or merge changes between the source branch and the destination branch.\n"
+                                    f"\nTip: This can usually be resolved by syncing your branch and solving any merge conflics.")
                 download_comment = pr_comments.create_comment(repo_name=base_repo_name, pr_number=pr.number, comment=download_comment)
                 if download_comment:
                     log(f"{fn}(): created PR issue comment with id {download_comment.id}")
