@@ -464,13 +464,15 @@ def prepare_jobs(pr, cfg, event_info, action_filter):
                                                                                        pr, job_dir)
 
             if download_pr_exit_code != 0:
-                download_comment = f"Download failed with error: {download_pr_error}"
-                download_comment = pr_comments.create_comment(repo_name=base_repo_name,pr_number=pr.number,comment=download_comment)
+                download_comment = f"""Unable to download or merge changes between source branch and the destination branch. Error: \n
+                                     {download_pr_error}\n
+                                     Tip: This can usually be resolved by syncing your branch"""
+                download_comment = pr_comments.create_comment(repo_name=base_repo_name, pr_number=pr.number, comment=download_comment)
                 if download_comment:
                     log(f"{fn}(): created PR issue comment with id {download_comment.id}")
                 else:
-                    log(f"{fn}(): failed to create PR issue comment ")
-                raise RuntimeError(download_pr_error)
+                    log(f"{fn}(): failed to create PR issue comment")
+            raise RuntimeError(download_pr_error)
 
             # prepare job configuration file 'job.cfg' in directory <job_dir>/cfg
             cpu_target = '/'.join(arch.split('/')[1:])
@@ -508,7 +510,7 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
 
     jobcfg_dir = os.path.join(job_dir, 'cfg')
     # create ini file job.cfg with entries:
-    # [site_config
+    # [site_config]
     # local_tmp = LOCAL_TMP_VALUE
     # shared_fs_path = SHARED_FS_PATH
     # build_logs_dir = BUILD_LOGS_DIR
