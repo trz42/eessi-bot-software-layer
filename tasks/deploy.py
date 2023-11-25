@@ -13,6 +13,7 @@
 # Standard library imports
 from datetime import datetime, timezone
 import glob
+import json
 import os
 import re
 import sys
@@ -257,6 +258,10 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number):
     tarball_upload_script = deploycfg.get(TARBALL_UPLOAD_SCRIPT)
     endpoint_url = deploycfg.get(ENDPOINT_URL) or ''
     bucket_spec = deploycfg.get(BUCKET_NAME)
+
+    # if bucket_spec value looks like a dict, try parsing it as such
+    if bucket_spec.lstrip().startswith('{'):
+        bucket_spec = json.loads(bucket_spec)
 
     jobcfg_path = os.path.join(job_dir, CFG_DIRNAME, JOB_CFG_FILENAME)
     jobcfg = config.read_config(jobcfg_path)
