@@ -564,7 +564,7 @@ class EESSIBotSoftwareLayerJobManager:
         # check if _bot_jobJOBID.test exits
         # TODO if not found, assume test was not run (or failed, or ...) and add
         # a message noting that ('not tested' + 'test suite not run or failed')
-        # --> 'bot: test [FILTERs]' command runs tests when filter matches
+        # --> bot/test.sh and bot/check-test.sh scripts are run in job script used by bot for 'build' action
         job_test_file = f"_bot_job{job_id}.test"
         job_test_file_path = os.path.join(new_symlink, job_test_file)
         job_tests = self.read_job_test(job_test_file_path)
