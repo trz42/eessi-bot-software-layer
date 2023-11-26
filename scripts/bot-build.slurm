@@ -46,7 +46,7 @@ status = UNKNOWN
 artefacts =
 EOF
 fi
-echo "check result step finished"
+echo "check build step finished"
 TEST_SCRIPT=bot/test.sh
 if [ -f ${TEST_SCRIPT} ]; then
     echo "${TEST_SCRIPT} script found in '${PWD}', so running it!"
