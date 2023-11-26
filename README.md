@@ -402,10 +402,24 @@ endpoint_url = URL_TO_S3_SERVER
 ```
 `endpoint_url` provides an endpoint (URL) to a server hosting an S3 bucket. The server could be hosted by a commercial cloud provider like AWS or Azure, or running in a private environment, for example, using Minio. The bot uploads tarballs to the bucket which will be periodically scanned by the ingestion procedure at the Stratum 0 server.
 
+
+```ini
+# example: same bucket for all target repos
+bucket_name = "eessi-staging"
 ```
-bucket_name = eessi-staging
+```ini
+# example: bucket to use depends on target repo
+bucket_name = {
+    "eessi-pilot-2023.06": "eessi-staging-2023.06",
+    "eessi.io-2023.06": "software.eessi.io-2023.06",
+}
 ```
-`bucket_name` is the name of the bucket used for uploading of tarballs. The bucket must be available on the default server (`https://${bucket_name}.s3.amazonaws.com`), or the one provided via `endpoint_url`.
+
+`bucket_name` is the name of the bucket used for uploading of tarballs.
+The bucket must be available on the default server (`https://${bucket_name}.s3.amazonaws.com`), or the one provided via `endpoint_url`.
+
+`bucket_name` can be specified as a string value to use the same bucket for all target repos, or it can be mapping from target repo id to bucket name.
+
 
 ```
 upload_policy = once
