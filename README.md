@@ -18,21 +18,39 @@ The bot consists of two main components provided in this repository:
 
 ## <a name="prerequisites"></a>Prerequisites
 
-- GitHub account(s) (two needed for a development scenario), referring to them as `YOU_1` and `YOU_2` below
-- A fork, say `YOU_1/software-layer`, of [EESSI/software-layer](https://github.com/EESSI/software-layer) and a fork, say `YOU_2/software-layer` of your first fork if you want to emulate the bot's behaviour but not change EESSI's repository. The EESSI bot will act on events triggered for the target repository (in this context, either `EESSI/software-layer` or `YOU_1/software-layer`).
-- Access to a frontend/login node/service node of a Slurm cluster where the EESSI bot components will run. For the sake of brevity, we call this node simply `bot machine`.
-- `singularity` with version 3.6 or newer _OR_ `apptainer` with version 1.0 or newer on the compute nodes of the Slurm cluster.
+- GitHub account(s) (two needed for a development scenario), referring to them
+  as `YOU_1` and `YOU_2` below
+- A fork, say `YOU_1/software-layer`, of
+  [EESSI/software-layer](https://github.com/EESSI/software-layer) and a fork,
+  say `YOU_2/software-layer` of your first fork if you want to emulate the
+  bot's behaviour but not change EESSI's repository. The EESSI bot will act on
+  events triggered for the target repository (in this context, either
+  `EESSI/software-layer` or `YOU_1/software-layer`).
+- Access to a frontend/login node/service node of a Slurm cluster where the
+  EESSI bot components will run. For the sake of brevity, we call this node
+  simply `bot machine`.
+- `singularity` with version 3.6 or newer _OR_ `apptainer` with version 1.0 or
+  newer on the compute nodes of the Slurm cluster.
+- On the cluster frontend (or where the bot components run), different tools
+  may be needed to run the Smee client. For `x86_64`, `singularity` or
+  `apptainer` are sufficient. For `aarch64`, the package manager `npm` is
+  needed.
 - The EESSI bot components and the (build) jobs will frequently access the
-  Internet. Hence, worker nodes and the `bot machine` of the Slurm cluster need
-access to the Internet (either directly or via an HTTP proxy).
+  Internet. Hence, worker nodes and the `bot machine` of the Slurm cluster
+  need access to the Internet (either directly or via an HTTP proxy).
 
 ## <a name="step1"></a>Step 1: Smee.io channel and smee client
 
-We use [smee.io](https://smee.io) as a service to relay events from GitHub to the EESSI bot. To do so, create a new channel via https://smee.io and note the URL, e.g., `https://smee.io/CHANNEL-ID`.
+We use [smee.io](https://smee.io) as a service to relay events from GitHub
+to the EESSI bot. To do so, create a new channel via https://smee.io and note
+the URL, e.g., `https://smee.io/CHANNEL-ID`.
 
 On the `bot machine` we need a tool which receives events relayed from
 `https://smee.io/CHANNEL-ID` and forwards it to the EESSI bot. We use the Smee
-client for this. The Smee client can be run via a container as follows
+client for this.
+
+On machines with `x86_64` architecture, the Smee client can be run via a
+container as follows
 
 ```
 singularity pull docker://deltaprojects/smee-client
@@ -47,6 +65,25 @@ singularity run smee-client_latest.sif --port 3030 --url https://smee.io/CHANNEL
 ```
 
 for specifying a different port than the default (3000).
+
+On machines with `aarch64` architecture, we can install the the smee client via
+the `npm` package manager as follows
+
+```
+npm install smee-client
+```
+
+and then running it with the default port (3000)
+
+```
+node_modules/smee-client/bin/smee.js --url https://smee.io/CHANNEL-ID
+```
+
+Another port can be used by adding the `--port PORT` argument, for example,
+
+```
+node_modules/smee-client/bin/smee.js --port 3030 --url https://smee.io/CHANNEL-ID
+```
 
 ## <a name="step2"></a>Step 2: Registering GitHub App
 
