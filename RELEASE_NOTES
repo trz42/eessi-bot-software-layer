@@ -1,6 +1,22 @@
 This file contains a description of the major changes to the EESSI
 build-and-deploy bot. For more detailed information, please see the git log.
 
+v0.2.0 (26 November 2023)
+--------------------------
+
+This is a minor release of the EESSI build-and-deploy bot.
+
+Bug fixes:
+* adds information on installing and using the smee client on `aarch64` (#233)
+
+Improvements:
+* support for running tests inside the same job but after the build step (#222)
+  * runs `bot/test.sh` and `bot/check-test.sh` if these are provided in the GitHub repository
+  * adds a new setting (`job_test_unknown_fmt`) in the bot's configuration file
+* ensure the bot can build for both the EESSI pilot repository (`pilot.eessi-hpc.org`) and `software.eessi.io` (#229)
+* support specifying repository-specific buckets via `bucket_name` in configuration file (#230)
+
+
 v0.1.1 (14 November 2023)
 --------------------------
 
