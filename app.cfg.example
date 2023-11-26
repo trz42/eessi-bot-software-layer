@@ -123,7 +123,10 @@ tarball_upload_script = PATH_TO_EESSI_BOT/scripts/eessi-upload-to-staging
 # - The latter variant is used for AWS S3 services.
 endpoint_url = URL_TO_S3_SERVER
 
-# bucket name
+# bucket name:
+# can be a string value, to always use same bucket regardless of target repo,
+# or can be a mapping of target repo id (see also repo_target_map) to bucket name
+# like: bucket_name = {"eessi-pilot-2023.06": "eessi-staging-pilot-2023.06", "eessi.io-2023.06": "software.eessi.io-2023.06"}
 bucket_name = eessi-staging
 
 # upload policy: defines what policy is used for uploading built artefacts
