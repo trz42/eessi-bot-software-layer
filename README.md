@@ -646,9 +646,15 @@ multiple_tarballs = Found {num_tarballs} tarballs in job dir - only 1 matching `
 `multiple_tarballs` is used to report that multiple tarballs have been found.
 
 ```
-job_result_unknown_fmt = <details><summary>:shrug: UNKNOWN _(click triangle for details)_</summary><ul><li>Job results file `{filename}` does not exist in job directory or reading it failed.</li><li>No artefacts were found/reported.</li></ul></details>
+job_result_unknown_fmt = <details><summary>:shrug: UNKNOWN _(click triangle for details)_</summary><ul><li>Job results file `{filename}` does not exist in job directory, or parsing it failed.</li><li>No artefacts were found/reported.</li></ul></details>
 ```
 `job_result_unknown_fmt` is used in case no result file (produced by `bot/check-build.sh`
+provided by target repository) was found.
+
+```
+job_test_unknown_fmt = <details><summary>:shrug: UNKNOWN _(click triangle for details)_</summary><ul><li>Job test file `{filename}` does not exist in job directory, or parsing it failed.</li></ul></details>
+```
+`job_test_unknown_fmt` is used in case no test file (produced by `bot/check-test.sh`
 provided by target repository) was found.
 
 # Instructions to run the bot components

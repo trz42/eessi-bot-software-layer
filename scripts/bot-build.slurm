@@ -46,4 +46,27 @@ status = UNKNOWN
 artefacts =
 EOF
 fi
-echo "check result step finished"
+echo "check build step finished"
+TEST_SCRIPT=bot/test.sh
+if [ -f ${TEST_SCRIPT} ]; then
+    echo "${TEST_SCRIPT} script found in '${PWD}', so running it!"
+    ${TEST_SCRIPT}
+    echo "${TEST_SCRIPT} finished"
+else
+    echo "could not find ${TEST_SCRIPT} script in '${PWD}'" >&2
+fi
+CHECK_TEST_SCRIPT=bot/check-test.sh
+if [ -f ${CHECK_TEST_SCRIPT} ]; then
+    echo "${CHECK_TEST_SCRIPT} script found in '${PWD}', so running it!"
+    ${CHECK_TEST_SCRIPT}
+else
+    echo "could not find ${CHECK_TEST_SCRIPT} script in '${PWD}' ..."
+    echo "... depositing default _bot_job${SLURM_JOB_ID}.test file in '${PWD}'"
+    cat << 'EOF' > _bot_job${SLURM_JOB_ID}.test
+[RESULT]
+comment_description = <details><summary>:shrug: UNKNOWN _(click triangle for detailed information)_<summary/><ul><li>Did not find `bot/check-test.sh` script in job's work directory.</li><li>*Check job manually or ask an admin of the bot instance to assist you.*</li></ul></details>
+status = UNKNOWN
+artefacts =
+EOF
+fi
+echo "check test step finished"
