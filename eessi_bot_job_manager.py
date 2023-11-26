@@ -585,7 +585,7 @@ class EESSIBotSoftwareLayerJobManager:
 
         dt = datetime.now(timezone.utc)
 
-        comment_update += f"\n|{dt.strftime('%b %d %X %Z %Y')}|tested|"
+        comment_update += f"\n|{dt.strftime('%b %d %X %Z %Y')}|test result|"
         comment_update += f"{comment_description}|"
 
         # obtain id of PR comment to be updated (from file '_bot_jobID.metadata')
