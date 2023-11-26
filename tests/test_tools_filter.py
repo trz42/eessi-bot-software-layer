@@ -116,7 +116,7 @@ def test_match_architecture_job_context(complex_filter):
 
 
 def test_non_match_architecture_repository_context(complex_filter):
-    context = {"architecture": "x86_64/intel/cascadelake", "repository": "EESSI-pilot"}
+    context = {"architecture": "x86_64/intel/cascadelake", "repository": "EESSI"}
     expected = False
     actual = complex_filter.check_filters(context)
     assert expected == actual
@@ -132,7 +132,7 @@ def arch_filter_slash_syntax():
 
 
 def test_match_architecture_syntax_slash(arch_filter_slash_syntax):
-    context = {"architecture": "x86_64/intel/cascadelake", "repository": "EESSI-pilot"}
+    context = {"architecture": "x86_64/intel/cascadelake", "repository": "EESSI"}
     expected = True
     actual = arch_filter_slash_syntax.check_filters(context)
     assert expected == actual
@@ -153,7 +153,7 @@ def arch_filter_dash_syntax():
 
 
 def test_match_architecture_syntax_dash(arch_filter_dash_syntax):
-    context = {"architecture": "x86_64-intel-cascadelake", "repository": "EESSI-pilot"}
+    context = {"architecture": "x86_64-intel-cascadelake", "repository": "EESSI"}
     expected = True
     actual = arch_filter_dash_syntax.check_filters(context)
     assert expected == actual

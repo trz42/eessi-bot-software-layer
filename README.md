@@ -524,10 +524,10 @@ repos_cfg_dir = PATH_TO_SHARED_DIRECTORY/cfg_bundles
 The `repos.cfg` file also uses the `ini` format as follows
 ```ini
 [eessi-2023.06]
-repo_name = pilot.eessi-hpc.org
+repo_name = software.eessi.io
 repo_version = 2023.06
-config_bundle = eessi-hpc.org-cfg_files.tgz
-config_map = { "eessi-hpc.org/cvmfs-config.eessi-hpc.org.pub":"/etc/cvmfs/keys/eessi-hpc.org/cvmfs-config.eessi-hpc.org.pub", "eessi-hpc.org/ci.eessi-hpc.org.pub":"/etc/cvmfs/keys/eessi-hpc.org/ci.eessi-hpc.org.pub", "eessi-hpc.org/pilot.eessi-hpc.org.pub":"/etc/cvmfs/keys/eessi-hpc.org/pilot.eessi-hpc.org.pub", "default.local":"/etc/cvmfs/default.local", "eessi-hpc.org.conf":"/etc/cvmfs/domain.d/eessi-hpc.org.conf"}
+config_bundle = eessi.io-cfg_files.tgz
+config_map = {"eessi.io/eessi.io.pub":"/etc/cvmfs/keys/eessi.io/eessi.io.pub", "default.local":"/etc/cvmfs/default.local", "eessi.io.conf":"/etc/cvmfs/domain.d/eessi.io.conf"}
 container = docker://ghcr.io/eessi/build-node:debian11
 ```
 The repository id is given in brackets (`[eessi-2023.06]`). Then the name of the repository (`repo_name`) and the

@@ -431,9 +431,9 @@ def prepare_jobs(pr, cfg, event_info, action_filter):
             log(f"{fn}(): skipping arch {arch} because repo target map does not define repositories to build for")
             continue
         for repo_id in repocfg[REPO_TARGET_MAP][arch]:
-            # ensure repocfg contains information about the repository repo_id if repo_id != EESSI-pilot
-            # Note, EESSI-pilot is a bad/misleading name, it should be more like AS_IN_CONTAINER
-            if repo_id != "EESSI-pilot" and repo_id not in repocfg:
+            # ensure repocfg contains information about the repository repo_id if repo_id != EESSI
+            # Note, EESSI is a bad/misleading name, it should be more like AS_IN_CONTAINER
+            if (repo_id != "EESSI" and repo_id != "EESSI-pilot") and repo_id not in repocfg:
                 log(f"{fn}(): skipping repo {repo_id}, it is not defined in repo config {repocfg[REPOS_CFG_DIR]}")
                 continue
 
