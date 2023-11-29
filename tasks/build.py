@@ -345,6 +345,7 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
     # - 'curl' diff for pull request
     # - 'git apply' diff file
     git_clone_cmd = ' '.join(['git clone', f'https://github.com/{repo_name}', arch_job_dir])
+    print(f'cloning with command {git_clone_cmd}')
     clone_output, clone_error, clone_exit_code = run_cmd(git_clone_cmd, "Clone repo", arch_job_dir, raise_on_error=False)
     if clone_exit_code != 0:
         return clone_output, clone_error, clone_exit_code
@@ -353,20 +354,51 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
         'git checkout',
         branch_name,
     ])
+    print(f'checking out with command {git_checkout_cmd}')
     checkout_output, checkout_err, checkout_exit_code = run_cmd(git_checkout_cmd,
                                                                 "checkout branch '%s'" % branch_name, arch_job_dir, raise_on_error=False)
     if checkout_exit_code != 0:
         return  checkout_output, checkout_err, checkout_exit_code
 
     curl_cmd = f'curl -L https://github.com/{repo_name}/pull/{pr.number}.diff > {pr.number}.diff'
+    print(f'curl with command {curl_cmd}')
     curl_output, curl_error, curl_exit_code = run_cmd(curl_cmd, "Obtain patch", arch_job_dir, raise_on_error=False)
     if curl_exit_code != 0:
         return  curl_output, curl_error, curl_exit_code
     
     git_apply_cmd = f'git apply {pr.number}.diff'
+    print(f'git apply with command {git_apply_cmd}')
     git_apply_output, git_apply_error, git_apply_exit_code = run_cmd(git_apply_cmd, "Apply patch", arch_job_dir, raise_on_error=False)
     if git_apply_exit_code != 0:
         return git_apply_output, git_apply_error, git_apply_exit_code
+    
+
+def comment_download_pr(base_repo_name, pr, download_pr_exit_code, download_pr_error):
+    """
+    Handle download_pr() exit code and write helpful comment to PR in case of failure
+
+    Args:
+        base_repo_name (string): name of the repository (format USER_OR_ORGANISATION/REPOSITORY)
+        pr (github.PullRequest.PullRequest): instance representing the pull request
+        download_pr_exit_code (int): exit code from download_pr(). 0 if all tasks were successful, 
+            otherwise it corresponds to the error codes of git clone, git checkout, git apply, or curl.  
+        download_pr_error (string): none, or the output of stderr from git clone, git checkout, git apply or curl. 
+
+    Return:
+        None (implicitly). A comment is created in the appropriate PR.
+        
+    """
+    if download_pr_exit_code != 0:
+        fn = sys._getframe().f_code.co_name
+        download_comment = (f"`{download_pr_error}`"
+                           f"\nUnable to download or merge changes between the source branch and the destination branch.\n"
+                           f"\nTip: This can usually be resolved by syncing your branch and resolving any merge conflicts.")
+        download_comment = pr_comments.create_comment(repo_name=base_repo_name, pr_number=pr.number, comment=download_comment)
+        if download_comment:
+            log(f"{fn}(): created PR issue comment with id {download_comment.id}")
+        else:
+            log(f"{fn}(): failed to create PR issue comment")
+        raise ValueError("Unable to download PR and/or sync changes")
 
 def apply_cvmfs_customizations(cvmfs_customizations, arch_job_dir):
     """
@@ -462,18 +494,7 @@ def prepare_jobs(pr, cfg, event_info, action_filter):
             # TODO optimisation? download once, copy and cleanup initial copy?
             download_pr_output, download_pr_error, download_pr_exit_code = download_pr(base_repo_name, base_branch_name,
                                                                                        pr, job_dir)
-
-            if download_pr_exit_code != 0:
-                download_comment = (f"`{download_pr_error}`"
-                                    f"\nUnable to download or merge changes between the source branch and the destination branch.\n"
-                                    f"\nTip: This can usually be resolved by syncing your branch and solving any merge conflics.")
-                download_comment = pr_comments.create_comment(repo_name=base_repo_name, pr_number=pr.number, comment=download_comment)
-                if download_comment:
-                    log(f"{fn}(): created PR issue comment with id {download_comment.id}")
-                else:
-                    log(f"{fn}(): failed to create PR issue comment")
-            raise RuntimeError(download_pr_error)
-
+            comment_download_pr(base_repo_name, pr, download_pr_exit_code, download_pr_error)
             # prepare job configuration file 'job.cfg' in directory <job_dir>/cfg
             cpu_target = '/'.join(arch.split('/')[1:])
             os_type = arch.split('/')[0]
