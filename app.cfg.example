@@ -123,7 +123,10 @@ tarball_upload_script = PATH_TO_EESSI_BOT/scripts/eessi-upload-to-staging
 # - The latter variant is used for AWS S3 services.
 endpoint_url = URL_TO_S3_SERVER
 
-# bucket name
+# bucket name:
+# can be a string value, to always use same bucket regardless of target repo,
+# or can be a mapping of target repo id (see also repo_target_map) to bucket name
+# like: bucket_name = {"eessi-pilot-2023.06": "eessi-staging-pilot-2023.06", "eessi.io-2023.06": "software.eessi.io-2023.06"}
 bucket_name = eessi-staging
 
 # upload policy: defines what policy is used for uploading built artefacts
@@ -157,7 +160,7 @@ arch_target_map = { "linux/x86_64/generic" : "--constraint shape=c4.2xlarge", "l
 # EESSI/2021.12 and NESSI/2022.11
 repo_target_map = { "linux/x86_64/amd/zen2" : ["eessi-2021.12","nessi.no-2022.11"] }
 
-# points to definition of repositories (default EESSI-pilot defined by build container)
+# points to definition of repositories (default repository defined by build container)
 repos_cfg_dir = PATH_TO_SHARED_DIRECTORY/cfg_bundles
 
 
@@ -214,4 +217,5 @@ missing_modules = Slurm output lacks message "No missing modules!".
 no_tarball_message = Slurm output lacks message about created tarball.
 no_matching_tarball = No tarball matching `{tarball_pattern}` found in job dir.
 multiple_tarballs = Found {num_tarballs} tarballs in job dir - only 1 matching `{tarball_pattern}` expected.
-job_result_unknown_fmt = <details><summary>:shrug: UNKNOWN _(click triangle for detailed information)_<summary/><ul><li>Job results file `{filename}` does not exist in job directory or reading it failed.</li><li>No artefacts were found/reported.</li></ul></details>
+job_result_unknown_fmt = <details><summary>:shrug: UNKNOWN _(click triangle for detailed information)_</summary><ul><li>Job results file `{filename}` does not exist in job directory, or parsing it failed.</li><li>No artefacts were found/reported.</li></ul></details>
+job_test_unknown_fmt = <details><summary>:shrug: UNKNOWN _(click triangle for detailed information)_</summary><ul><li>Job test file `{filename}` does not exist in job directory, or parsing it failed.</li></ul></details>

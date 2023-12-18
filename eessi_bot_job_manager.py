@@ -51,6 +51,8 @@ FAILURE = "failure"
 FINISHED_JOB_COMMENTS = "finished_job_comments"
 JOB_RESULT_COMMENT_DESCRIPTION = "comment_description"
 JOB_RESULT_UNKNOWN_FMT = "job_result_unknown_fmt"
+JOB_TEST_COMMENT_DESCRIPTION = "comment_description"
+JOB_TEST_UNKNOWN_FMT = "job_test_unknown_fmt"
 MISSING_MODULES = "missing_modules"
 MULTIPLE_TARBALLS = "multiple_tarballs"
 NEW_JOB_COMMENTS = "new_job_comments"
@@ -285,6 +287,24 @@ class EESSIBotSoftwareLayerJobManager:
         else:
             return None
 
+    def read_job_test(self, job_test_file_path):
+        """
+        Read job test file and return the contents of the 'TEST' section.
+
+        Args:
+            job_test_file_path (string): path to job test file
+
+        Returns:
+            (ConfigParser): instance of ConfigParser corresponding to the
+                'TEST' section or None
+        """
+        # reuse function from module tools.job_metadata to read metadata file
+        test = read_metadata_file(job_test_file_path, self.logfile)
+        if test and "TEST" in test:
+            return test["TEST"]
+        else:
+            return None
+
     def process_new_job(self, new_job):
         """
         Process a new job by verifying that it is a bot job and if so
@@ -470,7 +490,8 @@ class EESSIBotSoftwareLayerJobManager:
         """
         Process a finished job by
         - moving the symlink to the directory storing finished jobs,
-        - updating the PR comment with information from '*.result' file
+        - updating the PR comment with information from '*.result' and '*.test'
+          files
 
         Args:
             finished_job (dict): dictionary with information about the job
@@ -497,14 +518,21 @@ class EESSIBotSoftwareLayerJobManager:
         os.rename(old_symlink, new_symlink)
 
         # REPORT status (to logfile in any case, to PR comment if accessible)
-        #   rely fully on what bot/check-build.sh has returned
-        #   check if file _bot_jobJOBID.result exists --> if so read it and
-        #   update PR comment
-        # contents of *.result file (here we only use section [RESULT])
-        #   [RESULT]
-        #   comment_description = _FULLY_DEFINED_UPDATE_TO_PR_COMMENT_
-        #   status = {SUCCESS,FAILURE,UNKNOWN}
-        #   artefacts = _LIST_OF_ARTEFACTS_TO_BE_DEPLOYED_
+        #  - rely fully on what bot/check-build.sh and bot/check-test.sh have
+        #    returned
+        #  - check if file _bot_jobJOBID.result exists --> if so read it and
+        #    update PR comment
+        #    . contents of *.result file (here we only use section [RESULT])
+        #      [RESULT]
+        #      comment_description = _FULLY_DEFINED_UPDATE_TO_PR_COMMENT_
+        #      status = {SUCCESS,FAILURE,UNKNOWN}
+        #      artefacts = _LIST_OF_ARTEFACTS_TO_BE_DEPLOYED_
+        #  - check if file _bot_jobJOBID.test exists --> if so read it and
+        #    update PR comment
+        #    . contents of *.test file (here we only use section [TEST])
+        #      [TEST]
+        #      comment_description = _FULLY_DEFINED_UPDATE_TO_PR_COMMENT_
+        #      status = {SUCCESS,FAILURE,UNKNOWN}
 
         # obtain format templates from app.cfg
         finished_job_comments_cfg = config.read_config()[FINISHED_JOB_COMMENTS]
@@ -531,6 +559,33 @@ class EESSIBotSoftwareLayerJobManager:
         dt = datetime.now(timezone.utc)
 
         comment_update = f"\n|{dt.strftime('%b %d %X %Z %Y')}|finished|"
+        comment_update += f"{comment_description}|"
+
+        # check if _bot_jobJOBID.test exits
+        # TODO if not found, assume test was not run (or failed, or ...) and add
+        # a message noting that ('not tested' + 'test suite not run or failed')
+        # --> bot/test.sh and bot/check-test.sh scripts are run in job script used by bot for 'build' action
+        job_test_file = f"_bot_job{job_id}.test"
+        job_test_file_path = os.path.join(new_symlink, job_test_file)
+        job_tests = self.read_job_test(job_test_file_path)
+
+        job_test_unknown_fmt = finished_job_comments_cfg[JOB_TEST_UNKNOWN_FMT]
+        # set fallback comment_description in case no test file was found
+        # (self.read_job_result returned None)
+        comment_description = job_test_unknown_fmt.format(filename=job_test_file)
+        if job_tests:
+            # get preformatted comment_description or use previously set default for unknown
+            comment_description = job_tests.get(JOB_TEST_COMMENT_DESCRIPTION, comment_description)
+
+        # report to log
+        log(f"{fn}(): finished job {job_id}, test suite result\n"
+            f"########\n"
+            f"comment_description: {comment_description}\n"
+            f"########\n", self.logfile)
+
+        dt = datetime.now(timezone.utc)
+
+        comment_update += f"\n|{dt.strftime('%b %d %X %Z %Y')}|test result|"
         comment_update += f"{comment_description}|"
 
         # obtain id of PR comment to be updated (from file '_bot_jobID.metadata')

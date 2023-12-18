@@ -18,21 +18,39 @@ The bot consists of two main components provided in this repository:
 
 ## <a name="prerequisites"></a>Prerequisites
 
-- GitHub account(s) (two needed for a development scenario), referring to them as `YOU_1` and `YOU_2` below
-- A fork, say `YOU_1/software-layer`, of [EESSI/software-layer](https://github.com/EESSI/software-layer) and a fork, say `YOU_2/software-layer` of your first fork if you want to emulate the bot's behaviour but not change EESSI's repository. The EESSI bot will act on events triggered for the target repository (in this context, either `EESSI/software-layer` or `YOU_1/software-layer`).
-- Access to a frontend/login node/service node of a Slurm cluster where the EESSI bot components will run. For the sake of brevity, we call this node simply `bot machine`.
-- `singularity` with version 3.6 or newer _OR_ `apptainer` with version 1.0 or newer on the compute nodes of the Slurm cluster.
+- GitHub account(s) (two needed for a development scenario), referring to them
+  as `YOU_1` and `YOU_2` below
+- A fork, say `YOU_1/software-layer`, of
+  [EESSI/software-layer](https://github.com/EESSI/software-layer) and a fork,
+  say `YOU_2/software-layer` of your first fork if you want to emulate the
+  bot's behaviour but not change EESSI's repository. The EESSI bot will act on
+  events triggered for the target repository (in this context, either
+  `EESSI/software-layer` or `YOU_1/software-layer`).
+- Access to a frontend/login node/service node of a Slurm cluster where the
+  EESSI bot components will run. For the sake of brevity, we call this node
+  simply `bot machine`.
+- `singularity` with version 3.6 or newer _OR_ `apptainer` with version 1.0 or
+  newer on the compute nodes of the Slurm cluster.
+- On the cluster frontend (or where the bot components run), different tools
+  may be needed to run the Smee client. For `x86_64`, `singularity` or
+  `apptainer` are sufficient. For `aarch64`, the package manager `npm` is
+  needed.
 - The EESSI bot components and the (build) jobs will frequently access the
-  Internet. Hence, worker nodes and the `bot machine` of the Slurm cluster need
-access to the Internet (either directly or via an HTTP proxy).
+  Internet. Hence, worker nodes and the `bot machine` of the Slurm cluster
+  need access to the Internet (either directly or via an HTTP proxy).
 
 ## <a name="step1"></a>Step 1: Smee.io channel and smee client
 
-We use [smee.io](https://smee.io) as a service to relay events from GitHub to the EESSI bot. To do so, create a new channel via https://smee.io and note the URL, e.g., `https://smee.io/CHANNEL-ID`.
+We use [smee.io](https://smee.io) as a service to relay events from GitHub
+to the EESSI bot. To do so, create a new channel via https://smee.io and note
+the URL, e.g., `https://smee.io/CHANNEL-ID`.
 
 On the `bot machine` we need a tool which receives events relayed from
 `https://smee.io/CHANNEL-ID` and forwards it to the EESSI bot. We use the Smee
-client for this. The Smee client can be run via a container as follows
+client for this.
+
+On machines with `x86_64` architecture, the Smee client can be run via a
+container as follows
 
 ```
 singularity pull docker://deltaprojects/smee-client
@@ -47,6 +65,25 @@ singularity run smee-client_latest.sif --port 3030 --url https://smee.io/CHANNEL
 ```
 
 for specifying a different port than the default (3000).
+
+On machines with `aarch64` architecture, we can install the the smee client via
+the `npm` package manager as follows
+
+```
+npm install smee-client
+```
+
+and then running it with the default port (3000)
+
+```
+node_modules/smee-client/bin/smee.js --url https://smee.io/CHANNEL-ID
+```
+
+Another port can be used by adding the `--port PORT` argument, for example,
+
+```
+node_modules/smee-client/bin/smee.js --port 3030 --url https://smee.io/CHANNEL-ID
+```
 
 ## <a name="step2"></a>Step 2: Registering GitHub App
 
@@ -402,10 +439,24 @@ endpoint_url = URL_TO_S3_SERVER
 ```
 `endpoint_url` provides an endpoint (URL) to a server hosting an S3 bucket. The server could be hosted by a commercial cloud provider like AWS or Azure, or running in a private environment, for example, using Minio. The bot uploads tarballs to the bucket which will be periodically scanned by the ingestion procedure at the Stratum 0 server.
 
+
+```ini
+# example: same bucket for all target repos
+bucket_name = "eessi-staging"
 ```
-bucket_name = eessi-staging
+```ini
+# example: bucket to use depends on target repo
+bucket_name = {
+    "eessi-pilot-2023.06": "eessi-staging-2023.06",
+    "eessi.io-2023.06": "software.eessi.io-2023.06",
+}
 ```
-`bucket_name` is the name of the bucket used for uploading of tarballs. The bucket must be available on the default server (`https://${bucket_name}.s3.amazonaws.com`), or the one provided via `endpoint_url`.
+
+`bucket_name` is the name of the bucket used for uploading of tarballs.
+The bucket must be available on the default server (`https://${bucket_name}.s3.amazonaws.com`), or the one provided via `endpoint_url`.
+
+`bucket_name` can be specified as a string value to use the same bucket for all target repos, or it can be mapping from target repo id to bucket name.
+
 
 ```
 upload_policy = once
@@ -473,10 +524,10 @@ repos_cfg_dir = PATH_TO_SHARED_DIRECTORY/cfg_bundles
 The `repos.cfg` file also uses the `ini` format as follows
 ```ini
 [eessi-2023.06]
-repo_name = pilot.eessi-hpc.org
+repo_name = software.eessi.io
 repo_version = 2023.06
-config_bundle = eessi-hpc.org-cfg_files.tgz
-config_map = { "eessi-hpc.org/cvmfs-config.eessi-hpc.org.pub":"/etc/cvmfs/keys/eessi-hpc.org/cvmfs-config.eessi-hpc.org.pub", "eessi-hpc.org/ci.eessi-hpc.org.pub":"/etc/cvmfs/keys/eessi-hpc.org/ci.eessi-hpc.org.pub", "eessi-hpc.org/pilot.eessi-hpc.org.pub":"/etc/cvmfs/keys/eessi-hpc.org/pilot.eessi-hpc.org.pub", "default.local":"/etc/cvmfs/default.local", "eessi-hpc.org.conf":"/etc/cvmfs/domain.d/eessi-hpc.org.conf"}
+config_bundle = eessi.io-cfg_files.tgz
+config_map = {"eessi.io/eessi.io.pub":"/etc/cvmfs/keys/eessi.io/eessi.io.pub", "default.local":"/etc/cvmfs/default.local", "eessi.io.conf":"/etc/cvmfs/domain.d/eessi.io.conf"}
 container = docker://ghcr.io/eessi/build-node:debian11
 ```
 The repository id is given in brackets (`[eessi-2023.06]`). Then the name of the repository (`repo_name`) and the
@@ -595,9 +646,15 @@ multiple_tarballs = Found {num_tarballs} tarballs in job dir - only 1 matching `
 `multiple_tarballs` is used to report that multiple tarballs have been found.
 
 ```
-job_result_unknown_fmt = <details><summary>:shrug: UNKNOWN _(click triangle for details)_</summary><ul><li>Job results file `{filename}` does not exist in job directory or reading it failed.</li><li>No artefacts were found/reported.</li></ul></details>
+job_result_unknown_fmt = <details><summary>:shrug: UNKNOWN _(click triangle for details)_</summary><ul><li>Job results file `{filename}` does not exist in job directory, or parsing it failed.</li><li>No artefacts were found/reported.</li></ul></details>
 ```
 `job_result_unknown_fmt` is used in case no result file (produced by `bot/check-build.sh`
+provided by target repository) was found.
+
+```
+job_test_unknown_fmt = <details><summary>:shrug: UNKNOWN _(click triangle for details)_</summary><ul><li>Job test file `{filename}` does not exist in job directory, or parsing it failed.</li></ul></details>
+```
+`job_test_unknown_fmt` is used in case no test file (produced by `bot/check-test.sh`
 provided by target repository) was found.
 
 # Instructions to run the bot components

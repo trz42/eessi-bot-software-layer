@@ -13,6 +13,7 @@
 # Standard library imports
 from datetime import datetime, timezone
 import glob
+import json
 import os
 import re
 import sys
@@ -22,6 +23,7 @@ from pyghee.utils import log
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
 from connections import github
+from tasks.build import CFG_DIRNAME, JOB_CFG_FILENAME, JOB_REPO_ID, JOB_REPOSITORY
 from tasks.build import get_build_env_cfg
 from tools import config, pr_comments, run_cmd
 
@@ -255,7 +257,32 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number):
     deploycfg = cfg[DEPLOYCFG]
     tarball_upload_script = deploycfg.get(TARBALL_UPLOAD_SCRIPT)
     endpoint_url = deploycfg.get(ENDPOINT_URL) or ''
-    bucket_name = deploycfg.get(BUCKET_NAME)
+    bucket_spec = deploycfg.get(BUCKET_NAME)
+
+    # if bucket_spec value looks like a dict, try parsing it as such
+    if bucket_spec.lstrip().startswith('{'):
+        bucket_spec = json.loads(bucket_spec)
+
+    jobcfg_path = os.path.join(job_dir, CFG_DIRNAME, JOB_CFG_FILENAME)
+    jobcfg = config.read_config(jobcfg_path)
+    target_repo_id = jobcfg[JOB_REPOSITORY][JOB_REPO_ID]
+
+    if isinstance(bucket_spec, str):
+        bucket_name = bucket_spec
+        log(f"Using specified bucket: {bucket_name}")
+    elif isinstance(bucket_spec, dict):
+        # bucket spec may be a mapping of target repo id to bucket name
+        bucket_name = bucket_spec.get(target_repo_id)
+        if bucket_name is None:
+            update_pr_comment(tarball, repo_name, pr_number, "not uploaded",
+                              f"failed (no bucket specified for {target_repo_id})")
+            return
+        else:
+            log(f"Using bucket for {target_repo_id}: {bucket_name}")
+    else:
+        update_pr_comment(tarball, repo_name, pr_number, "not uploaded",
+                          f"failed (incorrect bucket spec: {bucket_spec})")
+        return
 
     # run 'eessi-upload-to-staging {abs_path}'
     # (1) construct command line

@@ -38,6 +38,7 @@ BUILDENV = "buildenv"
 BUILD_JOB_SCRIPT = "build_job_script"
 BUILD_LOGS_DIR = "build_logs_dir"
 BUILD_PERMISSION = "build_permission"
+CFG_DIRNAME = "cfg"
 CONTAINER_CACHEDIR = "container_cachedir"
 CVMFS_CUSTOMIZATIONS = "cvmfs_customizations"
 DEFAULT_JOB_TIME_LIMIT = "24:00:00"
@@ -47,6 +48,7 @@ HTTP_PROXY = "http_proxy"
 INITIAL_COMMENT = "initial_comment"
 JOBS_BASE_DIR = "jobs_base_dir"
 JOB_ARCHITECTURE = "architecture"
+JOB_CFG_FILENAME = "job.cfg"
 JOB_CONTAINER = "container"
 JOB_LOCAL_TMP = "local_tmp"
 JOB_HTTPS_PROXY = "https_proxy"
@@ -64,7 +66,6 @@ LOAD_MODULES = "load_modules"
 LOCAL_TMP = "local_tmp"
 NO_BUILD_PERMISSION_COMMENT = "no_build_permission_comment"
 REPOS_CFG_DIR = "repos_cfg_dir"
-REPOS_ID = "repo_id"
 REPOS_REPO_NAME = "repo_name"
 REPOS_REPO_VERSION = "repo_version"
 REPOS_CONFIG_BUNDLE = "config_bundle"
@@ -198,8 +199,8 @@ def get_repo_cfg(cfg):
         (dict): dictionary containing repository settings as follows
            - {REPOS_CFG_DIR: path to repository config directory as defined in 'app.cfg'}
            - {REPO_TARGET_MAP: json of REPO_TARGET_MAP value as defined in 'app.cfg'}
-           - for all sections [REPO_ID] defined in REPOS_CFG_DIR/repos.cfg add a
-             mapping {REPO_ID: dictionary containing settings of that section}
+           - for all sections [JOB_REPO_ID] defined in REPOS_CFG_DIR/repos.cfg add a
+             mapping {JOB_REPO_ID: dictionary containing settings of that section}
     """
     fn = sys._getframe().f_code.co_name
 
@@ -469,9 +470,9 @@ def prepare_jobs(pr, cfg, event_info, action_filter):
             log(f"{fn}(): skipping arch {arch} because repo target map does not define repositories to build for")
             continue
         for repo_id in repocfg[REPO_TARGET_MAP][arch]:
-            # ensure repocfg contains information about the repository repo_id if repo_id != EESSI-pilot
-            # Note, EESSI-pilot is a bad/misleading name, it should be more like AS_IN_CONTAINER
-            if repo_id != "EESSI-pilot" and repo_id not in repocfg:
+            # ensure repocfg contains information about the repository repo_id if repo_id != EESSI
+            # Note, EESSI is a bad/misleading name, it should be more like AS_IN_CONTAINER
+            if (repo_id != "EESSI" and repo_id != "EESSI-pilot") and repo_id not in repocfg:
                 log(f"{fn}(): skipping repo {repo_id}, it is not defined in repo config {repocfg[REPOS_CFG_DIR]}")
                 continue
 
@@ -529,7 +530,7 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
     """
     fn = sys._getframe().f_code.co_name
 
-    jobcfg_dir = os.path.join(job_dir, 'cfg')
+    jobcfg_dir = os.path.join(job_dir, CFG_DIRNAME)
     # create ini file job.cfg with entries:
     # [site_config]
     # local_tmp = LOCAL_TMP_VALUE
@@ -538,7 +539,7 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
     #
     # [repository]
     # repos_cfg_dir = JOB_CFG_DIR
-    # repo_id = REPO_ID
+    # repo_id = JOB_REPO_ID
     # container = CONTAINER
     # repo_name = REPO_NAME
     # repo_version = REPO_VERSION
@@ -595,7 +596,7 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
     # make sure that <jobcfg_dir> exists
     os.makedirs(jobcfg_dir, exist_ok=True)
 
-    jobcfg_file = os.path.join(jobcfg_dir, 'job.cfg')
+    jobcfg_file = os.path.join(jobcfg_dir, JOB_CFG_FILENAME)
     with open(jobcfg_file, "w") as jcf:
         job_cfg.write(jcf)
 
