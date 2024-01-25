@@ -26,7 +26,7 @@ import waitress
 from connections import github
 import tasks.build as build
 from tasks.build import check_build_permission, get_architecture_targets, get_repo_cfg, \
-    submit_build_jobs, request_bot_build_issue_comments
+    request_bot_build_issue_comments, submit_build_jobs
 import tasks.deploy as deploy
 from tasks.deploy import deploy_built_artefacts
 from tools import config
