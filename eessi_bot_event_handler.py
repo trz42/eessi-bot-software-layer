@@ -496,9 +496,9 @@ class EESSIBotSoftwareLayer(PyGHee):
         status_table = request_bot_build_issue_comments(repo_name, pr_number)
 
         comment_status = ''
-        comment_status += f"\nThis is the status of all the `bot: build` commands:"
-        comment_status += f"\n|arch|result|date|status|url|"
-        comment_status += f"\n|----|------|----|------|---|"
+        comment_status += "\nThis is the status of all the `bot: build` commands:"
+        comment_status += "\n|arch|result|date|status|url|"
+        comment_status += "\n|----|------|----|------|---|"
         for x in range(0, len(status_table['date'])):
             comment_status += f"\n|{status_table['arch'][x]}|"
             comment_status += f"{status_table['result'][x]}|"
