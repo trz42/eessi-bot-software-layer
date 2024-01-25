@@ -792,9 +792,10 @@ def request_bot_build_issue_comments(repo_name, pr_number):
 
                 # Convert markdown table to a dictionary
                 lines = comment_table.split('\n')
-                values = []
+                rows = []
                 keys = []
                 for i, row in enumerate(lines):
+                    values = {}
                     if i == 0:
                         for key in row.split('|'):
                             keys.append(key.strip())
@@ -803,22 +804,23 @@ def request_bot_build_issue_comments(repo_name, pr_number):
                     else:
                         for j, value in enumerate(row.split('|')):
                             if j > 0 and j < len(keys) - 1:
-                                values.append({keys[j]: value.strip()})
+                                values[keys[j]] = value.strip()})
+                        rows.append(values)
 
                 # add date, status, url to  status_table if
-                for value in values:
-                    if value['job status'] == 'finished':
-                        status_table['date'].append(value['date'])
-                        status_table['status'].append(value['job status'])
+                for row in rows:
+                    if row['job status'] == 'finished':
+                        status_table['date'].append(row['date'])
+                        status_table['status'].append(row['job status'])
                         status_table['url'].append(comment['html_url'])
-                        if 'FAILURE' in value['comment']:
+                        if 'FAILURE' in row['comment']:
                             status_table['result'].append(':cry: FAILURE')
-                        elif 'SUCCES' in value['comment']:
+                        elif 'SUCCES' in row['comment']:
                             status_table['result'].append(':grin: SUCCESS')
-                        elif 'UNKNOWN' in value['comment']:
+                        elif 'UNKNOWN' in row['comment']:
                             status_table['result'].append(':shrug: UNKNOWN')
                         else:
-                            status_table['result'].append(value['comment'])
+                            status_table['result'].append(row['comment'])
         if len(comments) != 100:
             break
     return status_table
