@@ -509,7 +509,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         self.log(f"PR opened: comment '{comment}'")
         repo = gh.get_repo(repo_name)
         pull_request = repo.get_pull(pr_number)
-        issue_comment = pull_request.create_issue_comment(comment)
+        issue_comment = pull_request.create_issue_comment(comment_status)
         return issue_comment
 
     def start(self, app, port=3000):
