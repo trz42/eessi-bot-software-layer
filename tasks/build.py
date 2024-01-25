@@ -765,7 +765,7 @@ def check_build_permission(pr, event_info):
 def request_bot_build_issue_comments(repo_name, pr_number):
     status_table = {'arch': [], 'date': [], 'status': [], 'url': [], 'result': []}
     cfg = config.read_config()
- 
+
     # for loop because github has max 100 items per request.
     # if the pr has more than 100 comments we need to use per_page
     # argument at the moment the for loop is for a max of 400 comments could bump this up
