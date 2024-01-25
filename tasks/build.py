@@ -761,14 +761,15 @@ def check_build_permission(pr, event_info):
         log(f"{fn}(): GH account '{build_labeler}' is authorized to build")
         return True
 
+
 def request_bot_build_issue_comments(repo_name, pr_number):
     status_table = {'arch': [], 'date': [], 'status': [], 'url': [], 'result': []}
     cfg = config.read_config()
-    
-    # for loop because github has max 100 items per request. 
-    # if the pr has more than 100 comments we need to use per_page 
+ 
+    # for loop because github has max 100 items per request.
+    # if the pr has more than 100 comments we need to use per_page
     # argument at the moment the for loop is for a max of 400 comments could bump this up
-    for x in range(1,5):
+    for x in range(1, 5):
         curl_cmd = f'curl -L https://api.github.com/repos/{repo_name}/issues/{pr_number}/comments?per_page=100&page={x}'
         curl_output, curl_error, curl_exit_code = run_cmd(curl_cmd, "fetch all comments")
 
@@ -790,15 +791,18 @@ def request_bot_build_issue_comments(repo_name, pr_number):
 
                 # Convert markdown table to a dictionary
                 lines = comment_table.split('\n')
-                ret = []
+                values = []
                 keys = []
-                for i, l in enumerate(lines):
+                for i, row in enumerate(lines):
                     if i == 0:
-                        keys = [_i.strip() for _i in l.split('|')]
-                    elif i == 1: 
+                        for key in row.split('|'):
+                            keys.append(key.strip())
+                    elif i == 1:
                         continue
                     else:
-                        ret.append({keys[_i]: v.strip() for _i, v in enumerate(l.split('|')) if _i > 0 and _i<len(keys)-1})
+                        for j, value in enumerate(l.split('|')):
+                            if j > 0 and j < len(keys) - 1:
+                                values.append({keys[j]: value.strip()})
 
                 # add date, status, url to  status_table if
                 for row in ret:
