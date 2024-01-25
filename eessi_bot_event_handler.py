@@ -25,7 +25,7 @@ import waitress
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
 from connections import github
 import tasks.build as build
-from tasks.build import check_build_permission, get_architecture_targets, get_repo_cfg, submit_build_jobs, request_bot_build_issue_comments
+from tasks.build import check_build_permission, get_architecture_targets, get_repo_cfg, \    submit_build_jobs, request_bot_build_issue_comments
 import tasks.deploy as deploy
 from tasks.deploy import deploy_built_artefacts
 from tools import config
@@ -493,12 +493,16 @@ class EESSIBotSoftwareLayer(PyGHee):
         repo_name = event_info['raw_request_body']['repository']['full_name']
         pr_number = event_info['raw_request_body']['issue']['number']
         status_table = request_bot_build_issue_comments(repo_name, pr_number)
-        
+
         comment = f"This is the status of all the `bot: build` commands:"
         comment += f"\n|arch|result|date|status|url|"
         comment += f"\n|----|------|----|------|---|"
-        for x in range(0,len(status_table['date'])):
-            comment += f"\n|{status_table['arch'][x]}|{status_table['result'][x]}|{status_table['date'][x]}|{status_table['status'][x]}|{status_table['url'][x]}|"
+        for x in range(0, len(status_table['date'])):
+            comment += f"\n|{status_table['arch'][x]}|"
+            comment += f"{status_table['result'][x]}|"
+            comment += f"{status_table['date'][x]}|"
+            comment += f"{status_table['status'][x]}|"
+            comment += f"{status_table['url'][x]}|"
 
         self.log(f"PR opened: comment '{comment}'")
         repo = gh.get_repo(repo_name)

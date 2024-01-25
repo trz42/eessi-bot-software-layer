@@ -771,13 +771,13 @@ def request_bot_build_issue_comments(repo_name, pr_number):
     for x in range(1,5):
         curl_cmd = f'curl -L https://api.github.com/repos/{repo_name}/issues/{pr_number}/comments?per_page=100&page={x}'
         curl_output, curl_error, curl_exit_code = run_cmd(curl_cmd, "fetch all comments")
-        
+
         comments = json.loads(curl_output)
-        
-        for comment in comments: #iterate through the comments to find the one where the status of the build was in
+
+        for comment in comments: # iterate through the comments to find the one where the status of the build was in
             if config.read_config()["submitted_job_comments"]['initial_comment'][:20] in comment['body']:
 
-                #get archictecture from comment['body']
+                # get archictecture from comment['body']
                 first_line = comment['body'][:comment['body'].find('/n')]
                 arch_map = get_architecture_targets(cfg)
                 for arch in arch_map.keys():
@@ -785,21 +785,22 @@ def request_bot_build_issue_comments(repo_name, pr_number):
                     if target_arch in first_line:
                         status_table['arch'].append(target_arch)
 
-                #get date, status, url and result from the markdown table
+                # get date, status, url and result from the markdown table
                 comment_table = comment['body'][comment['body'].find('|'):comment['body'].rfind('|')+1]
 
                 # Convert markdown table to a dictionary
                 lines = comment_table.split('\n')
                 ret = []
                 keys = []
-                for i,l in enumerate(lines):
-                    if i==0:
-                        keys=[_i.strip() for _i in l.split('|')]
-                    elif i==1: continue
+                for i, l in enumerate(lines):
+                    if i == 0:
+                        keys = [_i.strip() for _i in l.split('|')]
+                    elif i == 1: 
+                        continue
                     else:
-                        ret.append({keys[_i]:v.strip() for _i,v in enumerate(l.split('|')) if  _i>0 and _i<len(keys)-1})
-                
-                # add date, status, url to  status_table if 
+                        ret.append({keys[_i]: v.strip() for _i, v in enumerate(l.split('|')) if _i > 0 and _i<len(keys)-1})
+
+                # add date, status, url to  status_table if
                 for row in ret:
                     if row['job status'] == 'finished':
                         status_table['date'].append(row['date'])
