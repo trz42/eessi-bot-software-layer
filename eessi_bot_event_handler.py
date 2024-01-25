@@ -25,7 +25,7 @@ import waitress
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
 from connections import github
 import tasks.build as build
-from tasks.build import check_build_permission, get_architecture_targets, get_repo_cfg, submit_build_jobs
+from tasks.build import check_build_permission, get_architecture_targets, get_repo_cfg, submit_build_jobs, request_bot_build_issue_comments
 import tasks.deploy as deploy
 from tasks.deploy import deploy_built_artefacts
 from tools import config
@@ -416,7 +416,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         help_msg += "\n  - Commands must be sent with a **new** comment (edits of existing comments are ignored)."
         help_msg += "\n  - A comment may contain multiple commands, one per line."
         help_msg += "\n  - Every command begins at the start of a line and has the syntax `bot: COMMAND [ARGUMENTS]*`"
-        help_msg += "\n  - Currently supported COMMANDs are: `help`, `build`, `show_config`"
+        help_msg += "\n  - Currently supported COMMANDs are: `help`, `build`, `show_config`, `status`"
         help_msg += "\n"
         help_msg += "\n  For more information, see https://www.eessi.io/docs/bot"
         return help_msg
