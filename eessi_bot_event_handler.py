@@ -26,7 +26,7 @@ import waitress
 from connections import github
 import tasks.build as build
 from tasks.build import check_build_permission, get_architecture_targets, get_repo_cfg, \
-    submit_build_jobs, request_bot_build_issue_comments
+    srequest_bot_build_issue_comment, submit_build_jobs
 import tasks.deploy as deploy
 from tasks.deploy import deploy_built_artefacts
 from tools import config
@@ -479,15 +479,16 @@ class EESSIBotSoftwareLayer(PyGHee):
 
     def handle_bot_command_status(self, event_info, bot_command):
         """
-        Handles bot command 'status' by running the handler for events of
-        type pull_request with the action opened.
+        Handles bot command 'status' by querying the github API
+        for the comments in a pr.
 
         Args:
             event_info (dict): event received by event_handler
             bot_command (EESSIBotCommand): command to be handled
 
         Returns:
-            (string): table which collects the status of each target
+            github.IssueComment.IssueComment (note, github refers to
+                 PyGithub, not the github from the internal connections module)
         """
         self.log("processing bot command 'status'")
         gh = github.get_instance()
@@ -506,7 +507,7 @@ class EESSIBotSoftwareLayer(PyGHee):
             comment_status += f"{status_table['status'][x]}|"
             comment_status += f"{status_table['url'][x]}|"
 
-        self.log(f"PR opened: comment '{comment_status}'")
+        self.log(f"Overview of finished builds: comment '{comment_status}'")
         repo = gh.get_repo(repo_name)
         pull_request = repo.get_pull(pr_number)
         issue_comment = pull_request.create_issue_comment(comment_status)

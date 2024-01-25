@@ -763,6 +763,17 @@ def check_build_permission(pr, event_info):
 
 
 def request_bot_build_issue_comments(repo_name, pr_number):
+    """
+    Query the github API for the issue_comments in a pr. 
+    
+    Archs: 
+        repo_name (string): name of the repository (format USER_OR_ORGANISATION/REPOSITORY)
+        pr_number (int): number og the pr
+
+    Returns:
+        status_table (dict): dictionary with 'arch', 'date', 'status', 'url' and 'result'
+            for all the finished builds;
+    """
     status_table = {'arch': [], 'date': [], 'status': [], 'url': [], 'result': []}
     cfg = config.read_config()
 
@@ -780,7 +791,7 @@ def request_bot_build_issue_comments(repo_name, pr_number):
             if config.read_config()["submitted_job_comments"]['initial_comment'][:20] in comment['body']:
 
                 # get archictecture from comment['body']
-                first_line = comment['body'][:comment['body'].find('/n')]
+                first_line = comment['body'].split('\n')[0]
                 arch_map = get_architecture_targets(cfg)
                 for arch in arch_map.keys():
                     target_arch = '/'.join(arch.split('/')[1:])
@@ -815,7 +826,7 @@ def request_bot_build_issue_comments(repo_name, pr_number):
                         status_table['url'].append(comment['html_url'])
                         if 'FAILURE' in row['comment']:
                             status_table['result'].append(':cry: FAILURE')
-                        elif 'SUCCES' in row['comment']:
+                        elif 'SUCCESS' in value['comment']:
                             status_table['result'].append(':grin: SUCCESS')
                         elif 'UNKNOWN' in row['comment']:
                             status_table['result'].append(':shrug: UNKNOWN')
