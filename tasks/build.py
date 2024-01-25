@@ -764,9 +764,9 @@ def check_build_permission(pr, event_info):
 
 def request_bot_build_issue_comments(repo_name, pr_number):
     """
-    Query the github API for the issue_comments in a pr. 
-    
-    Archs: 
+    Query the github API for the issue_comments in a pr.
+
+    Archs:
         repo_name (string): name of the repository (format USER_OR_ORGANISATION/REPOSITORY)
         pr_number (int): number og the pr
 
