@@ -804,7 +804,7 @@ def request_bot_build_issue_comments(repo_name, pr_number):
                     else:
                         for j, value in enumerate(row.split('|')):
                             if j > 0 and j < len(keys) - 1:
-                                values[keys[j]] = value.strip()})
+                                values[keys[j]] = value.strip()
                         rows.append(values)
 
                 # add date, status, url to  status_table if
