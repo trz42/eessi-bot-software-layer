@@ -760,3 +760,78 @@ def check_build_permission(pr, event_info):
     else:
         log(f"{fn}(): GH account '{build_labeler}' is authorized to build")
         return True
+
+
+def request_bot_build_issue_comments(repo_name, pr_number):
+    """
+    Query the github API for the issue_comments in a pr.
+
+    Archs:
+        repo_name (string): name of the repository (format USER_OR_ORGANISATION/REPOSITORY)
+        pr_number (int): number og the pr
+
+    Returns:
+        status_table (dict): dictionary with 'arch', 'date', 'status', 'url' and 'result'
+            for all the finished builds;
+    """
+    status_table = {'arch': [], 'date': [], 'status': [], 'url': [], 'result': []}
+    cfg = config.read_config()
+
+    # for loop because github has max 100 items per request.
+    # if the pr has more than 100 comments we need to use per_page
+    # argument at the moment the for loop is for a max of 400 comments could bump this up
+    for x in range(1, 5):
+        curl_cmd = f'curl -L https://api.github.com/repos/{repo_name}/issues/{pr_number}/comments?per_page=100&page={x}'
+        curl_output, curl_error, curl_exit_code = run_cmd(curl_cmd, "fetch all comments")
+
+        comments = json.loads(curl_output)
+
+        for comment in comments:
+            # iterate through the comments to find the one where the status of the build was in
+            if config.read_config()["submitted_job_comments"]['initial_comment'][:20] in comment['body']:
+
+                # get archictecture from comment['body']
+                first_line = comment['body'].split('\n')[0]
+                arch_map = get_architecture_targets(cfg)
+                for arch in arch_map.keys():
+                    target_arch = '/'.join(arch.split('/')[1:])
+                    if target_arch in first_line:
+                        status_table['arch'].append(target_arch)
+
+                # get date, status, url and result from the markdown table
+                comment_table = comment['body'][comment['body'].find('|'):comment['body'].rfind('|')+1]
+
+                # Convert markdown table to a dictionary
+                lines = comment_table.split('\n')
+                rows = []
+                keys = []
+                for i, row in enumerate(lines):
+                    values = {}
+                    if i == 0:
+                        for key in row.split('|'):
+                            keys.append(key.strip())
+                    elif i == 1:
+                        continue
+                    else:
+                        for j, value in enumerate(row.split('|')):
+                            if j > 0 and j < len(keys) - 1:
+                                values[keys[j]] = value.strip()
+                        rows.append(values)
+
+                # add date, status, url to  status_table if
+                for row in rows:
+                    if row['job status'] == 'finished':
+                        status_table['date'].append(row['date'])
+                        status_table['status'].append(row['job status'])
+                        status_table['url'].append(comment['html_url'])
+                        if 'FAILURE' in row['comment']:
+                            status_table['result'].append(':cry: FAILURE')
+                        elif 'SUCCESS' in value['comment']:
+                            status_table['result'].append(':grin: SUCCESS')
+                        elif 'UNKNOWN' in row['comment']:
+                            status_table['result'].append(':shrug: UNKNOWN')
+                        else:
+                            status_table['result'].append(row['comment'])
+        if len(comments) != 100:
+            break
+    return status_table

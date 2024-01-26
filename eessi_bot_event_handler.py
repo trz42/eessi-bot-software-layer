@@ -25,7 +25,8 @@ import waitress
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
 from connections import github
 import tasks.build as build
-from tasks.build import check_build_permission, get_architecture_targets, get_repo_cfg, submit_build_jobs
+from tasks.build import check_build_permission, get_architecture_targets, get_repo_cfg, \
+    request_bot_build_issue_comments, submit_build_jobs
 import tasks.deploy as deploy
 from tasks.deploy import deploy_built_artefacts
 from tools import config
@@ -416,7 +417,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         help_msg += "\n  - Commands must be sent with a **new** comment (edits of existing comments are ignored)."
         help_msg += "\n  - A comment may contain multiple commands, one per line."
         help_msg += "\n  - Every command begins at the start of a line and has the syntax `bot: COMMAND [ARGUMENTS]*`"
-        help_msg += "\n  - Currently supported COMMANDs are: `help`, `build`, `show_config`"
+        help_msg += "\n  - Currently supported COMMANDs are: `help`, `build`, `show_config`, `status`"
         help_msg += "\n"
         help_msg += "\n  For more information, see https://www.eessi.io/docs/bot"
         return help_msg
@@ -475,6 +476,42 @@ class EESSIBotSoftwareLayer(PyGHee):
         pr = gh.get_repo(repo_name).get_pull(pr_number)
         issue_comment = self.handle_pull_request_opened_event(event_info, pr)
         return f"\n  - added comment {issue_comment.html_url} to show configuration"
+
+    def handle_bot_command_status(self, event_info, bot_command):
+        """
+        Handles bot command 'status' by querying the github API
+        for the comments in a pr.
+
+        Args:
+            event_info (dict): event received by event_handler
+            bot_command (EESSIBotCommand): command to be handled
+
+        Returns:
+            github.IssueComment.IssueComment (note, github refers to
+                 PyGithub, not the github from the internal connections module)
+        """
+        self.log("processing bot command 'status'")
+        gh = github.get_instance()
+        repo_name = event_info['raw_request_body']['repository']['full_name']
+        pr_number = event_info['raw_request_body']['issue']['number']
+        status_table = request_bot_build_issue_comments(repo_name, pr_number)
+
+        comment_status = ''
+        comment_status += "\nThis is the status of all the `bot: build` commands:"
+        comment_status += "\n|arch|result|date|status|url|"
+        comment_status += "\n|----|------|----|------|---|"
+        for x in range(0, len(status_table['date'])):
+            comment_status += f"\n|{status_table['arch'][x]}|"
+            comment_status += f"{status_table['result'][x]}|"
+            comment_status += f"{status_table['date'][x]}|"
+            comment_status += f"{status_table['status'][x]}|"
+            comment_status += f"{status_table['url'][x]}|"
+
+        self.log(f"Overview of finished builds: comment '{comment_status}'")
+        repo = gh.get_repo(repo_name)
+        pull_request = repo.get_pull(pr_number)
+        issue_comment = pull_request.create_issue_comment(comment_status)
+        return issue_comment
 
     def start(self, app, port=3000):
         """
