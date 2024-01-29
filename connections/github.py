@@ -11,7 +11,7 @@
 #
 
 # Standard library imports
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import time
 
 # Third party imports (anything installed into the local Python environment)
@@ -99,8 +99,6 @@ def get_instance():
         Instance of Github
     """
     global _gh, _token
-    # TODO Possibly renew token already if expiry date is soon, not only
-    #      after it has expired.
 
     # Check if PyGithub version is < 1.56
     if hasattr(github, 'GithubRetry'):
@@ -110,7 +108,10 @@ def get_instance():
         # Pygithub 1.x
         time_now = datetime.utcnow()
 
-    if not _gh or (_token and time_now > _token.expires_at):
+    # Renew token already if expiry date is less then 30 min away.
+    refresh_time = timedelta(minutes=30)
+
+    if not _gh or (_token and time_now > (_token.expires_at - refresh_time)):
         _gh = connect()
     return _gh
 
