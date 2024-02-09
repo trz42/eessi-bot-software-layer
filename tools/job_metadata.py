@@ -82,7 +82,7 @@ def read_metadata_file(metadata_path, log_file=None):
         return None
 
 
-def read_job_metadata_from_file(filepath, log_file=None):$
+def read_job_metadata_from_file(filepath, log_file=None):
     """
     Read job metadata from file
 
