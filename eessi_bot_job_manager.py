@@ -42,7 +42,7 @@ from pyghee.utils import log
 from connections import github
 from tools import config, run_cmd
 from tools.args import job_manager_parse
-from tools.job_metadata import read_metadata_file
+from tools.job_metadata import read_job_metadata_from_file, read_metadata_file
 from tools.pr_comments import get_submitted_job_comment, update_comment
 
 
@@ -253,7 +253,7 @@ class EESSIBotSoftwareLayerJobManager:
 
     def read_job_pr_metadata(self, job_metadata_path):
         """
-        Read job metadata file and return the contents of the 'PR' section.
+        Determine metadata od a job
 
         Args:
             job_metadata_path (string): path to job metadata file
@@ -262,12 +262,7 @@ class EESSIBotSoftwareLayerJobManager:
             (ConfigParser): instance of ConfigParser corresponding to the 'PR'
                 section or None
         """
-        # reuse function from module tools.job_metadata to read metadata file
-        metadata = read_metadata_file(job_metadata_path, self.logfile)
-        if metadata and "PR" in metadata:
-            return metadata["PR"]
-        else:
-            return None
+        return read_job_metadata_from_file(job_metadata_path, self.logfile)
 
     def read_job_result(self, job_result_file_path):
         """
