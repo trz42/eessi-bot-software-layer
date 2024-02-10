@@ -10,7 +10,6 @@
 #
 
 import os
-import shutil
 
 from tools.job_metadata import read_job_metadata_from_file
 
