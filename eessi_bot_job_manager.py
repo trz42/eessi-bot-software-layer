@@ -251,19 +251,6 @@ class EESSIBotSoftwareLayerJobManager:
 
         return finished_jobs
 
-    def read_job_pr_metadata(self, job_metadata_path):
-        """
-        Determine metadata od a job
-
-        Args:
-            job_metadata_path (string): path to job metadata file
-
-        Returns:
-            (ConfigParser): instance of ConfigParser corresponding to the 'PR'
-                section or None
-        """
-        return read_job_metadata_from_file(job_metadata_path, self.logfile)
-
     def read_job_result(self, job_result_file_path):
         """
         Read job result file and return the contents of the 'RESULT' section.
@@ -345,7 +332,7 @@ class EESSIBotSoftwareLayerJobManager:
 
             # assuming that a bot job's working directory contains a metadata
             # file, its existence is used to check if the job belongs to the bot
-            metadata_pr = self.read_job_pr_metadata(job_metadata_path)
+            metadata_pr = read_job_metadata_from_file(job_metadata_path, self.logfile)
 
             if metadata_pr is None:
                 log(f"No metadata file found at {job_metadata_path} for job {job_id}, so skipping it",
@@ -441,7 +428,7 @@ class EESSIBotSoftwareLayerJobManager:
         job_metadata_path = os.path.join(job_dir, metadata_file)
 
         # check if metadata file exist
-        metadata_pr = self.read_job_pr_metadata(job_metadata_path)
+        metadata_pr = read_job_metadata_from_file(job_metadata_path, self.logfile)
         if metadata_pr is None:
             raise Exception("Unable to find metadata file")
 
@@ -586,7 +573,7 @@ class EESSIBotSoftwareLayerJobManager:
         # obtain id of PR comment to be updated (from file '_bot_jobID.metadata')
         metadata_file = f"_bot_job{job_id}.metadata"
         job_metadata_path = os.path.join(new_symlink, metadata_file)
-        metadata_pr = self.read_job_pr_metadata(job_metadata_path)
+        metadata_pr = read_job_metadata_from_file(job_metadata_path, self.logfile)
         if metadata_pr is None:
             raise Exception("Unable to find metadata file ... skip updating PR comment")
 
