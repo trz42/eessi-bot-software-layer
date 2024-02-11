@@ -26,7 +26,7 @@ from datetime import datetime
 import pytest
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
-from tasks.build import Job, create_pr_comment
+from tasks.build import Job
 from tools import run_cmd, run_subprocess
 from tools.job_metadata import create_metadata_file, read_metadata_file
 from tools.pr_comments import PRComment, get_submitted_job_comment
@@ -475,18 +475,3 @@ def test_create_read_metadata_file(mocked_github, tmpdir):
     job_id5 = "555"
     with pytest.raises(TypeError):
         create_metadata_file(job5, job_id5, pr_comment)
-
-def test_comment_download_pr(tmpdir):
-    """Tests for function comment_download_pr."""
-
-    base_repo_name = "EESSI/software-layer"
-    pr = MockPullRequest(999)
-    download_pr_exit_code = 1
-    download_pr_error = "Cannot apply patch"
-
-    # Test exception is raised if there was an error
-    with patch('tools.pr_comments.create_comment') as mock_download_error:
-        mock_download_error = "error"
-        with pytest.raises(Exception):
-            comment_download_pr(base_repo_name, pr, download_pr_exit_code, download_pr_error)
-
