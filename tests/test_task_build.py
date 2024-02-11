@@ -18,7 +18,6 @@ import os
 import re
 import shutil
 from unittest.mock import patch
-from unittest import TestCase
 
 # Third party imports (anything installed into the local Python environment)
 from collections import namedtuple
@@ -26,7 +25,7 @@ from datetime import datetime
 import pytest
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
-from tasks.build import Job
+from tasks.build import Job, create_pr_comment
 from tools import run_cmd, run_subprocess
 from tools.job_metadata import create_metadata_file, read_metadata_file
 from tools.pr_comments import PRComment, get_submitted_job_comment
