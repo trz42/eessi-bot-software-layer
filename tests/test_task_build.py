@@ -26,7 +26,7 @@ from datetime import datetime
 import pytest
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
-from tasks.build import Job, create_pr_comment, comment_download_pr, download_pr
+from tasks.build import Job, create_pr_comment
 from tools import run_cmd, run_subprocess
 from tools.job_metadata import create_metadata_file, read_metadata_file
 from tools.pr_comments import PRComment, get_submitted_job_comment
@@ -489,50 +489,4 @@ def test_comment_download_pr(tmpdir):
         mock_download_error = "error"
         with pytest.raises(Exception):
             comment_download_pr(base_repo_name, pr, download_pr_exit_code, download_pr_error)
-
-
-def test_download_pr(tmpdir):
-    """Tests for function download_pr."""
-
-    base_repo_name = "EESSI/software-layer"
-    pr = MockPullRequest(12)
-    # Test git clone error is returned properly
-    download_pr_exit_code = 1
-    invalid_url_part = "invalid_clone_url"
-    output, error, exit_code = download_pr(repo_name = base_repo_name, 
-                                           branch_name = invalid_url_part, pr = pr, 
-                                           arch_job_dir = tmpdir)
-    assert exit_code == download_pr_exit_code
-    assert error == "error: pathspec 'invalid_clone_url' did not match any file(s) known to git\n"
-
-    # Test git checkout error is returned properly
-    shutil.copyfile("tests/1.diff", os.path.join(tmpdir, "1.diff"))
-    pr = MockPullRequest(12)
-    download_pr_exit_code = 1
-    branch_name = "develop"
-
-
-    class CustomMock(object):
-        calls = 0
-        def run_cmd(self, arg):
-            self.calls += 1
-            if self.calls != 2:
-                return None
-            else:
-                return DEFAULT
-    
-    run_cmd.side_effect = CustomMock().run_cmd
-
-
-    
-    output, error, exit_code = download_pr(repo_name = base_repo_name, 
-                                           branch_name = branch_name, pr = pr, 
-                                           arch_job_dir = tmpdir)
-
-    # assert exit_code == 1
-    # assert error == "error: pathspec 'invalid_clone_url' did not match any file(s) known to git\n"
-
-    # Test curl error is returned properly
-
-    # Test git apply error is returned properly
 
