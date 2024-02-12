@@ -337,7 +337,9 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
         arch_job_dir (string): working directory of the job to be submitted
 
     Returns:
-        None (implicitly)
+        None (implicitly), in case an error is caught in the git clone, git checkout, curl,
+            or git apply commands, returns the output, stderror, exit code and a string
+            stating which of these commands failed.
     """
     # download pull request to arch_job_dir
     # - 'git clone' repository into arch_job_dir (NOTE 'git clone' requires that
@@ -351,7 +353,8 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
         git_clone_cmd, "Clone repo", arch_job_dir, raise_on_error=False
         )
     if clone_exit_code != 0:
-        return clone_output, clone_error, clone_exit_code
+        error_stage = 'git clone'
+        return clone_output, clone_error, clone_exit_code, error_stage
 
     git_checkout_cmd = ' '.join([
         'git checkout',
@@ -362,7 +365,8 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
         git_checkout_cmd, "checkout branch '%s'" % branch_name, arch_job_dir, raise_on_error=False
         )
     if checkout_exit_code != 0:
-        return checkout_output, checkout_err, checkout_exit_code
+        error_stage = 'git checkout'
+        return checkout_output, checkout_err, checkout_exit_code, error_stage
 
     curl_cmd = f'curl -L https://github.com/{repo_name}/pull/{pr.number}.diff > {pr.number}.diff'
     log(f'curl with command {curl_cmd}')
@@ -370,7 +374,8 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
         curl_cmd, "Obtain patch", arch_job_dir, raise_on_error=False
         )
     if curl_exit_code != 0:
-        return curl_output, curl_error, curl_exit_code
+        error_stage = "curl"
+        return curl_output, curl_error, curl_exit_code, error_stage
 
     git_apply_cmd = f'git apply {pr.number}.diff'
     log(f'git apply with command {git_apply_cmd}')
@@ -378,10 +383,11 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
         git_apply_cmd, "Apply patch", arch_job_dir, raise_on_error=False
         )
     if git_apply_exit_code != 0:
-        return git_apply_output, git_apply_error, git_apply_exit_code
+        error_stage = 'git apply'
+        return git_apply_output, git_apply_error, git_apply_exit_code, error_stage
 
 
-def comment_download_pr(base_repo_name, pr, download_pr_exit_code, download_pr_error):
+def comment_download_pr(base_repo_name, pr, download_pr_exit_code, download_pr_error, error_stage):
     """
     Handle download_pr() exit code and write helpful comment to PR in case of failure
 
@@ -391,6 +397,8 @@ def comment_download_pr(base_repo_name, pr, download_pr_exit_code, download_pr_e
         download_pr_exit_code (int): exit code from download_pr(). 0 if all tasks were successful,
             otherwise it corresponds to the error codes of git clone, git checkout, git apply, or curl.
         download_pr_error (string): none, or the output of stderr from git clone, git checkout, git apply or curl.
+        error_stage (string): a string informing the stage where download_pr() failed. Can be 'git clone',
+            'git checkout', 'curl', or 'git apply'.
 
     Return:
         None (implicitly). A comment is created in the appropriate PR.
@@ -398,11 +406,28 @@ def comment_download_pr(base_repo_name, pr, download_pr_exit_code, download_pr_e
     """
     if download_pr_exit_code != 0:
         fn = sys._getframe().f_code.co_name
-        download_comment = (f"`{download_pr_error}`"
-                            f"\nUnable to download or merge changes between the source"
-                            " branch and the destination branch.\n"
-                            f"\nTip: This can usually be resolved by syncing your"
-                            " branch and resolving any merge conflicts.")
+        if error_stage == 'git clone':
+            download_comment = (f"`{download_pr_error}`"
+                                f"\nUnable to clone the target repository."
+                                f"\n_Tip: This could be a connection failure."
+                                f" Try again and if the issue remains check if the address is correct_.")
+        elif error_stage == 'git checkout':
+            download_comment = (f"`{download_pr_error}`"
+                                f"\nUnable to checkout to the correct branch."
+                                f"\n_Tip: Ensure that the branch name is correct and the target"
+                                " branch is available._")
+        elif error_stage == 'curl':
+            download_comment = (f"`{download_pr_error}`"
+                                f"\nUnable to download the .diff file."
+                                f"\n_Tip: This could be a connection failure."
+                                f" Try again and if the issue remains check if the address is correct_")
+        elif error_stage == 'git apply':
+            download_comment = (f"`{download_pr_error}`"
+                                f"\nUnable to download or merge changes between the source"
+                                f" branch and the destination branch.\n"
+                                f"\n_Tip: This can usually be resolved by syncing your"
+                                f" branch and resolving any merge conflicts._")
+
         download_comment = pr_comments.create_comment(
             repo_name=base_repo_name, pr_number=pr.number, comment=download_comment
             )
@@ -505,9 +530,10 @@ def prepare_jobs(pr, cfg, event_info, action_filter):
             log(f"{fn}(): job_dir '{job_dir}'")
 
             # TODO optimisation? download once, copy and cleanup initial copy?
-            download_pr_output, download_pr_error, download_pr_exit_code = download_pr(base_repo_name, base_branch_name,
-                                                                                       pr, job_dir)
-            comment_download_pr(base_repo_name, pr, download_pr_exit_code, download_pr_error)
+            download_pr_output, download_pr_error, download_pr_exit_code, error_stage = download_pr(
+                base_repo_name, base_branch_name, pr, job_dir
+                )
+            comment_download_pr(base_repo_name, pr, download_pr_exit_code, download_pr_error, error_stage)
             # prepare job configuration file 'job.cfg' in directory <job_dir>/cfg
             cpu_target = '/'.join(arch.split('/')[1:])
             os_type = arch.split('/')[0]
