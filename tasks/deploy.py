@@ -427,9 +427,9 @@ def determine_tarballs_to_deploy(successes, upload_policy):
     log(f"{funcname}(): num successful jobs {len(successes)}")
 
     to_be_deployed = {}
-    for s in successes:
+    for job in successes:
         # all tarballs for successful job
-        tarballs = s["eessi_tarballs"]
+        tarballs = job["eessi_tarballs"]
         log(f"{funcname}(): num tarballs {len(tarballs)}")
 
         # full path to first tarball for successful job
@@ -462,7 +462,7 @@ def determine_tarballs_to_deploy(successes, upload_policy):
             else:
                 deploy = True
         elif upload_policy == "once":
-            uploaded = uploaded_before(build_target, s["job_dir"])
+            uploaded = uploaded_before(build_target, job["job_dir"])
             if uploaded is None:
                 deploy = True
             else:
@@ -471,7 +471,7 @@ def determine_tarballs_to_deploy(successes, upload_policy):
                     f"{indent_fname}has been uploaded through '{uploaded}'")
 
         if deploy:
-            to_be_deployed[build_target] = {"job_dir": s["job_dir"],
+            to_be_deployed[build_target] = {"job_dir": job["job_dir"],
                                             "pr_comment_id": job["pr_comment_id"],
                                             "timestamp": timestamp}
 
