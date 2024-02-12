@@ -26,6 +26,7 @@ from connections import github
 from tasks.build import CFG_DIRNAME, JOB_CFG_FILENAME, JOB_REPO_ID, JOB_REPOSITORY
 from tasks.build import get_build_env_cfg
 from tools import config, pr_comments, run_cmd
+from tools.job_metadata import read_job_metadata_from_file
 
 
 BUCKET_NAME = "bucket_name"
@@ -72,6 +73,26 @@ def determine_job_dirs(pr_number):
     job_directories = glob.glob(glob_str)
 
     return job_directories
+
+
+def determine_pr_comment_id(job_dir):
+    """
+    Determines pr_comment_id by reading _bot_job{JOBID}.metadata in job_dir.
+
+    Args:
+        job_dir (string): working directory of the job
+
+    Returns:
+        (int): id of comment corresponding to job in pull request or -1
+    """
+    # assumes that last part of job_dir encodes the job's id
+    job_id = os.path.basename(os.path.normpath(job_dir))
+    job_metadata_file = os.path.join(job_dir, f"_bot_job{job_id}.metadata")
+    job_metadata = read_job_metadata_from_file(job_metadata_file)
+    if job_metadata and "pr_comment_id" in job_metadata:
+        return int(job_metadata["pr_comment_id"])
+    else:
+        return -1
 
 
 def determine_slurm_out(job_dir):
@@ -371,10 +392,13 @@ def determine_successful_jobs(job_dirs):
     for job_dir in job_dirs:
         slurm_out = determine_slurm_out(job_dir)
         eessi_tarballs = determine_eessi_tarballs(job_dir)
+        pr_comment_id = determine_pr_comment_id(job_dir)
+
         if check_build_status(slurm_out, eessi_tarballs):
             log(f"{funcname}(): SUCCESSFUL build in '{job_dir}'")
             successes.append({'job_dir': job_dir,
                               'slurm_out': slurm_out,
+                              'pr_comment_id': pr_comment_id,
                               'eessi_tarballs': eessi_tarballs})
         else:
             log(f"{funcname}(): FAILED build in '{job_dir}'")
@@ -448,6 +472,7 @@ def determine_tarballs_to_deploy(successes, upload_policy):
 
         if deploy:
             to_be_deployed[build_target] = {"job_dir": s["job_dir"],
+                                            "pr_comment_id": job["pr_comment_id"],
                                             "timestamp": timestamp}
 
     return to_be_deployed
