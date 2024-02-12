@@ -346,7 +346,7 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
     # - 'curl' diff for pull request
     # - 'git apply' diff file
     git_clone_cmd = ' '.join(['git clone', f'https://github.com/{repo_name}', arch_job_dir])
-    print(f'cloning with command {git_clone_cmd}')
+    log(f'cloning with command {git_clone_cmd}')
     clone_output, clone_error, clone_exit_code = run_cmd(git_clone_cmd, "Clone repo", arch_job_dir, raise_on_error=False)
     if clone_exit_code != 0:
         return clone_output, clone_error, clone_exit_code
@@ -355,20 +355,20 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
         'git checkout',
         branch_name,
     ])
-    print(f'checking out with command {git_checkout_cmd}')
+    log(f'checking out with command {git_checkout_cmd}')
     checkout_output, checkout_err, checkout_exit_code = run_cmd(git_checkout_cmd,
                                                                 "checkout branch '%s'" % branch_name, arch_job_dir, raise_on_error=False)
     if checkout_exit_code != 0:
         return  checkout_output, checkout_err, checkout_exit_code
 
     curl_cmd = f'curl -L https://github.com/{repo_name}/pull/{pr.number}.diff > {pr.number}.diff'
-    print(f'curl with command {curl_cmd}')
+    log(f'curl with command {curl_cmd}')
     curl_output, curl_error, curl_exit_code = run_cmd(curl_cmd, "Obtain patch", arch_job_dir, raise_on_error=False)
     if curl_exit_code != 0:
         return  curl_output, curl_error, curl_exit_code
     
     git_apply_cmd = f'git apply {pr.number}.diff'
-    print(f'git apply with command {git_apply_cmd}')
+    log(f'git apply with command {git_apply_cmd}')
     git_apply_output, git_apply_error, git_apply_exit_code = run_cmd(git_apply_cmd, "Apply patch", arch_job_dir, raise_on_error=False)
     if git_apply_exit_code != 0:
         return git_apply_output, git_apply_error, git_apply_exit_code
