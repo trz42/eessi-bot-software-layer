@@ -16,7 +16,6 @@
 # Standard library imports
 from collections import namedtuple
 import re
-import sys
 
 # Third party imports (anything installed into the local Python environment)
 from pyghee.utils import log
@@ -62,8 +61,6 @@ def determine_issue_comment(pull_request, pr_comment_id, search_pattern=None):
         github.IssueComment.IssueComment instance or None (note, github refers to
             PyGithub, not the github from the internal connections module)
     """
-
-    fn = sys._getframe().f_code.co_name
 
     if pr_comment_id != -1:
         return pull_request.get_issue_comment(pr_comment_id)
