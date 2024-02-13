@@ -235,7 +235,7 @@ def append_tarball_to_upload_log(tarball, job_dir):
         upload_log.write(f"{job_plus_tarball}\n")
 
 
-def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number):
+def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number, pr_comment_id):
     """
     Upload built tarball to an S3 bucket.
 
@@ -245,6 +245,7 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number):
         timestamp (int): timestamp of the tarball
         repo_name (string): repository of the pull request
         pr_number (int): number of the pull request
+        pr_comment_id (int): id of the pull request comment
 
     Returns:
         None (implicitly)
@@ -277,13 +278,13 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number):
         # bucket spec may be a mapping of target repo id to bucket name
         bucket_name = bucket_spec.get(target_repo_id)
         if bucket_name is None:
-            update_pr_comment(tarball, repo_name, pr_number, "not uploaded",
+            update_pr_comment(tarball, repo_name, pr_number, pr_comment_id, "not uploaded",
                               f"failed (no bucket specified for {target_repo_id})")
             return
         else:
             log(f"Using bucket for {target_repo_id}: {bucket_name}")
     else:
-        update_pr_comment(tarball, repo_name, pr_number, "not uploaded",
+        update_pr_comment(tarball, repo_name, pr_number, pr_comment_id, "not uploaded",
                           f"failed (incorrect bucket spec: {bucket_spec})")
         return
 
@@ -310,11 +311,11 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number):
         # add file to 'job_dir/../uploaded.txt'
         append_tarball_to_upload_log(tarball, job_dir)
         # update pull request comment
-        update_pr_comment(tarball, repo_name, pr_number, "uploaded",
+        update_pr_comment(tarball, repo_name, pr_number, pr_comment_id, "uploaded",
                           "succeeded")
     else:
         # update pull request comment
-        update_pr_comment(tarball, repo_name, pr_number, "not uploaded",
+        update_pr_comment(tarball, repo_name, pr_number, pr_comment_id, "not uploaded",
                           "failed")
 
 
@@ -525,4 +526,5 @@ def deploy_built_artefacts(pr, event_info):
     for target, job in to_be_deployed.items():
         job_dir = job['job_dir']
         timestamp = job['timestamp']
-        upload_tarball(job_dir, target, timestamp, repo_name, pr.number)
+        pr_comment_id = job['pr_comment_id']
+        upload_tarball(job_dir, target, timestamp, repo_name, pr.number, pr_comment_id)
