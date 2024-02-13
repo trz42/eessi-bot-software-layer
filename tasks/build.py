@@ -794,7 +794,7 @@ def request_bot_build_issue_comments(repo_name, pr_number):
                 first_line = comment['body'].split('\n')[0]
                 arch_map = get_architecture_targets(cfg)
                 for arch in arch_map.keys():
-                    target_arch = '/'.join(arch.split('/')[1:])
+                    target_arch = '/'.join(arch.split('/')[-1:])
                     if target_arch in first_line:
                         status_table['arch'].append(target_arch)
 
@@ -826,7 +826,7 @@ def request_bot_build_issue_comments(repo_name, pr_number):
                         status_table['url'].append(comment['html_url'])
                         if 'FAILURE' in row['comment']:
                             status_table['result'].append(':cry: FAILURE')
-                        elif 'SUCCESS' in value['comment']:
+                        elif 'SUCCESS' in row['comment']:
                             status_table['result'].append(':grin: SUCCESS')
                         elif 'UNKNOWN' in row['comment']:
                             status_table['result'].append(':shrug: UNKNOWN')
