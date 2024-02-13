@@ -69,19 +69,7 @@ def determine_issue_comment(pull_request, pr_comment_id, search_pattern=None):
         return pull_request.get_issue_comment(pr_comment_id)
     else:
         # use search pattern to determine issue comment
-        comments = pull_request.get_issue_comments()
-        for comment in comments:
-            # NOTE
-            # adjust search string if format changed by event handler
-            # (separate process running eessi_bot_event_handler.py)
-            re_pattern = f".*{search_pattern}.*"
-            comment_match = re.search(re_pattern, comment.body)
-
-            if comment_match:
-                log(f"{fn}(): found comment with id {comment.id}")
-                return comment
-
-    return None
+        return get_comment(pull_request, search_pattern)
 
 
 @retry(Exception, tries=5, delay=1, backoff=2, max_delay=30)
