@@ -77,7 +77,7 @@ def determine_job_dirs(pr_number):
 
 def determine_pr_comment_id(job_dir):
     """
-    Determines pr_comment_id by reading _bot_job{JOBID}.metadata in job_dir.
+    Determine pr_comment_id by reading _bot_job{JOBID}.metadata in job_dir.
 
     Args:
         job_dir (string): working directory of the job
