@@ -16,6 +16,7 @@
 # Standard library imports
 from collections import namedtuple
 import re
+import sys
 
 # Third party imports (anything installed into the local Python environment)
 from pyghee.utils import log
@@ -46,6 +47,41 @@ def create_comment(repo_name, pr_number, comment):
     repo = gh.get_repo(repo_name)
     pull_request = repo.get_pull(pr_number)
     return pull_request.create_issue_comment(comment)
+
+
+def determine_issue_comment(pull_request, pr_comment_id, search_pattern=None):
+    """
+    Determine issue comment for a given id or using a search pattern.
+
+    Args:
+        pull_request (github.PullRequest.PullRequest): instance representing the pull request
+        pr_comment_id (int): number of the comment to the pull request to be returned
+        search_pattern (string): pattern used to determine the comment to the pull request to be returned
+
+    Returns:
+        github.IssueComment.IssueComment instance or None (note, github refers to
+            PyGithub, not the github from the internal connections module)
+    """
+
+    fn = sys._getframe().f_code.co_name
+
+    if pr_comment_id != -1:
+        return pull_request.get_issue_comment(pr_comment_id)
+    else:
+        # use search pattern to determine issue comment
+        comments = pull_request.get_issue_comments()
+        for comment in comments:
+            # NOTE
+            # adjust search string if format changed by event handler
+            # (separate process running eessi_bot_event_handler.py)
+            re_pattern = f".*{search_pattern}.*"
+            comment_match = re.search(re_pattern, comment.body)
+
+            if comment_match:
+                log(f"{fn}(): found comment with id {comment.id}")
+                return comment
+
+    return None
 
 
 @retry(Exception, tries=5, delay=1, backoff=2, max_delay=30)
