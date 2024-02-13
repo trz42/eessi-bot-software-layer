@@ -188,9 +188,9 @@ def check_build_status(slurm_out, eessi_tarballs):
     return False
 
 
-def update_pr_comment(tarball, repo_name, pr_number, state, msg):
+def update_pr_comment(tarball, repo_name, pr_number, pr_comment_id, state, msg):
     """
-    Update pull request comment which contains specific tarball name.
+    Update pull request comment for the given comment id or tarball name
 
     Args:
         tarball (string): name of tarball that is looked for in a PR comment
@@ -202,36 +202,18 @@ def update_pr_comment(tarball, repo_name, pr_number, state, msg):
     Returns:
         None (implicitly)
     """
-    funcname = sys._getframe().f_code.co_name
-
     gh = github.get_instance()
     repo = gh.get_repo(repo_name)
     pull_request = repo.get_pull(pr_number)
 
-    # TODO does this always return all comments?
-    comments = pull_request.get_issue_comments()
-    for comment in comments:
-        # NOTE
-        # adjust search string if format changed by event handler
-        # (separate process running eessi_bot_event_handler.py)
-        re_tarball = f".*{tarball}.*"
-        comment_match = re.search(re_tarball, comment.body)
+    issue_comment = pr_comments.determine_issue_comment(pull_request, pr_comment_id, tarball)
+    if issue_comment:
+        dt = datetime.now(timezone.utc)
+        comment_update = (f"\n|{dt.strftime('%b %d %X %Z %Y')}|{state}|"
+                          f"transfer of `{tarball}` to S3 bucket {msg}|")
 
-        if comment_match:
-            log(f"{funcname}(): found comment with id {comment.id}")
-
-            issue_comment = pull_request.get_issue_comment(int(comment.id))
-
-            dt = datetime.now(timezone.utc)
-            comment_update = (f"\n|{dt.strftime('%b %d %X %Z %Y')}|{state}|"
-                              f"transfer of `{tarball}` to S3 bucket {msg}|")
-
-            # append update to existing comment
-            issue_comment.edit(issue_comment.body + comment_update)
-
-            # leave 'for' loop (only update one comment, because tarball
-            # should only be referenced in one comment)
-            break
+        # append update to existing comment
+        issue_comment.edit(issue_comment.body + comment_update)
 
 
 def append_tarball_to_upload_log(tarball, job_dir):
