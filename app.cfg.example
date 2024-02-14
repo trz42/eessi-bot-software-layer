@@ -219,3 +219,5 @@ no_matching_tarball = No tarball matching `{tarball_pattern}` found in job dir.
 multiple_tarballs = Found {num_tarballs} tarballs in job dir - only 1 matching `{tarball_pattern}` expected.
 job_result_unknown_fmt = <details><summary>:shrug: UNKNOWN _(click triangle for detailed information)_</summary><ul><li>Job results file `{filename}` does not exist in job directory, or parsing it failed.</li><li>No artefacts were found/reported.</li></ul></details>
 job_test_unknown_fmt = <details><summary>:shrug: UNKNOWN _(click triangle for detailed information)_</summary><ul><li>Job test file `{filename}` does not exist in job directory, or parsing it failed.</li></ul></details>
+
+[download_pr_comments]

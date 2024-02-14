@@ -42,6 +42,10 @@ CFG_DIRNAME = "cfg"
 CONTAINER_CACHEDIR = "container_cachedir"
 CVMFS_CUSTOMIZATIONS = "cvmfs_customizations"
 DEFAULT_JOB_TIME_LIMIT = "24:00:00"
+ERROR_CURL = "curl"
+ERROR_GIT_APPLY = "git apply"
+ERROR_GIT_CHECKOUT = "git checkout"
+ERROR_GIT_CLONE = "curl"
 GITHUB = "github"
 HTTPS_PROXY = "https_proxy"
 HTTP_PROXY = "http_proxy"
@@ -353,7 +357,7 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
         git_clone_cmd, "Clone repo", arch_job_dir, raise_on_error=False
         )
     if clone_exit_code != 0:
-        error_stage = 'git clone'
+        error_stage = ERROR_GIT_CLONE
         return clone_output, clone_error, clone_exit_code, error_stage
 
     git_checkout_cmd = ' '.join([
@@ -365,7 +369,7 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
         git_checkout_cmd, "checkout branch '%s'" % branch_name, arch_job_dir, raise_on_error=False
         )
     if checkout_exit_code != 0:
-        error_stage = 'git checkout'
+        error_stage = ERROR_GIT_CHECKOUT
         return checkout_output, checkout_err, checkout_exit_code, error_stage
 
     curl_cmd = f'curl -L https://github.com/{repo_name}/pull/{pr.number}.diff > {pr.number}.diff'
@@ -374,7 +378,7 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
         curl_cmd, "Obtain patch", arch_job_dir, raise_on_error=False
         )
     if curl_exit_code != 0:
-        error_stage = "curl"
+        error_stage = ERROR_CURL
         return curl_output, curl_error, curl_exit_code, error_stage
 
     git_apply_cmd = f'git apply {pr.number}.diff'
@@ -383,7 +387,7 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
         git_apply_cmd, "Apply patch", arch_job_dir, raise_on_error=False
         )
     if git_apply_exit_code != 0:
-        error_stage = 'git apply'
+        error_stage = ERROR_GIT_APPLY
         return git_apply_output, git_apply_error, git_apply_exit_code, error_stage
 
 
@@ -406,22 +410,22 @@ def comment_download_pr(base_repo_name, pr, download_pr_exit_code, download_pr_e
     """
     if download_pr_exit_code != 0:
         fn = sys._getframe().f_code.co_name
-        if error_stage == 'git clone':
+        if error_stage == ERROR_GIT_CLONE:
             download_comment = (f"`{download_pr_error}`"
                                 f"\nUnable to clone the target repository."
                                 f"\n_Tip: This could be a connection failure."
                                 f" Try again and if the issue remains check if the address is correct_.")
-        elif error_stage == 'git checkout':
+        elif error_stage == ERROR_GIT_CHECKOUT:
             download_comment = (f"`{download_pr_error}`"
                                 f"\nUnable to checkout to the correct branch."
                                 f"\n_Tip: Ensure that the branch name is correct and the target"
                                 " branch is available._")
-        elif error_stage == 'curl':
+        elif error_stage == ERROR_CURL:
             download_comment = (f"`{download_pr_error}`"
                                 f"\nUnable to download the .diff file."
                                 f"\n_Tip: This could be a connection failure."
                                 f" Try again and if the issue remains check if the address is correct_")
-        elif error_stage == 'git apply':
+        elif error_stage == ERROR_GIT_APPLY:
             download_comment = (f"`{download_pr_error}`"
                                 f"\nUnable to download or merge changes between the source"
                                 f" branch and the destination branch.\n"
