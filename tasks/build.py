@@ -40,13 +40,22 @@ BUILD_LOGS_DIR = "build_logs_dir"
 BUILD_PERMISSION = "build_permission"
 CFG_DIRNAME = "cfg"
 CONTAINER_CACHEDIR = "container_cachedir"
+CURL_FAILURE = "curl_failure"
+CURL_TIP = "curl_tip"
 CVMFS_CUSTOMIZATIONS = "cvmfs_customizations"
 DEFAULT_JOB_TIME_LIMIT = "24:00:00"
+DOWNLOAD_PR_COMMENTS = "download_pr_comments"
 ERROR_CURL = "curl"
 ERROR_GIT_APPLY = "git apply"
 ERROR_GIT_CHECKOUT = "git checkout"
 ERROR_GIT_CLONE = "curl"
 GITHUB = "github"
+GIT_CLONE_FAILURE = "git_clone_failure"
+GIT_CLONE_TIP = "git_clone_tip"
+GIT_CHECKOUT_FAILURE = "git_checkout_failure"
+GIT_CHECKOUT_TIP = "git_checkout_tip"
+GIT_APPLY_FAILURE = "git_apply_failure"
+GIT_APPLY_TIP = "git_apply_tip"
 HTTPS_PROXY = "https_proxy"
 HTTP_PROXY = "http_proxy"
 INITIAL_COMMENT = "initial_comment"
@@ -410,27 +419,24 @@ def comment_download_pr(base_repo_name, pr, download_pr_exit_code, download_pr_e
     """
     if download_pr_exit_code != 0:
         fn = sys._getframe().f_code.co_name
+
+        download_pr_comments_cfg = config.read_config()[DOWNLOAD_PR_COMMENTS]
         if error_stage == ERROR_GIT_CLONE:
             download_comment = (f"`{download_pr_error}`"
-                                f"\nUnable to clone the target repository."
-                                f"\n_Tip: This could be a connection failure."
-                                f" Try again and if the issue remains check if the address is correct_.")
+                                f"{download_pr_comments_cfg[GIT_CLONE_FAILURE]}"
+                                f"{download_pr_comments_cfg[GIT_CLONE_TIP]}")
         elif error_stage == ERROR_GIT_CHECKOUT:
             download_comment = (f"`{download_pr_error}`"
-                                f"\nUnable to checkout to the correct branch."
-                                f"\n_Tip: Ensure that the branch name is correct and the target"
-                                " branch is available._")
+                                f"{download_pr_comments_cfg[GIT_CHECKOUT_FAILURE]}"
+                                f"{download_pr_comments_cfg[GIT_CHECKOUT_TIP]}")
         elif error_stage == ERROR_CURL:
             download_comment = (f"`{download_pr_error}`"
-                                f"\nUnable to download the .diff file."
-                                f"\n_Tip: This could be a connection failure."
-                                f" Try again and if the issue remains check if the address is correct_")
+                                f"{download_pr_comments_cfg[CURL_FAILURE]}"
+                                f"{download_pr_comments_cfg[CURL_TIP]}")
         elif error_stage == ERROR_GIT_APPLY:
             download_comment = (f"`{download_pr_error}`"
-                                f"\nUnable to download or merge changes between the source"
-                                f" branch and the destination branch.\n"
-                                f"\n_Tip: This can usually be resolved by syncing your"
-                                f" branch and resolving any merge conflicts._")
+                                f"{download_pr_comments_cfg[GIT_APPLY_FAILURE]}"
+                                f"{download_pr_comments_cfg[GIT_APPLY_TIP]}")
 
         download_comment = pr_comments.create_comment(
             repo_name=base_repo_name, pr_number=pr.number, comment=download_comment
