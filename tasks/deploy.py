@@ -301,6 +301,7 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number, pr_co
         cmd_args.extend(['--endpoint-url', endpoint_url])
     cmd_args.extend(['--repository', repo_name])
     cmd_args.extend(['--pull-request', str(pr_number)])
+    cmd_args.extend(['--pr-comment-id', str(pr_comment_id)])
     cmd_args.append(abs_path)
     upload_cmd = ' '.join(cmd_args)
 
