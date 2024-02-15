@@ -42,6 +42,7 @@ function create_metadata_file
   _url=$2
   _repository=$3
   _pull_request=$4
+  _pull_request_comment_id=$5
 
   _tmpfile=$(mktemp)
 
@@ -56,10 +57,11 @@ function create_metadata_file
     --arg url "${_url}" \
     --arg repo "${_repository}" \
     --arg pr "${_pull_request}" \
+    --arg pr_comment_id "${_pull_request_comment_id}" \
     '{
        uploader: {username: $un, ip: $ip, hostname: $hn},
        payload: {filename: $fn, size: $sz, ctime: $ct, sha256sum: $sha256, url: $url},
-       link2pr: {repo: $repo, pr: $pr},
+       link2pr: {repo: $repo, pr: $pr, pr_comment_id: $pr_commend_id},
      }' > "${_tmpfile}"
 
   echo "${_tmpfile}"
@@ -70,6 +72,10 @@ function display_help
   echo "Usage: $0 [OPTIONS] <filenames>"                                        >&2
   echo "  -e | --endpoint-url URL      -  endpoint url (needed for non AWS S3)" >&2
   echo "  -h | --help                  -  display this usage information"       >&2
+  echo "  -i | --pr-comment-id         -  identifier of a PR comment; may be"   >&2
+  echo "                                  used to efficiently determine the PR" >&2
+  echo "                                  comment to be updated during the"     >&2
+  echo "                                  ingestion procedure"                  >&2
   echo "  -n | --bucket-name BUCKET    -  bucket name (same as BUCKET above)"   >&2
   echo "  -p | --pull-request NUMBER   -  a pull request NUMBER; used to"       >&2
   echo "                                  link the upload to a PR"              >&2
@@ -97,8 +103,11 @@ bucket_name="eessi-staging"
 
 # provided via options in the bot's config file app.cfg
 endpoint_url=
-pull_request=
-repository=
+
+# provided via command line arguments
+pr_comment_id="none"
+pull_request="none"
+repository="EESSI/software-layer"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -109,6 +118,10 @@ while [[ $# -gt 0 ]]; do
     -h|--help)
       display_help
       exit 0
+      ;;
+    -i|--pr-comment-id)
+      pr_comment_id="$2"
+      shift 2
       ;;
     -n|--bucket-name)
       bucket_name="$2"
@@ -161,7 +174,8 @@ for file in "$*"; do
         echo "Creating metadata file"
         url="${bucket_base}/${aws_path}/${aws_file}"
         metadata_file=$(create_metadata_file "${file}" "${url}" \
-                                             "${repository}" "${pull_request}")
+                                             "${repository}" "${pull_request}" \
+                                             "${pr_comment_id}")
         echo "metadata:"
         cat ${metadata_file}
 
