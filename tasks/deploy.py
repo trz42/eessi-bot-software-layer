@@ -34,7 +34,9 @@ DEPLOYCFG = "deploycfg"
 DEPLOY_PERMISSION = "deploy_permission"
 ENDPOINT_URL = "endpoint_url"
 JOBS_BASE_DIR = "jobs_base_dir"
+METADATA_PREFIX = "metadata_prefix"
 NO_DEPLOY_PERMISSION_COMMENT = "no_deploy_permission_comment"
+TARBALL_PREFIX = "tarball_prefix"
 TARBALL_UPLOAD_SCRIPT = "tarball_upload_script"
 UPLOAD_POLICY = "upload_policy"
 
@@ -262,10 +264,20 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number, pr_co
     tarball_upload_script = deploycfg.get(TARBALL_UPLOAD_SCRIPT)
     endpoint_url = deploycfg.get(ENDPOINT_URL) or ''
     bucket_spec = deploycfg.get(BUCKET_NAME)
+    metadata_prefix = deploycfg.get(METADATA_PREFIX)
+    tarball_prefix = deploycfg.get(TARBALL_PREFIX)
 
     # if bucket_spec value looks like a dict, try parsing it as such
     if bucket_spec.lstrip().startswith('{'):
         bucket_spec = json.loads(bucket_spec)
+
+    # if metadata_prefix value looks like a dict, try parsing it as such
+    if metadata_prefix.lstrip().startswith('{'):
+        metadata_prefix = json.loads(metadata_prefix)
+
+    # if tarball_prefix value looks like a dict, try parsing it as such
+    if tarball_prefix.lstrip().startswith('{'):
+        tarball_prefix = json.loads(tarball_prefix)
 
     jobcfg_path = os.path.join(job_dir, CFG_DIRNAME, JOB_CFG_FILENAME)
     jobcfg = config.read_config(jobcfg_path)
@@ -288,6 +300,40 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number, pr_co
                           f"failed (incorrect bucket spec: {bucket_spec})")
         return
 
+    if isinstance(metadata_prefix, str):
+        metadata_prefix_arg = metadata_prefix
+        log(f"Using specified metadata prefix: {metadata_prefix_arg}")
+    elif isinstance(metadata_prefix, dict):
+        # metadata prefix spec may be a mapping of target repo id to metadata prefix
+        metadata_prefix_arg = metadata_prefix.get(target_repo_id)
+        if metadata_prefix_arg is None:
+            update_pr_comment(tarball, repo_name, pr_number, pr_comment_id, "not uploaded",
+                              f"failed (no metadata prefix specified for {target_repo_id})")
+            return
+        else:
+            log(f"Using metadata prefix for {target_repo_id}: {metadata_prefix_arg}")
+    else:
+        update_pr_comment(tarball, repo_name, pr_number, pr_comment_id, "not uploaded",
+                          f"failed (incorrect metadata prefix spec: {metadata_prefix_arg})")
+        return
+
+    if isinstance(tarball_prefix, str):
+        tarball_prefix_arg = tarball_prefix
+        log(f"Using specified tarball prefix: {tarball_prefix_arg}")
+    elif isinstance(tarball_prefix, dict):
+        # tarball prefix spec may be a mapping of target repo id to tarball prefix
+        tarball_prefix_arg = tarball_prefix.get(target_repo_id)
+        if tarball_prefix_arg is None:
+            update_pr_comment(tarball, repo_name, pr_number, pr_comment_id, "not uploaded",
+                              f"failed (no tarball prefix specified for {target_repo_id})")
+            return
+        else:
+            log(f"Using tarball prefix for {target_repo_id}: {tarball_prefix_arg}")
+    else:
+        update_pr_comment(tarball, repo_name, pr_number, pr_comment_id, "not uploaded",
+                          f"failed (incorrect tarball prefix spec: {tarball_prefix_arg})")
+        return
+
     # run 'eessi-upload-to-staging {abs_path}'
     # (1) construct command line
     #   script assumes a few defaults:
@@ -299,9 +345,13 @@ def upload_tarball(job_dir, build_target, timestamp, repo_name, pr_number, pr_co
         cmd_args.extend(['--bucket-name', bucket_name])
     if len(endpoint_url) > 0:
         cmd_args.extend(['--endpoint-url', endpoint_url])
+    if len(metadata_prefix_arg) > 0:
+        cmd_args.extend(['--metadata-prefix', metadata_prefix_arg])
     cmd_args.extend(['--repository', repo_name])
-    cmd_args.extend(['--pull-request', str(pr_number)])
+    cmd_args.extend(['--pull-request-number', str(pr_number)])
     cmd_args.extend(['--pr-comment-id', str(pr_comment_id)])
+    if len(tarball_prefix_arg) > 0:
+        cmd_args.extend(['--tarball-prefix', tarball_prefix_arg])
     cmd_args.append(abs_path)
     upload_cmd = ' '.join(cmd_args)
 
