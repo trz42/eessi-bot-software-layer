@@ -865,6 +865,8 @@ def request_bot_build_issue_comments(repo_name, pr_number):
         status_table (dict): dictionary with 'arch', 'date', 'status', 'url' and 'result'
             for all the finished builds;
     """
+    fn = sys._getframe().f_code.co_name
+
     status_table = {'arch': [], 'date': [], 'status': [], 'url': [], 'result': []}
     cfg = config.read_config()
 
@@ -885,9 +887,12 @@ def request_bot_build_issue_comments(repo_name, pr_number):
                 first_line = comment['body'].split('\n')[0]
                 arch_map = get_architecture_targets(cfg)
                 for arch in arch_map.keys():
-                    target_arch = '/'.join(arch.split('/')[-1])
+                    # drop the first element in arch (which names the OS type) and join the remaining items with '-'
+                    target_arch = '-'.join(arch.split('/')[1:])
                     if target_arch in first_line:
                         status_table['arch'].append(target_arch)
+                    else:
+                        log(f"{fn}(): target_arch '{target_arch}' not found in first line '{first_line}'")
 
                 # get date, status, url and result from the markdown table
                 comment_table = comment['body'][comment['body'].find('|'):comment['body'].rfind('|')+1]
