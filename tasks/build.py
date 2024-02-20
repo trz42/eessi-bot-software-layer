@@ -49,6 +49,7 @@ ERROR_CURL = "curl"
 ERROR_GIT_APPLY = "git apply"
 ERROR_GIT_CHECKOUT = "git checkout"
 ERROR_GIT_CLONE = "curl"
+ERROR_NONE = "none"
 GITHUB = "github"
 GIT_CLONE_FAILURE = "git_clone_failure"
 GIT_CLONE_TIP = "git_clone_tip"
@@ -399,6 +400,8 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
         error_stage = ERROR_GIT_APPLY
         return git_apply_output, git_apply_error, git_apply_exit_code, error_stage
 
+    # need to return four items also in case everything went fine
+    return 'downloading PR succeeded', 'no error while downloading PR', 0, ERROR_NONE
 
 def comment_download_pr(base_repo_name, pr, download_pr_exit_code, download_pr_error, error_stage):
     """
