@@ -667,6 +667,13 @@ def main():
     if max_iter != 0:
         known_jobs = job_manager.get_known_jobs()
     while max_iter < 0 or i < max_iter:
+        # sleep poll_interval seconds (not for the first iteration)
+        if i != 0:
+            log(
+                "job manager main loop: sleep %d seconds" % poll_interval,
+                job_manager.logfile,
+            )
+            time.sleep(poll_interval)
         log("job manager main loop: iteration %d" % i, job_manager.logfile)
         log(
             "job manager main loop: known_jobs='%s'" % ",".join(
@@ -674,7 +681,12 @@ def main():
             job_manager.logfile,
         )
 
-        current_jobs = job_manager.get_current_jobs()
+        try:
+            current_jobs = job_manager.get_current_jobs()
+        except RuntimeError:
+            i = i + 1
+            continue
+
         log(
             "job manager main loop: current_jobs='%s'" % ",".join(
                 current_jobs.keys()),
@@ -729,13 +741,7 @@ def main():
 
         known_jobs = current_jobs
 
-        # sleep poll_interval seconds (only if at least one more iteration)
-        if max_iter < 0 or i + 1 < max_iter:
-            log(
-                "job manager main loop: sleep %d seconds" % poll_interval,
-                job_manager.logfile,
-            )
-            time.sleep(poll_interval)
+        # add one iteration to the loop
         i = i + 1
 
 
