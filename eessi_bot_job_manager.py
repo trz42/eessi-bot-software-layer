@@ -668,7 +668,7 @@ def main():
         known_jobs = job_manager.get_known_jobs()
     while max_iter < 0 or i < max_iter:
         # sleep poll_interval seconds (not for the first iteration)
-        if i != 0 and (max_iter < 0 or i < max_iter):
+        if i != 0:
             log(
                 "job manager main loop: sleep %d seconds" % poll_interval,
                 job_manager.logfile,
@@ -683,7 +683,7 @@ def main():
 
         try:
             current_jobs = job_manager.get_current_jobs()
-        except Exception as err:
+        except RuntimeError:
             i = i + 1
             continue
 
