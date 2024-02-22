@@ -683,7 +683,7 @@ def main():
 
         try:
             current_jobs = job_manager.get_current_jobs()
-        except:
+        except Exception as err:
             i = i + 1
             continue
 
