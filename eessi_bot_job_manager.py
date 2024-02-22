@@ -113,14 +113,7 @@ class EESSIBotSoftwareLayerJobManager:
             squeue_cmd,
             "get_current_jobs(): squeue command",
             log_file=self.logfile,
-            raise_on_error=False,
         )
-
-        if squeue_exitcode != 0:
-            current_jobs = {}
-            poll_interval = config.read_config()["job_manager"].get("poll_interval")
-            log("The squeue command failed will try again in {} seconds".format(poll_interval))
-            return current_jobs
 
         # create dictionary of jobs from output of 'squeue_cmd'
         # with the following information per job: jobid, state,
