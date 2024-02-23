@@ -403,6 +403,7 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
     # need to return four items also in case everything went fine
     return 'downloading PR succeeded', 'no error while downloading PR', 0, ERROR_NONE
 
+
 def comment_download_pr(base_repo_name, pr, download_pr_exit_code, download_pr_error, error_stage):
     """
     Handle download_pr() exit code and write helpful comment to PR in case of failure
