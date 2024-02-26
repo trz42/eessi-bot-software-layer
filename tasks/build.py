@@ -49,6 +49,7 @@ ERROR_CURL = "curl"
 ERROR_GIT_APPLY = "git apply"
 ERROR_GIT_CHECKOUT = "git checkout"
 ERROR_GIT_CLONE = "curl"
+ERROR_NONE = "none"
 GITHUB = "github"
 GIT_CLONE_FAILURE = "git_clone_failure"
 GIT_CLONE_TIP = "git_clone_tip"
@@ -398,6 +399,9 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
     if git_apply_exit_code != 0:
         error_stage = ERROR_GIT_APPLY
         return git_apply_output, git_apply_error, git_apply_exit_code, error_stage
+
+    # need to return four items also in case everything went fine
+    return 'downloading PR succeeded', 'no error while downloading PR', 0, ERROR_NONE
 
 
 def comment_download_pr(base_repo_name, pr, download_pr_exit_code, download_pr_error, error_stage):
@@ -862,6 +866,8 @@ def request_bot_build_issue_comments(repo_name, pr_number):
         status_table (dict): dictionary with 'arch', 'date', 'status', 'url' and 'result'
             for all the finished builds;
     """
+    fn = sys._getframe().f_code.co_name
+
     status_table = {'arch': [], 'date': [], 'status': [], 'url': [], 'result': []}
     cfg = config.read_config()
 
@@ -882,9 +888,12 @@ def request_bot_build_issue_comments(repo_name, pr_number):
                 first_line = comment['body'].split('\n')[0]
                 arch_map = get_architecture_targets(cfg)
                 for arch in arch_map.keys():
-                    target_arch = '/'.join(arch.split('/')[-1])
+                    # drop the first element in arch (which names the OS type) and join the remaining items with '-'
+                    target_arch = '-'.join(arch.split('/')[1:])
                     if target_arch in first_line:
                         status_table['arch'].append(target_arch)
+                    else:
+                        log(f"{fn}(): target_arch '{target_arch}' not found in first line '{first_line}'")
 
                 # get date, status, url and result from the markdown table
                 comment_table = comment['body'][comment['body'].find('|'):comment['body'].rfind('|')+1]
