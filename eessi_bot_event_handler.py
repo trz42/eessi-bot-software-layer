@@ -31,7 +31,7 @@ import tasks.deploy as deploy
 from tasks.deploy import deploy_built_artefacts
 from tools import config
 from tools.args import event_handler_parse
-from tools.commands import EESSIBotCommand, EESSIBotCommandError,
+from tools.commands import EESSIBotCommand, EESSIBotCommandError, \
     contains_any_bot_command, get_bot_command
 from tools.permissions import check_command_permission
 from tools.pr_comments import create_comment
