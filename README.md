@@ -408,11 +408,11 @@ submit_command = /usr/bin/sbatch
 build_permission = GH_ACCOUNT_1 GH_ACCOUNT_2 ...
 ```
 `build_permission` defines which GitHub accounts have the permission to trigger
-the build, i.e., the bot acts on `bot: build ...` commands. If the value is left
-empty everyone can trigger build jobs.
+build jobs, i.e., for which accounts the bot acts on `bot: build ...` commands.
+If the value is left empty, everyone can trigger build jobs.
 
 ```
-no_build_permission_comment = Label `bot:build` has been set by user `{build_labeler}`, but this person does not have permission to trigger builds
+no_build_permission_comment = The `bot: build ...` command has been used by user `{build_labeler}`, but this person does not have permission to trigger builds.
 ```
 `no_build_permission_comment` defines a comment (template) that is used when
 the account trying to trigger build jobs has no permission to do so.
