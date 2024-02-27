@@ -128,7 +128,7 @@ class EESSIBotSoftwareLayer(PyGHee):
 
         # check if comment does not contain a bot command
         if not contains_any_bot_command(comment_received):
-            self.log(f"comment does not contain a bot comment; not processing it further")
+            self.log("comment does not contain a bot comment; not processing it further")
             return
         # at this point we know that the comment contains a bot command
 
