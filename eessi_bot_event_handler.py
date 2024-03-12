@@ -6,9 +6,11 @@
 # The bot helps with requests to add software installations to the
 # EESSI software layer, see https://github.com/EESSI/software-layer
 #
-# author: Kenneth Hoste (@boegel)
 # author: Bob Droege (@bedroge)
+# author: Kenneth Hoste (@boegel)
 # author: Hafsa Naeem (@hafsa-naeem)
+# author: Jonas Qvigstad (@jonas-lq)
+# author: Lara Ramona Peeters (@laraPPr)
 # author: Thomas Roeblitz (@trz42)
 #
 # license: GPLv2
