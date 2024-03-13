@@ -338,15 +338,15 @@ class EESSIBotSoftwareLayer(PyGHee):
 
         comment = f"Instance `{app_name}` is configured to build for:"
         architectures = ['/'.join(arch.split('/')[1:]) for arch in arch_map.keys()]
-        comment += "- architectures: "
+        comment += "\n- architectures: "
         if len(architectures) > 0:
-            comment += f"{', '.join([f"`{arch}`" for arch in architectures])}"
+            comment += f"{', '.join([f'`{arch}`' for arch in architectures])}"
         else:
             comment += "none"
-        repositories = [repo_id for repo_id in repo_cfg[REPO_TARGET_MAP].keys()]
-        comment += "- repositories: "
+        repositories = list(set([repo_id for repo_ids in repo_cfg[REPO_TARGET_MAP].values() for repo_id in repo_ids]))
+        comment += "\n- repositories: "
         if len(repositories) > 0:
-            comment += f"{', '.join([f"`{repo_id}`" for repo_id in repositories])}"
+            comment += f"{', '.join([f'`{repo_id}`' for repo_id in repositories])}"
         else:
             comment += "none"
 
