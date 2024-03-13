@@ -336,15 +336,19 @@ class EESSIBotSoftwareLayer(PyGHee):
         arch_map = get_architecture_targets(self.cfg)
         repo_cfg = get_repo_cfg(self.cfg)
 
-        comment = f"Instance `{app_name}` is configured to build:"
-
-        for arch in arch_map.keys():
-            # check if repo_target_map contains an entry for {arch}
-            if arch not in repo_cfg[REPO_TARGET_MAP]:
-                self.log(f"skipping arch {arch} because repo target map does not define repositories to build for")
-                continue
-            for repo_id in repo_cfg[REPO_TARGET_MAP][arch]:
-                comment += f"\n- arch `{'/'.join(arch.split('/')[1:])}` for repo `{repo_id}`"
+        comment = f"Instance `{app_name}` is configured to build for:"
+        architectures = ['/'.join(arch.split('/')[1:]) for arch in arch_map.keys()]
+        comment += "- architectures: "
+        if len(architectures) > 0:
+            comment += f"{', '.join([f"`{arch}`" for arch in architectures])}"
+        else:
+            comment += "none"
+        repositories = [repo_id for repo_id in repo_cfg[REPO_TARGET_MAP].keys()]
+        comment += "- repositories: "
+        if len(repositories) > 0:
+            comment += f"{', '.join([f"`{repo_id}`" for repo_id in repositories])}"
+        else:
+            comment += "none"
 
         self.log(f"PR opened: comment '{comment}'")
 
