@@ -170,7 +170,6 @@ def check_job_status(job_dir):
     #   (2) result file && status = SUCCESS --> return True
     #   (3) result file && status = FAILURE --> return False
 
-
     # case (0): no job id --> return False
     job_id = job_metadata.determine_job_id_from_job_directory(job_dir)
     if job_id == 0:
