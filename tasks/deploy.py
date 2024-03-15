@@ -174,6 +174,7 @@ def check_job_status(job_dir):
     job_id = job_metadata.determine_job_id_from_job_directory(job_dir)
     if job_id == 0:
         # could not determine job id, return False
+        log(f"{fn}(): could not determine job id from directory '{job_dir}'\n"
         return False
 
     job_result_file = f"_bot_job{job_id}.result"
@@ -185,13 +186,16 @@ def check_job_status(job_dir):
         job_status = job_result[job_metadata.JOB_RESULT_STATUS]
     else:
         # case (1): no result file or no status --> return False
+        log(f"{fn}(): no result file '{job_result_file_path}' or reading it failed\n"
         return False
 
     if job_status is job_metadata.JOB_RESULT_SUCCESS:
         # case (2): result file && status = SUCCESS --> return True
+        log(f"{fn}(): found status 'SUCCESS' from '{job_result_file_path}'\n"
         return True
     else:
         # case (3): result file && status = FAILURE --> return False
+        log(f"{fn}(): found status 'FAILURE' from '{job_result_file_path}'\n"
         return False
 
 
