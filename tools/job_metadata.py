@@ -27,6 +27,7 @@ JOB_RESULT_FAILURE = "FAILURE"
 JOB_RESULT_SECTION = "RESULT"
 JOB_RESULT_STATUS = "status"
 JOB_RESULT_SUCCESS = "SUCCESS"
+JOB_TEST_SECTION = "TEST"
 
 
 def create_metadata_file(job, job_id, pr_comment):
