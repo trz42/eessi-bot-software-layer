@@ -189,7 +189,9 @@ def check_job_status(job_dir):
         log(f"{fn}(): no result file '{job_result_file_path}' or reading it failed\n")
         return False
 
-    if job_status is job_metadata.JOB_RESULT_SUCCESS:
+    log(f"{fn}(): job status is {job_status} (compare against {job_metadata.JOB_RESULT_SUCCESS})\n")
+
+    if job_status == job_metadata.JOB_RESULT_SUCCESS:
         # case (2): result file && status = SUCCESS --> return True
         log(f"{fn}(): found status 'SUCCESS' from '{job_result_file_path}'\n")
         return True
