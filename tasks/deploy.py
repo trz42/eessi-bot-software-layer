@@ -31,6 +31,8 @@ from tasks.build import get_build_env_cfg
 from tools import config, job_metadata, pr_comments, run_cmd
 
 
+ARTEFACT_PREFIX = "artefact_prefix"
+ARTEFACT_UPLOAD_SCRIPT = "artefact_upload_script"
 BUCKET_NAME = "bucket_name"
 DEPLOYCFG = "deploycfg"
 DEPLOY_PERMISSION = "deploy_permission"
@@ -38,8 +40,6 @@ ENDPOINT_URL = "endpoint_url"
 JOBS_BASE_DIR = "jobs_base_dir"
 METADATA_PREFIX = "metadata_prefix"
 NO_DEPLOY_PERMISSION_COMMENT = "no_deploy_permission_comment"
-TARBALL_PREFIX = "tarball_prefix"
-TARBALL_UPLOAD_SCRIPT = "tarball_upload_script"
 UPLOAD_POLICY = "upload_policy"
 
 
@@ -201,12 +201,12 @@ def check_job_status(job_dir):
         return False
 
 
-def update_pr_comment(tarball, repo_name, pr_number, pr_comment_id, state, msg):
+def update_pr_comment(artefact, repo_name, pr_number, pr_comment_id, state, msg):
     """
-    Update pull request comment for the given comment id or tarball name
+    Update pull request comment for the given comment id or artefact name
 
     Args:
-        tarball (string): name of tarball that is looked for in a PR comment
+        artefact (string): name of artefact that is looked for in a PR comment
         repo_name (string): name of the repository (USER_ORG/REPOSITORY)
         pr_number (int): pull request number
         state (string): value for state column to be used in update
@@ -219,23 +219,23 @@ def update_pr_comment(tarball, repo_name, pr_number, pr_comment_id, state, msg):
     repo = gh.get_repo(repo_name)
     pull_request = repo.get_pull(pr_number)
 
-    issue_comment = pr_comments.determine_issue_comment(pull_request, pr_comment_id, tarball)
+    issue_comment = pr_comments.determine_issue_comment(pull_request, pr_comment_id, artefact)
     if issue_comment:
         dt = datetime.now(timezone.utc)
         comment_update = (f"\n|{dt.strftime('%b %d %X %Z %Y')}|{state}|"
-                          f"transfer of `{tarball}` to S3 bucket {msg}|")
+                          f"transfer of `{artefact}` to S3 bucket {msg}|")
 
         # append update to existing comment
         issue_comment.edit(issue_comment.body + comment_update)
 
 
-def append_tarball_to_upload_log(tarball, job_dir):
+def append_artefact_to_upload_log(artefact, job_dir):
     """
-    Append tarball to upload log.
+    Append artefact to upload log.
 
     Args:
-        tarball (string): name of tarball that has been uploaded
-        job_dir (string): directory of the job that built the tarball
+        artefact (string): name of artefact that has been uploaded
+        job_dir (string): directory of the job that built the artefact
 
     Returns:
         None (implicitly)
@@ -244,8 +244,8 @@ def append_tarball_to_upload_log(tarball, job_dir):
     pr_base_dir = os.path.dirname(job_dir)
     uploaded_txt = os.path.join(pr_base_dir, 'uploaded.txt')
     with open(uploaded_txt, "a") as upload_log:
-        job_plus_tarball = os.path.join(os.path.basename(job_dir), tarball)
-        upload_log.write(f"{job_plus_tarball}\n")
+        job_plus_artefact = os.path.join(os.path.basename(job_dir), artefact)
+        upload_log.write(f"{job_plus_artefact}\n")
 
 
 def upload_artefact(job_dir, payload, timestamp, repo_name, pr_number, pr_comment_id):
@@ -273,11 +273,11 @@ def upload_artefact(job_dir, payload, timestamp, repo_name, pr_number, pr_commen
     # obtain config settings
     cfg = config.read_config()
     deploycfg = cfg[DEPLOYCFG]
-    tarball_upload_script = deploycfg.get(TARBALL_UPLOAD_SCRIPT)
+    artefact_upload_script = deploycfg.get(ARTEFACT_UPLOAD_SCRIPT)
     endpoint_url = deploycfg.get(ENDPOINT_URL) or ''
     bucket_spec = deploycfg.get(BUCKET_NAME)
     metadata_prefix = deploycfg.get(METADATA_PREFIX)
-    tarball_prefix = deploycfg.get(TARBALL_PREFIX)
+    artefact_prefix = deploycfg.get(ARTEFACT_PREFIX)
 
     # if bucket_spec value looks like a dict, try parsing it as such
     if bucket_spec.lstrip().startswith('{'):
@@ -287,9 +287,9 @@ def upload_artefact(job_dir, payload, timestamp, repo_name, pr_number, pr_commen
     if metadata_prefix.lstrip().startswith('{'):
         metadata_prefix = json.loads(metadata_prefix)
 
-    # if tarball_prefix value looks like a dict, try parsing it as such
-    if tarball_prefix.lstrip().startswith('{'):
-        tarball_prefix = json.loads(tarball_prefix)
+    # if artefact_prefix value looks like a dict, try parsing it as such
+    if artefact_prefix.lstrip().startswith('{'):
+        artefact_prefix = json.loads(artefact_prefix)
 
     jobcfg_path = os.path.join(job_dir, CFG_DIRNAME, JOB_CFG_FILENAME)
     jobcfg = config.read_config(jobcfg_path)
@@ -329,21 +329,21 @@ def upload_artefact(job_dir, payload, timestamp, repo_name, pr_number, pr_commen
                           f"failed (incorrect metadata prefix spec: {metadata_prefix_arg})")
         return
 
-    if isinstance(tarball_prefix, str):
-        tarball_prefix_arg = tarball_prefix
-        log(f"Using specified artefact prefix: {tarball_prefix_arg}")
-    elif isinstance(tarball_prefix, dict):
+    if isinstance(artefact_prefix, str):
+        artefact_prefix_arg = artefact_prefix
+        log(f"Using specified artefact prefix: {artefact_prefix_arg}")
+    elif isinstance(artefact_prefix, dict):
         # artefact prefix spec may be a mapping of target repo id to artefact prefix
-        tarball_prefix_arg = tarball_prefix.get(target_repo_id)
-        if tarball_prefix_arg is None:
+        artefact_prefix_arg = artefact_prefix.get(target_repo_id)
+        if artefact_prefix_arg is None:
             update_pr_comment(artefact, repo_name, pr_number, pr_comment_id, "not uploaded",
                               f"failed (no artefact prefix specified for {target_repo_id})")
             return
         else:
-            log(f"Using artefact prefix for {target_repo_id}: {tarball_prefix_arg}")
+            log(f"Using artefact prefix for {target_repo_id}: {artefact_prefix_arg}")
     else:
         update_pr_comment(artefact, repo_name, pr_number, pr_comment_id, "not uploaded",
-                          f"failed (incorrect artefact prefix spec: {tarball_prefix_arg})")
+                          f"failed (incorrect artefact prefix spec: {artefact_prefix_arg})")
         return
 
     # run 'eessi-upload-to-staging {abs_path}'
@@ -352,18 +352,18 @@ def upload_artefact(job_dir, payload, timestamp, repo_name, pr_number, pr_commen
     #     bucket_name = 'eessi-staging'
     #     if endpoint_url not set use EESSI S3 bucket
     # (2) run command
-    cmd_args = [tarball_upload_script, ]
+    cmd_args = [artefact_upload_script, ]
+    if len(artefact_prefix_arg) > 0:
+        cmd_args.extend(['--artefact-prefix', artefact_prefix_arg])
     if len(bucket_name) > 0:
         cmd_args.extend(['--bucket-name', bucket_name])
     if len(endpoint_url) > 0:
         cmd_args.extend(['--endpoint-url', endpoint_url])
     if len(metadata_prefix_arg) > 0:
         cmd_args.extend(['--metadata-prefix', metadata_prefix_arg])
-    cmd_args.extend(['--repository', repo_name])
-    cmd_args.extend(['--pull-request-number', str(pr_number)])
     cmd_args.extend(['--pr-comment-id', str(pr_comment_id)])
-    if len(tarball_prefix_arg) > 0:
-        cmd_args.extend(['--tarball-prefix', tarball_prefix_arg])
+    cmd_args.extend(['--pull-request-number', str(pr_number)])
+    cmd_args.extend(['--repository', repo_name])
     cmd_args.append(abs_path)
     upload_cmd = ' '.join(cmd_args)
 
@@ -372,7 +372,7 @@ def upload_artefact(job_dir, payload, timestamp, repo_name, pr_number, pr_commen
 
     if ec == 0:
         # add file to 'job_dir/../uploaded.txt'
-        append_tarball_to_upload_log(artefact, job_dir)
+        append_artefact_to_upload_log(artefact, job_dir)
         # update pull request comment
         update_pr_comment(artefact, repo_name, pr_number, pr_comment_id, "uploaded",
                           "succeeded")
