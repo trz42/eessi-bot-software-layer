@@ -662,46 +662,6 @@ running_job = job `{job_id}` is running
 
 The `[finished_job_comments]` section sets templates for messages about finished jobs.
 ```
-success = :grin: SUCCESS tarball `{artefact_name}` ({artefact_size} GiB) in job dir
-```
-`success` specifies the message for a successful job that produced an artefact.
-
-```
-failure = :cry: FAILURE
-```
-`failure` specifies the message for a failed job.
-
-```
-no_slurm_out = No slurm output `{slurm_out}` in job dir
-```
-`no_slurm_out` specifies the message for missing Slurm output file.
-
-```
-slurm_out = Found slurm output `{slurm_out}` in job dir
-```
-`slurm_out` specifies the message for found Slurm output file.
-
-```
-missing_modules = Slurm output lacks message "No missing modules!".
-```
-`missing_modules` is used to signal the lack of a message that all modules were built.
-
-```
-no_tarball_message = Slurm output lacks message about created tarball.
-```
-`no_tarball_message` is used to signal the lack of a message about a created tarball.
-
-```
-no_matching_tarball = No tarball matching `{artefact_pattern}` found in job dir.
-```
-`no_matching_tarball` is used to signal a missing tarball.
-
-```
-multiple_tarballs = Found {num_artefacts} tarballs in job dir - only 1 matching `{artefact_pattern}` expected.
-```
-`multiple_tarballs` is used to report that multiple tarballs have been found.
-
-```
 job_result_unknown_fmt = <details><summary>:shrug: UNKNOWN _(click triangle for details)_</summary><ul><li>Job results file `{filename}` does not exist in job directory, or parsing it failed.</li><li>No artefacts were found/reported.</li></ul></details>
 ```
 `job_result_unknown_fmt` is used in case no result file (produced by `bot/check-build.sh`
