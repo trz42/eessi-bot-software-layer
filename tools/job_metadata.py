@@ -21,6 +21,15 @@ from pyghee.utils import log
 # (none yet)
 
 
+JOB_PR_SECTION = "PR"
+JOB_RESULT_ARTEFACTS = "artefacts"
+JOB_RESULT_FAILURE = "FAILURE"
+JOB_RESULT_SECTION = "RESULT"
+JOB_RESULT_STATUS = "status"
+JOB_RESULT_SUCCESS = "SUCCESS"
+JOB_TEST_SECTION = "TEST"
+
+
 def create_metadata_file(job, job_id, pr_comment):
     """
     Create job metadata file in job working directory
@@ -48,6 +57,54 @@ def create_metadata_file(job, job_id, pr_comment):
     with open(bot_jobfile_path, 'w') as bjf:
         bot_jobfile.write(bjf)
     log(f"{fn}(): created job metadata file {bot_jobfile_path}")
+
+
+def determine_job_id_from_job_directory(job_directory, log_file=None):
+    """
+    Determine job id from a job directory.
+
+    Args:
+        job_directory (string): path to job directory
+        log_file (string): path to log file
+
+    Returns:
+        (int): job id or 0
+    """
+    # job id could be found in
+    # - current directory name
+    # - part of a 'slurm-JOB_ID.out' file name
+    # - part of a '_bot_jobJOB_ID.metadata' file
+    # For now we just use the first alternative.
+    job_dir_basename = os.path.basename(job_directory)
+    from_dir_job_id = 0
+    if job_dir_basename.replace('.', '', 1).isdigit():
+        from_dir_job_id = int(job_dir_basename)
+    return from_dir_job_id
+
+
+def get_section_from_file(filepath, section, log_file=None):
+    """
+    Read filepath (ini/cfg format) and return contents of a section.
+
+    Args:
+        filepath (string): path to a metadata file
+        section (string): name of the section to obtain contents for
+        log_file (string): path to log file
+
+    Returns:
+        (ConfigParser): instance of ConfigParser corresponding to the section or None
+    """
+    # reuse function from module tools.job_metadata to read metadata file
+    section_contents = None
+    metadata = read_metadata_file(filepath, log_file=log_file)
+    if metadata:
+        # get section
+        if section in metadata:
+            section_contents = metadata[section]
+        else:
+            section_contents = {}
+
+    return section_contents
 
 
 def read_metadata_file(metadata_path, log_file=None):
@@ -79,29 +136,4 @@ def read_metadata_file(metadata_path, log_file=None):
         return metadata
     else:
         log(f"No metadata file found at {metadata_path}.", log_file)
-        return None
-
-
-def read_job_metadata_from_file(filepath, log_file=None):
-    """
-    Read job metadata from file
-
-    Args:
-        filepath (string): path to job metadata file
-        log_file (string): path to log file
-
-    Returns:
-        job_metadata (dict): dictionary containing job metadata or None
-    """
-
-    metadata = read_metadata_file(filepath, log_file=log_file)
-    if metadata:
-        # get PR section
-        if "PR" in metadata:
-            metadata_pr = metadata["PR"]
-        else:
-            metadata_pr = {}
-        return metadata_pr
-    else:
-        log(f"Metadata file '{filepath}' does not exist or could not be read")
         return None
