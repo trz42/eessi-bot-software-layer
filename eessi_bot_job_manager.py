@@ -48,21 +48,27 @@ from tools.args import job_manager_parse
 from tools.pr_comments import get_submitted_job_comment, update_comment
 
 
-AWAITS_LAUNCH = "awaits_launch"
-FINISHED_JOB_COMMENTS = "finished_job_comments"
-JOB_RESULT_COMMENT_DESCRIPTION = "comment_description"
-JOB_RESULT_UNKNOWN_FMT = "job_result_unknown_fmt"
-JOB_TEST_COMMENT_DESCRIPTION = "comment_description"
-JOB_TEST_UNKNOWN_FMT = "job_test_unknown_fmt"
-NEW_JOB_COMMENTS = "new_job_comments"
-RUNNING_JOB = "running_job"
-RUNNING_JOB_COMMENTS = "running_job_comments"
-
+# settings that are required in 'app.cfg'
 REQUIRED_CONFIG = {
-    FINISHED_JOB_COMMENTS: [JOB_RESULT_UNKNOWN_FMT, JOB_TEST_UNKNOWN_FMT],
-    NEW_JOB_COMMENTS: [AWAITS_LAUNCH],
-    RUNNING_JOB_COMMENTS: [RUNNING_JOB]
-}
+    config.SECTION_FINISHED_JOB_COMMENTS: [
+        config.FINISHED_JOB_COMMENTS_SETTING_JOB_RESULT_UNKNOWN_FMT,  # required
+        config.FINISHED_JOB_COMMENTS_SETTING_JOB_TEST_UNKNOWN_FMT],   # required
+    config.SECTION_GITHUB: [
+        config.GITHUB_SETTING_APP_ID,                                 # required
+        # config.GITHUB_SETTING_APP_NAME,                               # unused
+        config.GITHUB_SETTING_INSTALLATION_ID,                        # required
+        config.GITHUB_SETTING_PRIVATE_KEY],                           # required
+    config.SECTION_JOB_MANAGER: [
+        config.JOB_MANAGER_SETTING_LOG_PATH,                          # required
+        config.JOB_MANAGER_SETTING_JOB_IDS_DIR,                       # required
+        config.JOB_MANAGER_SETTING_POLL_COMMAND,                      # required
+        config.JOB_MANAGER_SETTING_POLL_INTERVAL,                     # optional+recommended
+        config.JOB_MANAGER_SETTING_SCONTROL_COMMAND],                 # required
+    config.SECTION_NEW_JOB_COMMENTS: [
+        config.NEW_JOB_COMMENTS_SETTING_AWAITS_LAUNCH],               # required
+    config.SECTION_RUNNING_JOB_COMMENTS: [
+        config.RUNNING_JOB_COMMENTS_SETTING_RUNNING_JOB]              # required
+    }
 
 
 class EESSIBotSoftwareLayerJobManager:
@@ -77,8 +83,8 @@ class EESSIBotSoftwareLayerJobManager:
         configuration to set the path to the logfile.
         """
         cfg = config.read_config()
-        job_manager_cfg = cfg['job_manager']
-        self.logfile = job_manager_cfg.get('log_path')
+        job_manager_cfg = cfg[config.SECTION_JOB_MANAGER]
+        self.logfile = job_manager_cfg.get(config.JOB_MANAGER_SETTING_LOG_PATH)
 
     def get_current_jobs(self):
         """
@@ -340,10 +346,10 @@ class EESSIBotSoftwareLayerJobManager:
 
             # update status table if we found a comment
             if "comment_id" in new_job:
-                new_job_comments_cfg = config.read_config()[NEW_JOB_COMMENTS]
+                new_job_comments_cfg = config.read_config()[config.SECTION_NEW_JOB_COMMENTS]
                 dt = datetime.now(timezone.utc)
                 update = "\n|%s|released|" % dt.strftime("%b %d %X %Z %Y")
-                update += f"{new_job_comments_cfg[AWAITS_LAUNCH]}|"
+                update += f"{new_job_comments_cfg[config.NEW_JOB_COMMENTS_SETTING_AWAITS_LAUNCH]}|"
                 update_comment(new_job["comment_id"], pr, update)
             else:
                 log(
@@ -412,8 +418,9 @@ class EESSIBotSoftwareLayerJobManager:
 
         if "comment_id" in running_job:
             dt = datetime.now(timezone.utc)
-            running_job_comments_cfg = config.read_config()[RUNNING_JOB_COMMENTS]
-            running_msg = running_job_comments_cfg[RUNNING_JOB].format(job_id=running_job['jobid'])
+            running_job_comments_cfg = config.read_config()[config.SECTION_RUNNING_JOB_COMMENTS]
+            running_msg_fmt = running_job_comments_cfg[config.RUNNING_JOB_COMMENTS_SETTING_RUNNING_JOB]
+            running_msg = running_msg_fmt.format(job_id=running_job['jobid'])
             if "comment_body" in running_job and running_msg in running_job["comment_body"]:
                 log("Not updating comment, '%s' already found" % running_msg)
             else:
@@ -476,7 +483,7 @@ class EESSIBotSoftwareLayerJobManager:
         #      status = {SUCCESS,FAILURE,UNKNOWN}
 
         # obtain format templates from app.cfg
-        finished_job_comments_cfg = config.read_config()[FINISHED_JOB_COMMENTS]
+        finished_job_comments_cfg = config.read_config()[config.SECTION_FINISHED_JOB_COMMENTS]
 
         # check if _bot_jobJOBID.result exits
         job_result_file = f"_bot_job{job_id}.result"
@@ -485,13 +492,13 @@ class EESSIBotSoftwareLayerJobManager:
                                                          job_metadata.JOB_RESULT_SECTION,
                                                          self.logfile)
 
-        job_result_unknown_fmt = finished_job_comments_cfg[JOB_RESULT_UNKNOWN_FMT]
+        job_result_unknown_fmt = finished_job_comments_cfg[config.FINISHED_JOB_COMMENTS_SETTING_JOB_RESULT_UNKNOWN_FMT]
         # set fallback comment_description in case no result file was found
         # (job_metadata.get_section_from_file returned None)
         comment_description = job_result_unknown_fmt.format(filename=job_result_file)
         if job_results:
             # get preformatted comment_description or use previously set default for unknown
-            comment_description = job_results.get(JOB_RESULT_COMMENT_DESCRIPTION, comment_description)
+            comment_description = job_results.get(job_metadata.JOB_RESULT_COMMENT_DESCRIPTION, comment_description)
 
         # report to log
         log(f"{fn}(): finished job {job_id}\n"
@@ -514,13 +521,13 @@ class EESSIBotSoftwareLayerJobManager:
                                                        job_metadata.JOB_TEST_SECTION,
                                                        self.logfile)
 
-        job_test_unknown_fmt = finished_job_comments_cfg[JOB_TEST_UNKNOWN_FMT]
+        job_test_unknown_fmt = finished_job_comments_cfg[config.FINISHED_JOB_COMMENTS_SETTING_JOB_TEST_UNKNOWN_FMT]
         # set fallback comment_description in case no test file was found
         # (job_metadata.get_section_from_file returned None)
         comment_description = job_test_unknown_fmt.format(filename=job_test_file)
         if job_tests:
             # get preformatted comment_description or use previously set default for unknown
-            comment_description = job_tests.get(JOB_TEST_COMMENT_DESCRIPTION, comment_description)
+            comment_description = job_tests.get(job_metadata.JOB_TEST_COMMENT_DESCRIPTION, comment_description)
 
         # report to log
         log(f"{fn}(): finished job {job_id}, test suite result\n"
@@ -611,16 +618,16 @@ def main():
     job_manager.scontrol_command = ""
     if max_iter != 0:
         cfg = config.read_config()
-        job_mgr = cfg["job_manager"]
-        job_manager.job_ids_dir = job_mgr.get("job_ids_dir")
+        job_mgr = cfg[config.SECTION_JOB_MANAGER]
+        job_manager.job_ids_dir = job_mgr.get(config.JOB_MANAGER_SETTING_JOB_IDS_DIR)
         job_manager.submitted_jobs_dir = os.path.join(
             job_manager.job_ids_dir, "submitted"
         )
-        job_manager.poll_command = job_mgr.get("poll_command") or False
-        poll_interval = int(job_mgr.get("poll_interval") or 0)
+        job_manager.poll_command = job_mgr.get(config.JOB_MANAGER_SETTING_POLL_COMMAND) or False
+        poll_interval = int(job_mgr.get(config.JOB_MANAGER_SETTING_POLL_INTERVAL) or 0)
         if poll_interval <= 0:
             poll_interval = 60
-        job_manager.scontrol_command = job_mgr.get("scontrol_command") or False
+        job_manager.scontrol_command = job_mgr.get(config.JOB_MANAGER_SETTING_SCONTROL_COMMAND) or False
         os.makedirs(job_manager.submitted_jobs_dir, exist_ok=True)
 
     # max_iter
