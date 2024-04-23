@@ -151,3 +151,4 @@ def check_required_cfg_settings(req_settings, path="app.cfg"):
         for item in req_settings[section]:
             if item not in cfg[section]:
                 error(f'Missing configuration item "{item}" in section "{section}" of configuration file {path}.')
+    return True

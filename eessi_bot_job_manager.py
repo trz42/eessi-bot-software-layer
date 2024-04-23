@@ -577,7 +577,11 @@ def main():
 
     # config is read and checked for settings to raise an exception early when
     # the job_manager runs
-    config.check_required_cfg_settings(REQUIRED_CONFIG)
+    if config.check_required_cfg_settings(REQUIRED_CONFIG) == True:
+        print("Configuration check: PASSED")
+    else:
+        print("Configuration check: FAILED")
+        sys.exit(1)
     github.connect()
 
     job_manager = EESSIBotSoftwareLayerJobManager()

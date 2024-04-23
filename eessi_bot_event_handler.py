@@ -609,7 +609,11 @@ def main():
     opts = event_handler_parse()
 
     # config is read and checked for settings to raise an exception early when the event_handler starts.
-    config.check_required_cfg_settings(REQUIRED_CONFIG)
+    if config.check_required_cfg_settings(REQUIRED_CONFIG) == True:
+        print("Configuration check: PASSED")
+    else:
+        print("Configuration check: FAILED")
+        sys.exit(1)
     github.connect()
 
     if opts.file:
