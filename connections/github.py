@@ -46,10 +46,10 @@ def get_token():
 
     global _token
     cfg = config.read_config()
-    github_cfg = cfg['github']
-    app_id = github_cfg.get('app_id')
-    installation_id = github_cfg.get('installation_id')
-    private_key_path = github_cfg.get('private_key')
+    github_cfg = cfg[config.SECTION_GITHUB]
+    app_id = github_cfg.get(config.GITHUB_SETTING_APP_ID)
+    installation_id = github_cfg.get(config.GITHUB_SETTING_INSTALLATION_ID)
+    private_key_path = github_cfg.get(config.GITHUB_SETTING_PRIVATE_KEY)
     private_key = ''
 
     with open(private_key_path, 'r') as private_key_file:
