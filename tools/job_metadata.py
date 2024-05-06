@@ -58,10 +58,14 @@ JOB_PR_PR_COMMENT_ID = "pr_comment_id"
 
 # JWD/_bot_jobJOBID.result
 JOB_RESULT_SECTION = "RESULT"
+# constants representing settings
 JOB_RESULT_ARTEFACTS = "artefacts"
 JOB_RESULT_COMMENT_DESCRIPTION = "comment_description"
-JOB_RESULT_FAILURE = "FAILURE"
 JOB_RESULT_STATUS = "status"
+# constants representing values for JOB_RESULT_STATUS (the values of these
+# constants need to correspond to what the `bot/check-build.sh` script uses when
+# writing the _bot_jobJOBID.result file)
+JOB_RESULT_FAILURE = "FAILURE"
 JOB_RESULT_SUCCESS = "SUCCESS"
 
 # JWD/_bot_jobJOBID.test
