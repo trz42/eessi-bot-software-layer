@@ -19,13 +19,17 @@
 # (none yet)
 
 
-# access to a CernVM-FS repository is defined via a repos.cfg file and associated
-# tarballs containing configuration settings per repository
-# below, we define constants for the settings of each repository;
-# the section name, eg, 'eessi-2023.06' in '[eessi-2023.06]' is not fixed and
-# therefore no constant is defined for itsections and 'settings' in these files
+# Constants for settings in JOB_WORKING_DIRECTORY/cfg/repos.cfg
 #
-# cfg/repos.cfg
+# Access to a CernVM-FS repository is defined via a repos.cfg file and associated
+# tarballs containing configuration settings per repository.
+#
+# Below, we define constants for the settings of each repository.
+#
+# Note, we do not define a constant for the section name, because for every
+# repository we will use a different section name. For example, '[eessi-2023.06]'
+# would define a section with name 'eessi-2023.06'.
+#
 REPOS_CFG_CONFIG_BUNDLE = "config_bundle"
 REPOS_CFG_CONFIG_MAP = "config_map"
 REPOS_CFG_CONTAINER = "container"
