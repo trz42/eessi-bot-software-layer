@@ -19,7 +19,6 @@
 # Standard library imports
 from collections import namedtuple
 import configparser
-from datetime import datetime, timezone
 import json
 import os
 import shutil
@@ -34,9 +33,10 @@ from connections import github
 from tools import config, pr_comments, run_cmd
 from tools.job_metadata import create_metadata_file
 
+
 def move_to_trash_bin(trash_bin_dir, job_dirs):
-        move_cmd = ["mv -t", trash_bin_dir]
-        for job_dir in job_dirs:
-            move_cmd.append(job_dir)
+    move_cmd = ["mkdir -p tras_bin_dir && mv -t", trash_bin_dir]
+    for job_dir in job_dirs:
+        move_cmd.append(job_dir)
         ' '.join(move_cmd)
         out, err, ec = run_cmd(move_cmd, 'Move job directories to trash_bin', raise_on_error=False)
