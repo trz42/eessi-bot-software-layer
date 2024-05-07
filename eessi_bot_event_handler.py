@@ -554,7 +554,6 @@ class EESSIBotSoftwareLayer(PyGHee):
         self.log(log_file_info)
         waitress.serve(app, listen='*:%s' % port)
 
-
     def handle_pull_request_merged_event(self, event_info, pr):
         """
         Handle events of type pull_request with the action merged. Main action
@@ -570,13 +569,14 @@ class EESSIBotSoftwareLayer(PyGHee):
         """
         self.log("PR merged: scanning directories used by PR")
         
-        
         # 1) determine the jobs that have been run for the PR
         job_dirs = determine_job_dirs(pr.number)
 
         # 2) read location of trash_bin from cfg
         merge_cfg = self.cfg['merge_cfg']
         trash_bin_dir = merge_cfg.get('trash_bin_dir')
+        # Subdirectory with date of move. Also with repository name. Handle symbolic links (later?)
+        # cron job deletes symlinks?
 
         # 3) move the directories to the trash_bin
         self.log("Moving directories to trash_bin")
@@ -589,13 +589,6 @@ class EESSIBotSoftwareLayer(PyGHee):
         pull_request = repo.get_pull(pr.number)
         issue_comment = pull_request.create_issue_comment(comment)
         return issue_comment
-
-def move_to_trash_bin(trash_bin_dir, job_dirs):
-        move_cmd = ["mv -t", trash_bin_dir]
-        for job_dir in job_dirs:
-            move_cmd.append(job_dir)
-        ' '.join(move_cmd)
-        out, err, ec = run_cmd(move_cmd, 'Move job directories to trash_bin', raise_on_error=False)
 
 def main():
     """
