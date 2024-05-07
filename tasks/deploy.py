@@ -26,21 +26,8 @@ from pyghee.utils import log
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
 from connections import github
-from tasks.build import CFG_DIRNAME, JOB_CFG_FILENAME, JOB_REPO_ID, JOB_REPOSITORY
 from tasks.build import get_build_env_cfg
 from tools import config, job_metadata, pr_comments, run_cmd
-
-
-ARTEFACT_PREFIX = "artefact_prefix"
-ARTEFACT_UPLOAD_SCRIPT = "artefact_upload_script"
-BUCKET_NAME = "bucket_name"
-DEPLOYCFG = "deploycfg"
-DEPLOY_PERMISSION = "deploy_permission"
-ENDPOINT_URL = "endpoint_url"
-JOBS_BASE_DIR = "jobs_base_dir"
-METADATA_PREFIX = "metadata_prefix"
-NO_DEPLOY_PERMISSION_COMMENT = "no_deploy_permission_comment"
-UPLOAD_POLICY = "upload_policy"
 
 
 def determine_job_dirs(pr_number):
@@ -57,14 +44,14 @@ def determine_job_dirs(pr_number):
 
     job_directories = []
 
-    # a job directory's name has the format cfg[JOBS_BASE_DIR]/YYYY.MM/pr_<id>/JOBID
+    # a job directory's name has the format cfg[config.BUILDENV_SETTING_JOBS_BASE_DIR]/YYYY.MM/pr_<id>/JOBID
     #  - we may have to scan multiple YYYY.MM directories if the pull request was
     #    processed over more than one month (that is jobs were run in two or more
     #    months)
     #  - we assume that a JOBID is a positive integer
     cfg = config.read_config()
     build_env_cfg = get_build_env_cfg(cfg)
-    jobs_base_dir = build_env_cfg[JOBS_BASE_DIR]
+    jobs_base_dir = build_env_cfg[config.BUILDENV_SETTING_JOBS_BASE_DIR]
     log(f"{funcname}(): jobs_base_dir = {jobs_base_dir}")
 
     date_pr_job_pattern = (f"[0-9][0-9][0-9][0-9].[0-9][0-9]/"
@@ -272,12 +259,12 @@ def upload_artefact(job_dir, payload, timestamp, repo_name, pr_number, pr_commen
 
     # obtain config settings
     cfg = config.read_config()
-    deploycfg = cfg[DEPLOYCFG]
-    artefact_upload_script = deploycfg.get(ARTEFACT_UPLOAD_SCRIPT)
-    endpoint_url = deploycfg.get(ENDPOINT_URL) or ''
-    bucket_spec = deploycfg.get(BUCKET_NAME)
-    metadata_prefix = deploycfg.get(METADATA_PREFIX)
-    artefact_prefix = deploycfg.get(ARTEFACT_PREFIX)
+    deploycfg = cfg[config.SECTION_DEPLOYCFG]
+    artefact_upload_script = deploycfg.get(config.DEPLOYCFG_SETTING_ARTEFACT_UPLOAD_SCRIPT)
+    endpoint_url = deploycfg.get(config.DEPLOYCFG_SETTING_ENDPOINT_URL) or ''
+    bucket_spec = deploycfg.get(config.DEPLOYCFG_SETTING_BUCKET_NAME)
+    metadata_prefix = deploycfg.get(config.DEPLOYCFG_SETTING_METADATA_PREFIX)
+    artefact_prefix = deploycfg.get(config.DEPLOYCFG_SETTING_ARTEFACT_PREFIX)
 
     # if bucket_spec value looks like a dict, try parsing it as such
     if bucket_spec.lstrip().startswith('{'):
@@ -291,9 +278,9 @@ def upload_artefact(job_dir, payload, timestamp, repo_name, pr_number, pr_commen
     if artefact_prefix.lstrip().startswith('{'):
         artefact_prefix = json.loads(artefact_prefix)
 
-    jobcfg_path = os.path.join(job_dir, CFG_DIRNAME, JOB_CFG_FILENAME)
+    jobcfg_path = os.path.join(job_dir, job_metadata.JOB_CFG_DIRECTORY_NAME, job_metadata.JOB_CFG_FILENAME)
     jobcfg = config.read_config(jobcfg_path)
-    target_repo_id = jobcfg[JOB_REPOSITORY][JOB_REPO_ID]
+    target_repo_id = jobcfg[job_metadata.JOB_CFG_REPOSITORY_SECTION][job_metadata.JOB_CFG_REPOSITORY_REPO_ID]
 
     if isinstance(bucket_spec, str):
         bucket_name = bucket_spec
@@ -537,8 +524,8 @@ def deploy_built_artefacts(pr, event_info):
     log(f"{funcname}(): deploy for PR {pr.number}")
 
     cfg = config.read_config()
-    deploy_cfg = cfg[DEPLOYCFG]
-    deploy_permission = deploy_cfg.get(DEPLOY_PERMISSION, '')
+    deploy_cfg = cfg[config.SECTION_DEPLOYCFG]
+    deploy_permission = deploy_cfg.get(config.DEPLOYCFG_SETTING_DEPLOY_PERMISSION, '')
     log(f"{funcname}(): deploy permission '{deploy_permission}'")
 
     labeler = event_info['raw_request_body']['sender']['login']
@@ -547,7 +534,7 @@ def deploy_built_artefacts(pr, event_info):
     # permission to trigger the deployment
     if labeler not in deploy_permission.split():
         log(f"{funcname}(): GH account '{labeler}' is not authorized to deploy")
-        no_deploy_permission_comment = deploy_cfg.get(NO_DEPLOY_PERMISSION_COMMENT)
+        no_deploy_permission_comment = deploy_cfg.get(config.DEPLOYCFG_SETTING_NO_DEPLOY_PERMISSION_COMMENT)
         repo_name = event_info["raw_request_body"]["repository"]["full_name"]
         pr_comments.create_comment(repo_name,
                                    pr.number,
@@ -557,7 +544,7 @@ def deploy_built_artefacts(pr, event_info):
         log(f"{funcname}(): GH account '{labeler}' is authorized to deploy")
 
     # get upload policy from config
-    upload_policy = deploy_cfg.get(UPLOAD_POLICY)
+    upload_policy = deploy_cfg.get(config.DEPLOYCFG_SETTING_UPLOAD_POLICY)
     log(f"{funcname}(): upload policy '{upload_policy}'")
 
     if upload_policy == "none":
