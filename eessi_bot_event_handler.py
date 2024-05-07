@@ -18,6 +18,7 @@
 
 # Standard library imports
 import sys
+from datetime import datetime, timezone
 
 # Third party imports (anything installed into the local Python environment)
 from pyghee.lib import create_app, get_event_info, PyGHee, read_event_from_json
@@ -28,8 +29,9 @@ import waitress
 from connections import github
 from tasks.build import check_build_permission, get_architecture_targets, get_repo_cfg, \
     request_bot_build_issue_comments, submit_build_jobs
-from tasks.deploy import deploy_built_artefacts
-from tools import config
+from tasks.deploy import deploy_built_artefacts, determine_job_dirs
+from tasks.clean_up import move_to_trash_bin
+from tools import config, cvmfs_repository
 from tools.args import event_handler_parse
 from tools.commands import EESSIBotCommand, EESSIBotCommandError, \
     contains_any_bot_command, get_bot_command
@@ -613,18 +615,24 @@ class EESSIBotSoftwareLayer(PyGHee):
         PyGithub, not the github from the internal connections module)
         """
         self.log("PR merged: scanning directories used by PR")
-        
+        repo_cfg = get_repo_cfg(self.cfg)
+        repo_name = repo_cfg[cvmfs_repository.REPOS_CFG_REPO_NAME]
+        clean_up_comments_cfg = self.cfg[config.SECTION_CLEAN_UP_COMMENTS]
         # 1) determine the jobs that have been run for the PR
         job_dirs = determine_job_dirs(pr.number)
 
         # 2) read location of trash_bin from cfg
         merge_cfg = self.cfg['merge_cfg']
-        trash_bin_dir = merge_cfg.get('trash_bin_dir')
+        repo_cfg = get_repo_cfg(self.cfg)
+        repo_name = repo_cfg[cvmfs_repository.REPOS_CFG_REPO_NAME]
+        dt = datetime.now(timezone.utc)
+        trash_bin_dir = "/".join([merge_cfg.get('trash_bin_dir'), repo_name, dt.strftime('%Y%m%d')])
+        
         # Subdirectory with date of move. Also with repository name. Handle symbolic links (later?)
         # cron job deletes symlinks?
 
         # 3) move the directories to the trash_bin
-        self.log("Moving directories to trash_bin")
+        log("Moving directories to trash_bin")
         move_to_trash_bin(trash_bin_dir, job_dirs)
 
         # 4) report move to pull request?
@@ -632,7 +640,8 @@ class EESSIBotSoftwareLayer(PyGHee):
         gh = github.get_instance()
         repo = gh.get_repo(repo_name)
         pull_request = repo.get_pull(pr.number)
-        issue_comment = pull_request.create_issue_comment(comment)
+        moved_comment = clean_up_comments_cfg[config.CLEANUP_COMMENTS_MOVED]
+        issue_comment = pull_request.create_issue_comment(moved_comment)
         return issue_comment
 
 def main():
