@@ -35,7 +35,7 @@ from tools.job_metadata import create_metadata_file
 
 
 def move_to_trash_bin(trash_bin_dir, job_dirs):
-    move_cmd = ["mkdir -p tras_bin_dir && mv -t", trash_bin_dir]
+    move_cmd = ["mkdir -p trash_bin_dir && mv -t", trash_bin_dir]
     for job_dir in job_dirs:
         move_cmd.append(job_dir)
         ' '.join(move_cmd)
