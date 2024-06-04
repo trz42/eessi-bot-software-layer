@@ -17,26 +17,23 @@
 #
 
 # Standard library imports
-from collections import namedtuple
-import configparser
-import json
-import os
-import shutil
 import sys
 
 # Third party imports (anything installed into the local Python environment)
-from pyghee.utils import error, log
-from retry.api import retry_call
+from pyghee.utils import log
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
-from connections import github
-from tools import config, pr_comments, run_cmd
-from tools.job_metadata import create_metadata_file
+from tools import run_cmd
 
 
 def move_to_trash_bin(trash_bin_dir, job_dirs):
+    funcname = sys._getframe().f_code.co_name
+    log(f"{funcname}(): trash_bin_dir = {trash_bin_dir}")
+    
     move_cmd = ["mkdir -p trash_bin_dir && mv -t", trash_bin_dir]
     for job_dir in job_dirs:
         move_cmd.append(job_dir)
         ' '.join(move_cmd)
         out, err, ec = run_cmd(move_cmd, 'Move job directories to trash_bin', raise_on_error=False)
+
+    return

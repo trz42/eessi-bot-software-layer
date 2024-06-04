@@ -105,6 +105,12 @@ SECTION_SUBMITTED_JOB_COMMENTS = 'submitted_job_comments'
 SUBMITTED_JOB_COMMENTS_SETTING_INITIAL_COMMENT = 'initial_comment'
 SUBMITTED_JOB_COMMENTS_SETTING_AWAITS_RELEASE = 'awaits_release'
 
+SECTION_MERGED_PR = 'merged_pr'
+MERGED_PR_SETTING_TRASH_BIN_ROOT_DIR = 'trash_bin_dir'
+
+SECTION_CLEAN_UP_COMMENTS = 'clean_up_comments'
+CLEAN_UP_COMMENTS_SETTING_MOVED_COMMENT = 'moved_comment'
+
 
 def read_config(path='app.cfg'):
     """
