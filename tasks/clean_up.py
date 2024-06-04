@@ -29,7 +29,7 @@ from tools import run_cmd
 def move_to_trash_bin(trash_bin_dir, job_dirs):
     funcname = sys._getframe().f_code.co_name
     log(f"{funcname}(): trash_bin_dir = {trash_bin_dir}")
-    
+
     move_cmd = ["mkdir -p trash_bin_dir && mv -t", trash_bin_dir]
     for job_dir in job_dirs:
         move_cmd.append(job_dir)
