@@ -31,7 +31,7 @@ from tasks.build import check_build_permission, get_architecture_targets, get_re
     request_bot_build_issue_comments, submit_build_jobs
 from tasks.deploy import deploy_built_artefacts, determine_job_dirs
 from tasks.clean_up import move_to_trash_bin
-from tools import config, cvmfs_repository
+from tools import config
 from tools.args import event_handler_parse
 from tools.commands import EESSIBotCommand, EESSIBotCommandError, \
     contains_any_bot_command, get_bot_command
@@ -601,10 +601,11 @@ class EESSIBotSoftwareLayer(PyGHee):
         self.log(log_file_info)
         waitress.serve(app, listen='*:%s' % port)
 
-    def handle_pull_request_merged_event(self, event_info, pr):
+    def handle_pull_request_closed_event(self, event_info, pr):
         """
-        Handle events of type pull_request with the action merged. Main action
-        is to scan directories used and move them to the trash_bin.
+        Handle events of type pull_request with the action 'closed'. Main action
+        is to scan directories used and move them to the trash_bin when the PR
+        is merged.
 
         Args:
         event_info (dict): event received by event_handler
@@ -636,8 +637,8 @@ class EESSIBotSoftwareLayer(PyGHee):
 
         # 2) Get trash_bin_dir from configs
         trash_bin_root_dir = self.cfg[config.SECTION_MERGED_PR][config.MERGED_PR_SETTING_TRASH_BIN_ROOT_DIR]
-        repo_cfg = get_repo_cfg(self.cfg)
-        repo_name = repo_cfg[cvmfs_repository.REPOS_CFG_REPO_NAME]
+
+        repo_name = event_info['full_name']
         dt = datetime.now(timezone.utc)
         trash_bin_dir = "/".join([trash_bin_root_dir, repo_name, dt.strftime('%Y%m%d')])
 
