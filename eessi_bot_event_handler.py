@@ -621,7 +621,7 @@ class EESSIBotSoftwareLayer(PyGHee):
 
         if action == 'merged':
             self.log("PR merged: scanning directories used by PR")
-            self.log(f"merge '{action}' action is handled")
+            self.log(f"pull_request event with action '{action}' will be handled")
         else:
             self.log(f"merge action '{action}' not handled")
             return
