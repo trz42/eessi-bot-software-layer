@@ -11,22 +11,31 @@
 
 # Standard library imports
 import sys
+import os
+import shutil
 
 # Third party imports (anything installed into the local Python environment)
 from pyghee.utils import log
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
-from tools import run_cmd
 
 
 def move_to_trash_bin(trash_bin_dir, job_dirs):
+    """
+    Move directory to trash_bin_dir
+
+    Args:
+        trash_bin_dir (string): path to the trash_bin_dir. Defined in .cfg
+        job_dirs (list): list with job directory names
+
+    Returns:
+        None (implicitly)
+    """
     funcname = sys._getframe().f_code.co_name
     log(f"{funcname}(): trash_bin_dir = {trash_bin_dir}")
 
-    move_cmd = ["mkdir -p trash_bin_dir && mv -t", trash_bin_dir]
+    os.makedirs(trash_bin_dir, exist_ok=True)
     for job_dir in job_dirs:
-        move_cmd.append(job_dir)
-        ' '.join(move_cmd)
-        out, err, ec = run_cmd(move_cmd, 'Move job directories to trash_bin', raise_on_error=False)
-
-    return
+        destination_dir = shutil.move(job_dir, trash_bin_dir)
+        log(f"{funcname}(): moved {job_dir} to {destination_dir}")
+    return True
