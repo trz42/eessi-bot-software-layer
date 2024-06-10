@@ -618,12 +618,13 @@ class EESSIBotSoftwareLayer(PyGHee):
         # Detect event and only act if PR is merged
         request_body = event_info['raw_request_body']
         action = request_body['action']
+        merged = request_body['merged']
 
-        if action == 'merged':
+        if merged == 'true':
             self.log("PR merged: scanning directories used by PR")
-            self.log(f"merge '{action}' action is handled")
+            self.log(f"pull_request event with action '{action}' and merged '{merged}' will be handled")
         else:
-            self.log(f"merge action '{action}' not handled")
+            self.log(f"Action '{action}' not handled as merged is '{merged}'")
             return
         # at this point we know that we are handling a new merge
         # NOTE: Permissions to merge are already handled through GitHub, we
