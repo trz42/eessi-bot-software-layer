@@ -619,7 +619,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         # Detect event and only act if PR is merged
         request_body = event_info['raw_request_body']
         action = request_body['action']
-        merged = request_body['merged']
+        merged = request_body['pull_request']['merged']
 
         if merged == 'true':
             self.log("PR merged: scanning directories used by PR")
@@ -638,7 +638,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         # 2) Get trash_bin_dir from configs
         trash_bin_root_dir = self.cfg[config.SECTION_MERGED_PR][config.MERGED_PR_SETTING_TRASH_BIN_ROOT_DIR]
 
-        repo_name = event_info['full_name']
+        repo_name = event_info['repository']['full_name']
         dt = datetime.now(timezone.utc)
         trash_bin_dir = "/".join([trash_bin_root_dir, repo_name, dt.strftime('%Y%m%d')])
 
