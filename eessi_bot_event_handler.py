@@ -640,7 +640,7 @@ class EESSIBotSoftwareLayer(PyGHee):
 
         repo_name = request_body['repository']['full_name']
         dt = datetime.now(timezone.utc)
-        trash_bin_dir = "/".join([trash_bin_root_dir, repo_name, dt.strftime('%Y%m%d')])
+        trash_bin_dir = "/".join([trash_bin_root_dir, repo_name, dt.strftime('%Y%m.%d')])
 
         # Subdirectory with date of move. Also with repository name. Handle symbolic links (later?)
         # cron job deletes symlinks?
