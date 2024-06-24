@@ -89,7 +89,7 @@ class EESSIBotSoftwareLayerJobManager:
         self.logfile = job_manager_cfg.get(config.JOB_MANAGER_SETTING_LOG_PATH)
         buildenv_cfg = cfg[config.SECTION_BUILDENV]
         self.job_name = buildenv_cfg.get(config.BUILDENV_SETTING_JOB_NAME)
-        if len(self.job_name) < 3:
+        if self.job_name and len(self.job_name) < 3:
             raise Exception(f"job name ({self.job_name}) is shorter than 3 characters")
 
     def get_current_jobs(self):
@@ -111,7 +111,9 @@ class EESSIBotSoftwareLayerJobManager:
         if username is None:
             raise Exception("Unable to find username")
 
-        squeue_cmd = "%s --long --noheader --user=%s --name='%s'" % (self.poll_command, username, self.job_name)
+        squeue_cmd = "%s --long --noheader --user=%s" % (self.poll_command, username)
+        if self.job_name:
+            squeue_cmd += "--name='%s'" % self.job_name
         squeue_output, squeue_err, squeue_exitcode = run_cmd(
             squeue_cmd,
             "get_current_jobs(): squeue command",
