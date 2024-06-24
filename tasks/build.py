@@ -661,10 +661,9 @@ def submit_job(job, cfg):
         build_env_cfg[config.BUILDENV_SETTING_SUBMIT_COMMAND],
         build_env_cfg[config.BUILDENV_SETTING_SLURM_PARAMS],
         time_limit,
-        job.slurm_opts,
-        f"--job-name='{job_name}'",
-        build_env_cfg[config.BUILDENV_SETTING_BUILD_JOB_SCRIPT],
-    ])
+        job.slurm_opts] +
+        ([f"--job-name='{job_name}'"] if job_name else []) +
+        [build_env_cfg[config.BUILDENV_SETTING_BUILD_JOB_SCRIPT]])
 
     cmdline_output, cmdline_error, cmdline_exit_code = run_cmd(command_line,
                                                                "submit job for target '%s'" % job.arch_target,
