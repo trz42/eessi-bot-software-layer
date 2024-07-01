@@ -648,7 +648,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         self.log("Moving directories to trash_bin")
         move_to_trash_bin(trash_bin_dir, job_dirs)
 
-        # 4) report move to pull request?
+        # 4) report move to pull request
         repo_name = pr.base.repo.full_name
         gh = github.get_instance()
         repo = gh.get_repo(repo_name)
