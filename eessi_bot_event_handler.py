@@ -17,7 +17,6 @@
 #
 
 # Standard library imports
-import os
 import sys
 from datetime import datetime, timezone
 
