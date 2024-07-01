@@ -631,7 +631,6 @@ class EESSIBotSoftwareLayer(PyGHee):
         # NOTE: Permissions to merge are already handled through GitHub, we
         # don't need to check here
 
-        clean_up_comments_cfg = self.cfg[config.SECTION_CLEAN_UP_COMMENTS]
         # 1) determine the jobs that have been run for the PR
         job_dirs = determine_job_dirs(pr.number)
 
