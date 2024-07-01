@@ -631,7 +631,6 @@ class EESSIBotSoftwareLayer(PyGHee):
         # NOTE: Permissions to merge are already handled through GitHub, we
         # don't need to check here
 
-        clean_up_comments_cfg = self.cfg[config.SECTION_CLEAN_UP_COMMENTS]
         # 1) determine the jobs that have been run for the PR
         job_dirs = determine_job_dirs(pr.number)
 
@@ -640,7 +639,7 @@ class EESSIBotSoftwareLayer(PyGHee):
 
         repo_name = request_body['repository']['full_name']
         dt = datetime.now(timezone.utc)
-        trash_bin_dir = "/".join([trash_bin_root_dir, repo_name, dt.strftime('%Y%m%d')])
+        trash_bin_dir = "/".join([trash_bin_root_dir, repo_name, dt.strftime('%Y%m.%d')])
 
         # Subdirectory with date of move. Also with repository name. Handle symbolic links (later?)
         # cron job deletes symlinks?
@@ -654,7 +653,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         gh = github.get_instance()
         repo = gh.get_repo(repo_name)
         pull_request = repo.get_pull(pr.number)
-        moved_comment = clean_up_comments_cfg[config.CLEAN_UP_COMMENTS_SETTING_MOVED_COMMENT]
+        moved_comment = f"PR merged! Moved `{job_dirs}` to `{trash_bin_dir}`"
         issue_comment = pull_request.create_issue_comment(moved_comment)
         return issue_comment
 
