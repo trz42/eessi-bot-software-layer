@@ -654,7 +654,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         gh = github.get_instance()
         repo = gh.get_repo(repo_name)
         pull_request = repo.get_pull(pr.number)
-        moved_comment = clean_up_comments_cfg[config.CLEAN_UP_COMMENTS_SETTING_MOVED_COMMENT]
+        moved_comment = f"PR merged! Moved `{job_dirs}` to `{trash_bin_dir}`"
         issue_comment = pull_request.create_issue_comment(moved_comment)
         return issue_comment
 
