@@ -41,7 +41,7 @@ def move_to_trash_bin(trash_bin_dir, job_dirs):
         pr_dirs.append(os.path.dirname(job_dir))
 
     # Remove event_xxx-yyy/run_nnn/ directories
-    pr_dirs = list(set(pr_dirs)) # get only unique dirs
+    pr_dirs = list(set(pr_dirs))  # get only unique dirs
     for pr_dir in pr_dirs:
         destination_dir = shutil.copy2(pr_dir, trash_bin_dir, follow_symlinks=True)
         log(f"{funcname}(): copied {pr_dir} to {destination_dir}")
