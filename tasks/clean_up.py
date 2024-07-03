@@ -45,7 +45,7 @@ def move_to_trash_bin(trash_bin_dir, job_dirs):
     for pr_dir in pr_dirs:
         destination_dir = shutil.copytree(pr_dir, trash_bin_dir)
         log(f"{funcname}(): copied {pr_dir} to {destination_dir}")
-        os.remove(pr_dir)
+        shutil.rmtree(pr_dir)  # Use shutil.rmtree to remove directories recursively
         log(f"{funcname}(): removed {pr_dir}")
 
     return True
