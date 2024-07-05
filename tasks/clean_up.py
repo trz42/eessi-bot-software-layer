@@ -43,7 +43,8 @@ def move_to_trash_bin(trash_bin_dir, job_dirs):
     # Remove event_xxx-yyy/run_nnn/ directories
     pr_dirs = list(set(pr_dirs))  # get only unique dirs
     for pr_dir in pr_dirs:
-        destination_dir = shutil.copytree(pr_dir, trash_bin_dir)
+        log(f"{funcname}(): attempting to copy {pr_dir} to {trash_bin_dir}")
+        destination_dir = shutil.copytree(pr_dir, trash_bin_dir, dirs_exist_ok=True)
         log(f"{funcname}(): copied {pr_dir} to {destination_dir}")
         shutil.rmtree(pr_dir)  # Use shutil.rmtree to remove directories recursively
         log(f"{funcname}(): removed {pr_dir}")
