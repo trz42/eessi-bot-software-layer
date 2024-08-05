@@ -60,6 +60,9 @@ REQUIRED_CONFIG = {
         config.BUILDENV_SETTING_SHARED_FS_PATH,                    # optional+recommended
         # config.BUILDENV_SETTING_SLURM_PARAMS,                      # optional
         config.BUILDENV_SETTING_SUBMIT_COMMAND],                   # required
+    config.SECTION_CLEAN_UP: [
+        config.CLEAN_UP_SETTING_TRASH_BIN_ROOT_DIR,                # required
+        config.CLEAN_UP_SETTING_MOVED_JOB_DIRS_COMMENT],           # required
     config.SECTION_DEPLOYCFG: [
         config.DEPLOYCFG_SETTING_ARTEFACT_PREFIX,                  # (required)
         config.DEPLOYCFG_SETTING_ARTEFACT_UPLOAD_SCRIPT,           # required
@@ -635,7 +638,7 @@ class EESSIBotSoftwareLayer(PyGHee):
         job_dirs = determine_job_dirs(pr.number)
 
         # 2) Get trash_bin_dir from configs
-        trash_bin_root_dir = self.cfg[config.SECTION_MERGED_PR][config.MERGED_PR_SETTING_TRASH_BIN_ROOT_DIR]
+        trash_bin_root_dir = self.cfg[config.SECTION_CLEAN_UP][config.CLEAN_UP_SETTING_TRASH_BIN_ROOT_DIR]
 
         repo_name = request_body['repository']['full_name']
         dt = datetime.now(timezone.utc)
@@ -653,7 +656,8 @@ class EESSIBotSoftwareLayer(PyGHee):
         gh = github.get_instance()
         repo = gh.get_repo(repo_name)
         pull_request = repo.get_pull(pr.number)
-        moved_comment = f"PR merged! Moved `{job_dirs}` to `{trash_bin_dir}`"
+        clean_up_comment = self.cfg[config.SECTION_CLEAN_UP][config.CLEAN_UP_SETTING_MOVED_JOB_DIRS_COMMENT]
+        moved_comment = clean_up_comment.format(job_dirs=job_dirs, trash_bin_dir=trash_bin_dir)
         issue_comment = pull_request.create_issue_comment(moved_comment)
         return issue_comment
 
