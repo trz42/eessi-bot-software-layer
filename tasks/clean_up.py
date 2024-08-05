@@ -50,7 +50,6 @@ def move_to_trash_bin(trash_bin_dir, job_dirs):
         log(f"{funcname}(): adding PR dir '{pr_dir}' (from job dir '{job_dir}')")
         pr_dirs.append(pr_dir)
 
-
     # Move (or copy as fallback) entire pr_PR_NUM directories to trash_bin_dir/YYYY.MM
     pr_dirs = list(set(pr_dirs))  # get only unique dirs
     for pr_dir in pr_dirs:
