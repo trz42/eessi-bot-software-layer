@@ -65,15 +65,16 @@ def get_build_env_cfg(cfg):
     """
     fn = sys._getframe().f_code.co_name
 
+    config_data = {}
     buildenv = cfg[config.SECTION_BUILDENV]
 
     job_name = buildenv.get(config.BUILDENV_SETTING_JOB_NAME)
     log(f"{fn}(): job_name '{job_name}'")
-    config_data = {config.BUILDENV_SETTING_JOB_NAME: job_name}
+    config_data[config.BUILDENV_SETTING_JOB_NAME] = job_name
 
     jobs_base_dir = buildenv.get(config.BUILDENV_SETTING_JOBS_BASE_DIR)
     log(f"{fn}(): jobs_base_dir '{jobs_base_dir}'")
-    config_data = {config.BUILDENV_SETTING_JOBS_BASE_DIR: jobs_base_dir}
+    config_data[config.BUILDENV_SETTING_JOBS_BASE_DIR] = jobs_base_dir
 
     local_tmp = buildenv.get(config.BUILDENV_SETTING_LOCAL_TMP)
     log(f"{fn}(): local_tmp '{local_tmp}'")
