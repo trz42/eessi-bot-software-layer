@@ -105,6 +105,10 @@ SECTION_SUBMITTED_JOB_COMMENTS = 'submitted_job_comments'
 SUBMITTED_JOB_COMMENTS_SETTING_INITIAL_COMMENT = 'initial_comment'
 SUBMITTED_JOB_COMMENTS_SETTING_AWAITS_RELEASE = 'awaits_release'
 
+SECTION_CLEAN_UP = 'clean_up'
+CLEAN_UP_SETTING_TRASH_BIN_ROOT_DIR = 'trash_bin_dir'
+CLEAN_UP_SETTING_MOVED_JOB_DIRS_COMMENT = 'moved_job_dirs_comment'
+
 
 def read_config(path='app.cfg'):
     """
