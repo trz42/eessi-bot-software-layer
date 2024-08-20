@@ -12,6 +12,7 @@
 # author: Jonas Qvigstad (@jonas-lq)
 # author: Lara Ramona Peeters (@laraPPr)
 # author: Thomas Roeblitz (@trz42)
+# author: Pedro Santos Neves (@Neves-P)
 #
 # license: GPLv2
 #
@@ -607,9 +608,9 @@ class EESSIBotSoftwareLayer(PyGHee):
 
     def handle_pull_request_closed_event(self, event_info, pr):
         """
-        Handle events of type pull_request with the action 'closed'. Main action
-        is to scan directories used and move them to the trash_bin when the PR
-        is merged.
+        Handle events of type pull_request with the action 'closed'. It
+        determines used by the PR and moves them to the trash_bin. It also adds
+        information to the logs and a comment to the PR.
 
         Args:
         event_info (dict): event received by event_handler
@@ -620,37 +621,35 @@ class EESSIBotSoftwareLayer(PyGHee):
         PyGithub, not the github from the internal connections module)
         """
 
-        # Detect event and only act if PR is merged
+        # Detect event and report if PR was merged or closed
         request_body = event_info['raw_request_body']
-        action = request_body['action']
-        merged = request_body['pull_request']['merged']
+        # next value: True -> PR merged, False -> PR closed
+        mergedOrClosed = request_body['pull_request']['merged']
+        status = "merged" if mergedOrClosed else "closed"
 
-        if merged:
-            self.log("PR merged: scanning directories used by PR")
-            self.log(f"pull_request event with action '{action}' and merged '{merged}' will be handled")
-        else:
-            self.log(f"Action '{action}' not handled as 'merged' is '{merged}'")
-            return
-        # at this point we know that we are handling a new merge
-        # NOTE: Permissions to merge are already handled through GitHub, we
-        # don't need to check here
+        self.log(f"PR {pr.number}: PR got {status} (json value: {mergedOrClosed})")
 
         # 1) determine the jobs that have been run for the PR
+        self.log(f"PR {pr.number}: determining directories to be moved to trash bin")
         job_dirs = determine_job_dirs(pr.number)
 
         # 2) Get trash_bin_dir from configs
         trash_bin_root_dir = self.cfg[config.SECTION_CLEAN_UP][config.CLEAN_UP_SETTING_TRASH_BIN_ROOT_DIR]
 
         repo_name = request_body['repository']['full_name']
-        dt = datetime.now(timezone.utc)
-        trash_bin_dir = "/".join([trash_bin_root_dir, repo_name, dt.strftime('%Y.%m.%d')])
+        dt_start = datetime.now(timezone.utc)
+        trash_bin_dir = "/".join([trash_bin_root_dir, repo_name, dt_start.strftime('%Y.%m.%d')])
 
         # Subdirectory with date of move. Also with repository name. Handle symbolic links (later?)
         # cron job deletes symlinks?
 
         # 3) move the directories to the trash_bin
-        self.log("Moving directories to trash_bin")
+        self.log(f"PR {pr.number}: moving directories to trash bin {trash_bin_dir}")
         move_to_trash_bin(trash_bin_dir, job_dirs)
+        dt_end = datetime.now(timezone.utc)
+        dt_delta = dt_end - dt_start
+        seconds_elapsed = dt_delta.days * 24 * 3600 + dt_delta.seconds
+        self.log(f"PR {pr.number}: moved directories to trash bin {trash_bin_dir} (took {seconds_elapsed} seconds)")
 
         # 4) report move to pull request
         repo_name = pr.base.repo.full_name
