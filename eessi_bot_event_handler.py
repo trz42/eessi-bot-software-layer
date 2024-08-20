@@ -621,9 +621,8 @@ class EESSIBotSoftwareLayer(PyGHee):
         PyGithub, not the github from the internal connections module)
         """
 
-        # Detect event and only act if PR is merged
+        # Detect event and report if PR was merged or closed
         request_body = event_info['raw_request_body']
-        action = request_body['action']
         # next value: True -> PR merged, False -> PR closed
         mergedOrClosed = request_body['pull_request']['merged']
         status = "merged" if mergedOrClosed else "closed"
