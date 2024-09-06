@@ -426,6 +426,13 @@ no_build_permission_comment = The `bot: build ...` command has been used by user
 `no_build_permission_comment` defines a comment (template) that is used when
 the account trying to trigger build jobs has no permission to do so.
 
+```
+allow_update_submit_opts = false
+```
+`allow_update_submit_opts` determines whether or not to allow updating the submit
+options via custom module `det_submit_opts` provided by the pull request being
+processed.
+
 
 #### `[bot_control]` section
 
