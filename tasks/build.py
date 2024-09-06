@@ -12,6 +12,7 @@
 # author: Lara Ramona Peeters (@laraPPr)
 # author: Pedro Santos Neves (@Neves-P)
 # author: Thomas Roeblitz (@trz42)
+# author: Sam Moors (@smoors)
 #
 # license: GPLv2
 #

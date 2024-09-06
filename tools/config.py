@@ -10,6 +10,7 @@
 # author: Jacob Ziemke (@jacobz137)
 # author: Jonas Qvigstad (@jonas-lq)
 # author: Thomas Roeblitz (@trz42)
+# author: Sam Moors (@smoors)
 #
 # license: GPLv2
 #
