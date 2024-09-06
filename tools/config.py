@@ -10,6 +10,7 @@
 # author: Jacob Ziemke (@jacobz137)
 # author: Jonas Qvigstad (@jonas-lq)
 # author: Thomas Roeblitz (@trz42)
+# author: Sam Moors (@smoors)
 #
 # license: GPLv2
 #
@@ -36,6 +37,7 @@ BOT_CONTROL_SETTING_COMMAND_PERMISSION = 'command_permission'
 BOT_CONTROL_SETTING_COMMAND_RESPONSE_FMT = 'command_response_fmt'
 
 SECTION_BUILDENV = 'buildenv'
+BUILDENV_SETTING_ALLOW_UPDATE_SUBMIT_OPTS = 'allow_update_submit_opts'
 BUILDENV_SETTING_BUILD_JOB_SCRIPT = 'build_job_script'
 BUILDENV_SETTING_BUILD_LOGS_DIR = 'build_logs_dir'
 BUILDENV_SETTING_BUILD_PERMISSION = 'build_permission'

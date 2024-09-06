@@ -10,6 +10,7 @@
 # author: Jonas Qvigstad (@jonas-lq)
 # author: Pedro Santos Neves (@Neves-P)
 # author: Thomas Roeblitz (@trz42)
+# author: Sam Moors (@smoors)
 #
 # license: GPLv2
 #
@@ -127,6 +128,9 @@ build_permission =
 
 # template for comment when user who set a label has no permission to trigger build jobs
 no_build_permission_comment = Label `bot:build` has been set by user `{build_labeler}`, but this person does not have permission to trigger builds
+
+# whether or not to allow updating the submit options via custom module det_submit_opts
+allow_update_submit_opts = false
 
 
 [deploycfg]

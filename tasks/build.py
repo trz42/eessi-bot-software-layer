@@ -12,6 +12,7 @@
 # author: Lara Ramona Peeters (@laraPPr)
 # author: Pedro Santos Neves (@Neves-P)
 # author: Thomas Roeblitz (@trz42)
+# author: Sam Moors (@smoors)
 #
 # license: GPLv2
 #
@@ -657,6 +658,24 @@ def submit_job(job, cfg):
         time_limit = ""
     else:
         time_limit = f"--time={DEFAULT_JOB_TIME_LIMIT}"
+
+    # update job.slurm_opts with det_submit_opts(job) in det_submit_opts.py if allowed and available
+    do_update_slurm_opts = False
+    allow_update_slurm_opts = cfg[config.SECTION_BUILDENV].getboolean(config.BUILDENV_SETTING_ALLOW_UPDATE_SUBMIT_OPTS)
+
+    if allow_update_slurm_opts:
+        sys.path.append(job.working_dir)
+
+        try:
+            from det_submit_opts import det_submit_opts  # pylint:disable=import-outside-toplevel
+            do_update_slurm_opts = True
+        except ImportError:
+            log(f"{fn}(): not updating job.slurm_opts: "
+                "cannot import function det_submit_opts from module det_submit_opts")
+
+    if do_update_slurm_opts:
+        job = job._replace(slurm_opts=det_submit_opts(job))
+        log(f"{fn}(): updated job.slurm_opts: {job.slurm_opts}")
 
     command_line = ' '.join([
         build_env_cfg[config.BUILDENV_SETTING_SUBMIT_COMMAND],

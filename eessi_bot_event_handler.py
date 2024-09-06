@@ -13,6 +13,7 @@
 # author: Lara Ramona Peeters (@laraPPr)
 # author: Thomas Roeblitz (@trz42)
 # author: Pedro Santos Neves (@Neves-P)
+# author: Sam Moors (@smoors)
 #
 # license: GPLv2
 #
@@ -47,6 +48,7 @@ REQUIRED_CONFIG = {
         config.BOT_CONTROL_SETTING_COMMAND_PERMISSION,             # required
         config.BOT_CONTROL_SETTING_COMMAND_RESPONSE_FMT],          # required
     config.SECTION_BUILDENV: [
+        # config.BUILDENV_SETTING_ALLOW_UPDATE_SUBMIT_OPTS           # optional
         config.BUILDENV_SETTING_BUILD_JOB_SCRIPT,                  # required
         config.BUILDENV_SETTING_BUILD_LOGS_DIR,                    # optional+recommended
         config.BUILDENV_SETTING_BUILD_PERMISSION,                  # optional+recommended
