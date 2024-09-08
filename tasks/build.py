@@ -343,7 +343,12 @@ def download_pr(repo_name, branch_name, pr, arch_job_dir):
         error_stage = _ERROR_GIT_CHECKOUT
         return checkout_output, checkout_err, checkout_exit_code, error_stage
 
-    curl_cmd = f'curl -L https://github.com/{repo_name}/pull/{pr.number}.diff > {pr.number}.diff'
+    curl_cmd = ' '.join([
+        'curl -L',
+        '-H "Accept: application/vnd.github.diff"',
+        '-H "X-GitHub-Api-Version: 2022-11-28"',
+        f'https://api.github.com/repos/{repo_name}/pulls/{pr.number} > {pr.number}.diff',
+    ])
     log(f'curl with command {curl_cmd}')
     curl_output, curl_error, curl_exit_code = run_cmd(
         curl_cmd, "Obtain patch", arch_job_dir, raise_on_error=False
