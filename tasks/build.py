@@ -633,7 +633,7 @@ def prepare_job_cfg(job_dir, build_env_cfg, repos_cfg, repo_id, software_subdir,
     job_cfg[job_cfg_arch_section] = {}
     job_cfg[job_cfg_arch_section][job_metadata.JOB_CFG_ARCHITECTURE_SOFTWARE_SUBDIR] = software_subdir
     job_cfg[job_cfg_arch_section][job_metadata.JOB_CFG_ARCHITECTURE_OS_TYPE] = os_type
-    job_cfg[job_cfg_arch_section][job_metadata.JOB_CFG_ARCHITECTURE_ACCELERATOR] = accelerator
+    job_cfg[job_cfg_arch_section][job_metadata.JOB_CFG_ARCHITECTURE_ACCELERATOR] = accelerator if accelerator else ''
 
     # copy contents of directory containing repository configuration to directory
     # containing job configuration/metadata
