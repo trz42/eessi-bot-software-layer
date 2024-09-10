@@ -39,6 +39,7 @@ COMPONENT_TOO_SHORT = "component in filter spec '{component}:{pattern}' is too s
 COMPONENT_UNKNOWN = "unknown component={component} in {component}:{pattern}"
 FILTER_EMPTY_PATTERN = "pattern in filter string '{filter_string}' is empty"
 FILTER_FORMAT_ERROR = "filter string '{filter_string}' does not conform to format 'component:pattern'"
+UNKNOWN_COMPONENT_CONST = "unknown component constant {component}"
 
 Filter = namedtuple('Filter', ('component', 'pattern'))
 
@@ -174,6 +175,26 @@ class EESSIBotActionFilter:
             log(msg)
             raise EESSIBotActionFilterError(msg)
         self.add_filter(_filter_split[0], _filter_split[1])
+
+    def get_filter_by_component(self, component):
+        """
+        Returns filter pattern for component.
+
+        Args:
+            component (string): one of FILTER_COMPONENTS
+
+        Returns:
+            (list): list of pattern for filters whose component matches argument
+        """
+        if component not in FILTER_COMPONENTS:
+            msg = UNKNOWN_COMPONENT_CONST.format(component=component)
+            raise EESSIBotActionFilterError(msg)
+
+        pattern = []
+        for _filter in self.action_filters:
+            if component == _filter.component:
+                pattern.append(_filter.pattern)
+        return pattern
 
     def remove_filter(self, component, pattern):
         """
