@@ -475,11 +475,16 @@ def prepare_jobs(pr, cfg, event_info, action_filter):
     #      call to just before download_pr
     year_month, pr_id, run_dir = create_pr_dir(pr, cfg, event_info)
 
-    accelerator = "none"
     # determine accelerator from action_filter argument
     accelerators = action_filter.get_filter_by_component(tools_filter.FILTER_COMPONENT_ACCEL)
-    if len(accelerators) > 0:
+    if len(accelerators) == 1:
         accelerator = accelerators[0]
+    elif len(accelerators) > 1:
+        log(f"{fn}(): found more than one ({len(accelerators)}) accelerator requirement")
+        accelerator = None
+    else:
+        log(f"{fn}(): found no accelerator requirement")
+        accelerator = None
 
     jobs = []
     for arch, slurm_opt in arch_map.items():
@@ -529,9 +534,10 @@ def prepare_jobs(pr, cfg, event_info, action_filter):
             # prepare job configuration file 'job.cfg' in directory <job_dir>/cfg
             cpu_target = '/'.join(arch.split('/')[1:])
             os_type = arch.split('/')[0]
-            log(f"{fn}(): arch = '{arch}' => cpu_target = '{cpu_target}' , os_type = '{os_type}'")
 
-            log(f"{fn}(): accelerator = '{accelerator}'")
+            log(f"{fn}(): arch = '{arch}' => cpu_target = '{cpu_target}' , os_type = '{os_type}'"
+                f", accelerator = '{accelerator}'")
+
             prepare_job_cfg(job_dir, build_env_cfg, repocfg, repo_id, cpu_target, os_type, accelerator)
 
             # enlist jobs to proceed
@@ -749,12 +755,11 @@ def create_pr_comment(job, job_id, app_name, pr, gh, symlink):
 
     submitted_job_comments_cfg = config.read_config()[config.SECTION_SUBMITTED_JOB_COMMENTS]
 
-    # obtain accelerator from job.accelerator
-    accelerator = job.accelerator
+    # set string for accelerator if job.accelerator is defined/set (e.g., not None)
     accelerator_spec_str = ''
-    if accelerator != 'none':
+    if job.accelerator:
         accelerator_spec = f"{submitted_job_comments_cfg[config.SUBMITTED_JOB_COMMENTS_SETTING_WITH_ACCELERATOR]}"
-        accelerator_spec_str = accelerator_spec.format(accelerator=accelerator)
+        accelerator_spec_str = accelerator_spec.format(accelerator=job.accelerator)
 
     # get current date and time
     dt = datetime.now(timezone.utc)
