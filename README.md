@@ -646,15 +646,22 @@ scontrol_command = /usr/bin/scontrol
 
 The `[submitted_job_comments]` section specifies templates for messages about newly submitted jobs.
 ```
-initial_comment = New job on instance `{app_name}` for architecture `{arch_name}` for repository `{repo_id}` in job dir `{symlink}`
-```
-`initial_comment` is used to create a comment to a PR when a new job has been created.
-
-```
 awaits_release = job id `{job_id}` awaits release by job manager
 ```
 `awaits_release` is used to provide a status update of a job (shown as a row in the job's status
 table).
+
+```
+initial_comment = New job on instance `{app_name}` for architecture `{arch_name}`{accelerator_spec} for repository `{repo_id}` in job dir `{symlink}`
+```
+`initial_comment` is used to create a comment to a PR when a new job has been
+created. Note, the part '{accelerator_spec}' is only filled-in by the bot if the
+argument 'accelerator' to the `bot: build` command have been used.
+```
+with_accelerator =  " and accelerator {accelerator}"
+```
+`with_accelerator` is used to provide information about the accelerator the job
+should build for if and only if the argument `accelerator:X/Y` has been provided.
 
 #### `[new_job_comments]` section
 
