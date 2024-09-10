@@ -813,3 +813,26 @@ The job manager can run on a different machine than the event handler, as long a
 
 For information on how to make pull requests and let the bot build software, see
 [the bot section of the EESSI documentation](https://www.eessi.io/docs/bot/).
+
+# Private target repos
+
+Both Git and Curl need to have access to the target repo. A convenient way to
+access a private repo via a Github token is by adding the following lines to
+your `~/.netrc` and `~/.curlrc` files:
+
+```
+# ~/.netrc
+machine github.com
+login oauth
+password <Github token>
+
+machine api.github.com
+login oauth
+password <Github token>
+```
+
+```
+# ~/.curlrc
+--netrc
+```
+
