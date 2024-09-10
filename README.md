@@ -658,7 +658,7 @@ initial_comment = New job on instance `{app_name}` for architecture `{arch_name}
 created. Note, the part '{accelerator_spec}' is only filled-in by the bot if the
 argument 'accelerator' to the `bot: build` command have been used.
 ```
-with_accelerator =  " and accelerator {accelerator}"
+with_accelerator = &nbsp;and accelerator `{accelerator}`
 ```
 `with_accelerator` is used to provide information about the accelerator the job
 should build for if and only if the argument `accelerator:X/Y` has been provided.
