@@ -752,7 +752,7 @@ def create_pr_comment(job, job_id, app_name, pr, gh, symlink):
     # obtain accelerator from job.accelerator
     accelerator = job.accelerator
     accelerator_spec_str = ''
-    if not accelerator is 'none':
+    if accelerator != 'none':
         accelerator_spec = f"{submitted_job_comments_cfg[config.SUBMITTED_JOB_COMMENTS_SETTING_WITH_ACCELERATOR]}"
         accelerator_spec_str = accelerator_spec.format(accelerator=accelerator)
 
