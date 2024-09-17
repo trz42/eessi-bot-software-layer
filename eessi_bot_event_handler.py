@@ -97,7 +97,8 @@ REQUIRED_CONFIG = {
         config.REPO_TARGETS_SETTING_REPOS_CFG_DIR],                # required
     config.SECTION_SUBMITTED_JOB_COMMENTS: [
         config.SUBMITTED_JOB_COMMENTS_SETTING_INITIAL_COMMENT,     # required
-        config.SUBMITTED_JOB_COMMENTS_SETTING_AWAITS_RELEASE]      # required
+        config.SUBMITTED_JOB_COMMENTS_SETTING_AWAITS_RELEASE,      # required
+        config.SUBMITTED_JOB_COMMENTS_SETTING_WITH_ACCELERATOR],   # required
     }
 
 
