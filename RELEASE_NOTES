@@ -22,7 +22,7 @@ Improvements:
 * use GitHub API for downloading the diff of a PR (#278)
 * add documentation about private repos (#279)
 * pass accelerator value to job scripts (via job.cfg) and extend PR comment if
-  the 'accelerator' argument is used (#280)
+  the 'accelerator' argument is used (#280, #282)
 
 New 'app.cfg' settings (see README.md and app.cfg.example for details):
 * (optional) 'allow_update_submit_opts'
