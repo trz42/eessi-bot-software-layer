@@ -6,9 +6,6 @@ v0.6.0 (18 September 2024)
 
 This is a minor release of the EESSI build-and-deploy bot.
 
-Bug fixes:
-* mark 'with_accelerator' setting as required (#282)
-
 Improvements:
 * move merged PR job directories to 'trash_bin_dir' (#271)
   * the target directory can be defined with the 'app.cfg' setting 'trash_bin_dir'
@@ -22,14 +19,14 @@ Improvements:
 * use GitHub API for downloading the diff of a PR (#278)
 * add documentation about private repos (#279)
 * pass accelerator value to job scripts (via job.cfg) and extend PR comment if
-  the 'accelerator' argument is used (#280)
+  the 'accelerator' argument is used (#280, #282)
 
 New 'app.cfg' settings (see README.md and app.cfg.example for details):
-* (optional) 'allow_update_submit_opts'
-* (required) 'job_name'
-* (required) 'moved_job_dirs_comment'
-* (required) 'trash_bin_dir'
-* (required) 'with_accelerator'
+* (optional) 'allow_update_submit_opts' in section '[buildenv]'
+* (required) 'job_name' in section '[buildenv]'
+* (required) 'moved_job_dirs_comment' in section '[clean_up]'
+* (required) 'trash_bin_dir' in section '[clean_up]'
+* (required) 'with_accelerator' in section '[submitted_job_comments]'
 
 
 v0.5.0 (16 May 2024)
