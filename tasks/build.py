@@ -25,7 +25,6 @@ import json
 import os
 import shutil
 import sys
-import tempfile
 
 # Third party imports (anything installed into the local Python environment)
 from pyghee.utils import error, log
@@ -747,17 +746,19 @@ def submit_job(job, cfg):
             error(f"Failed to determine path of build job script in repository from: {build_job_script}")
 
         # clone repo to temporary directory, and correctly set path to build job script
-        tmpdir = tempfile.mkdtemp()
-        repo_subdir =  '-'.join(build_job_script_repo.split('/')[-2:])
-        target_dir = os.path.join(tmpdir, repo_subdir)
+        repo_subdir = build_job_script_repo.split('/')[-1]
+        if repo_subdir.endswith('.git'):
+            repo_subdir = repo_subdir[:-4]
+        target_dir = os.path.join(job.working_dir, repo_subdir)
         os.makedirs(target_dir, exist_ok=True)
 
         clone_output, clone_error, clone_exit_code = clone_git_repo(build_job_script_repo, target_dir)
-        if clone_exit_code != 0:
+        if clone_exit_code == 0:
+            log(f"{fn}(): repository {build_job_script_repo} cloned to {target_dir}")
+        else:
             error(f"Failed to clone repository {build_job_script_repo}: {clone_error}")
 
-        repo_subdir =  '-'.join(build_job_script_repo.split('/')[-2:])
-        build_job_script_path = os.path.join(tmpdir, repo_subdir, build_job_script_path)
+        build_job_script_path = os.path.join(target_dir, build_job_script_path)
     else:
         error(f"Incorrect build job script specification, unknown type: {build_job_script}")
 
