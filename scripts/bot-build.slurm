@@ -10,6 +10,7 @@
 #
 # author: Kenneth Hoste (@boegel)
 # author: Thomas Roeblitz (@trz42)
+# author: Sam Moors (@smoors)
 #
 # license: GPLv2
 #
@@ -23,6 +24,14 @@
 #    for example, repos.cfg and configuration file bundles for repositories
 
 echo "Starting bot-build.slurm"
+EXPORT_VARS_SCRIPT=bot/export_vars.sh
+if [ -f ${EXPORT_VARS_SCRIPT} ]; then
+    echo "${EXPORT_VARS_SCRIPT} script found in '${PWD}', so sourcing it!"
+    source ${EXPORT_VARS_SCRIPT}
+else
+    echo "could not find ${EXPORT_VARS_SCRIPT} script in '${PWD}', skipping" >&2
+fi
+echo "$EXPORT_VARS_SCRIPT finished"
 BOT_BUILD_SCRIPT=bot/build.sh
 if [ -f ${BOT_BUILD_SCRIPT} ]; then
     echo "${BOT_BUILD_SCRIPT} script found in '${PWD}', so running it!"
