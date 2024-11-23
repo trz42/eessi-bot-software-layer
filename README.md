@@ -433,6 +433,15 @@ allow_update_submit_opts = false
 options via custom module `det_submit_opts` provided by the pull request being
 processed.
 
+```
+allowed_exportvars = ["NAME1=value_1a", "NAME1=value_1b", "NAME2=value_2"]
+```
+`allowed_exportvars` defines a list of name-value pairs (environment
+variables) that are allowed to be specified in a PR command with the
+`exportvariable` filter. To specify multiple environment variables, multiple
+`exportvariable` filters must be used (one per variable). These variables will
+be exported into the build environment before running the bot/build.sh script.
+
 
 #### `[bot_control]` section
 

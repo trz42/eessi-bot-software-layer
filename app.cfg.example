@@ -132,6 +132,10 @@ no_build_permission_comment = Label `bot:build` has been set by user `{build_lab
 # whether or not to allow updating the submit options via custom module det_submit_opts
 allow_update_submit_opts = false
 
+# defines which name-value pairs (environment variables) are allowed to be
+# exported into the build environment via `exportvariable` filters
+allowed_exportvars = ["NAME1=value_1a", "NAME1=value_1b", "NAME2=value_2"]
+
 
 [deploycfg]
 # script for uploading built software packages

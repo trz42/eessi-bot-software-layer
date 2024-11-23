@@ -25,7 +25,7 @@ import sys
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
 from .logging import error
 
-# define configration constants
+# define configuration constants
 #   SECTION_sectionname for any section name in app.cfg
 #   sectionname_SETTING_settingname for any setting with name settingname in
 #     section sectionname
@@ -37,6 +37,7 @@ BOT_CONTROL_SETTING_COMMAND_PERMISSION = 'command_permission'
 BOT_CONTROL_SETTING_COMMAND_RESPONSE_FMT = 'command_response_fmt'
 
 SECTION_BUILDENV = 'buildenv'
+BUILDENV_SETTING_ALLOWED_EXPORTVARS = 'allowed_exportvars'
 BUILDENV_SETTING_ALLOW_UPDATE_SUBMIT_OPTS = 'allow_update_submit_opts'
 BUILDENV_SETTING_BUILD_JOB_SCRIPT = 'build_job_script'
 BUILDENV_SETTING_BUILD_LOGS_DIR = 'build_logs_dir'

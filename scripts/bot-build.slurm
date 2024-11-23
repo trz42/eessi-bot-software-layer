@@ -24,7 +24,7 @@
 #    for example, repos.cfg and configuration file bundles for repositories
 
 echo "Starting bot-build.slurm"
-EXPORT_VARS_SCRIPT=bot/export_vars.sh
+EXPORT_VARS_SCRIPT=cfg/export_vars.sh
 if [ -f ${EXPORT_VARS_SCRIPT} ]; then
     echo "${EXPORT_VARS_SCRIPT} script found in '${PWD}', so sourcing it!"
     source ${EXPORT_VARS_SCRIPT}
