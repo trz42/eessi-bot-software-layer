@@ -28,10 +28,10 @@ EXPORT_VARS_SCRIPT=cfg/export_vars.sh
 if [ -f ${EXPORT_VARS_SCRIPT} ]; then
     echo "${EXPORT_VARS_SCRIPT} script found in '${PWD}', so sourcing it!"
     source ${EXPORT_VARS_SCRIPT}
+    echo "$EXPORT_VARS_SCRIPT finished"
 else
     echo "could not find ${EXPORT_VARS_SCRIPT} script in '${PWD}', skipping" >&2
 fi
-echo "$EXPORT_VARS_SCRIPT finished"
 BOT_BUILD_SCRIPT=bot/build.sh
 if [ -f ${BOT_BUILD_SCRIPT} ]; then
     echo "${BOT_BUILD_SCRIPT} script found in '${PWD}', so running it!"
