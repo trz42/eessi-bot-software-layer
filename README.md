@@ -871,7 +871,7 @@ site_configuration = {
     ],
     'logging': common_logging_config(),
 }
-
+```
 
 ## Approach 2: describing a virtual node
 In this approach, we describe a virtual node configuration for which the size matches exactly what is allocated by the bot (through the `slurm_params` and `arch_target_map`). In this example, we'll assume that this node has 4 GPUs and 72 cores, distributed over 2 sockets each consisting of 1 NUMA domain. We also assume our bot is configured with `slurm_params = --hold --nodes=1 --export=None --time=0:30:0` and `arch_target_map = {"linux/x86_64/intel/skylake_avx512" : "--partition=gpu --cpus-per-task=18 --gpus-per-node 1"}`, i.e. it effectively allocates a quarter node. We describe a virtual partition for ReFrame as if this quarter node is a full node, i.e. we pretend it is a partition with 18 cores and 1 GPU per node, with 1 socket. 
