@@ -785,7 +785,7 @@ The first approach is the easiest, and thus recommended, since you can use CPU a
 ## Approach 1 (recommended): describing the physical node and setting the `REFRAME_SCALE_TAG` to match the bot config's allocation size
 In this approach, we describe the physical node configuration. That means: the amount of physical CPUs and GPUs present in the node.
 
-For the CPU part, we can rely on ReFrame's CPU autodetection: if the local spawner is configured, and no CPU topology information is provided in the ReFrame configuration file, ReFrame will automatically detect the [CPU topology](https://reframe-hpc.readthedocs.io/en/stable/config_reference.html#config.systems.partitions.processor).
+For the CPU part, we can rely on ReFrame's CPU autodetection: if `remote_detect` is set to `True` in the general section of the config, and no CPU topology information is provided in the ReFrame configuration file, ReFrame will automatically detect the [CPU topology](https://reframe-hpc.readthedocs.io/en/stable/config_reference.html#config.systems.partitions.processor).
 
 For the GPU part, we need to configure the vendor and the amount of GPUs. E.g. for a partition with 4 Nvidia GPUs per node:
 ```
@@ -867,6 +867,7 @@ site_configuration = {
         {
             'purge_environment': True,
             'resolve_module_conflicts': False,  # avoid loading the module before submitting the job
+            'remote_detect': True,  # Make sure to automatically detect the CPU topology
         }
     ],
     'logging': common_logging_config(),
