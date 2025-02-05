@@ -23,6 +23,9 @@
 #  - the directory may contain any additional files references in job.cfg,
 #    for example, repos.cfg and configuration file bundles for repositories
 
+# CVL EDIT 31-01-2025: set permissive umask for building
+umask 0002
+
 echo "Starting bot-build.slurm"
 EXPORT_VARS_SCRIPT=cfg/export_vars.sh
 if [ -f ${EXPORT_VARS_SCRIPT} ]; then
@@ -32,6 +35,38 @@ if [ -f ${EXPORT_VARS_SCRIPT} ]; then
 else
     echo "could not find ${EXPORT_VARS_SCRIPT} script in '${PWD}', skipping" >&2
 fi
+
+# First, read if there is a local_tmp defined in the site_config section of cfg/job.cfg
+JOB_CFG=cfg/job.cfg
+inside_site_config=false
+local_tmp_value=""
+while IFS= read -r line; do
+    # Check if we've reached [site_config]
+    if [[ $line =~ ^\[site_config\]$ ]]; then
+        inside_site_config=true
+        continue
+    fi
+
+    # If another section starts and we haven't found local_tmp, stop searching
+    if [[ $line =~ ^\[.*\]$ && $inside_site_config == true ]]; then
+        break
+    fi
+
+    # Extract 'local_tmp' when inside [site_config]
+    if $inside_site_config && [[ $line =~ ^local_tmp\ *=\ *([^[:space:]]+) ]]; then
+        local_tmp_value="${BASH_REMATCH[1]}"
+        break
+    fi
+done < "$JOB_CFG"
+if [[ -n "${local_tmp_value}" ]]; then
+    local_tmp_value=$(envsubst <<< ${local_tmp_value})
+    # Ensure dir exists before calling mktemp
+    mkdir -p ${local_tmp_value}
+    local_tmp_value=$(mktemp -d --tmpdir=${local_tmp_value} eessi_job.XXXXXXXXXX)
+    echo "Overwriting current TMPDIR '$TMPDIR' with the value '${local_tmp_value}', as configured in cfg/job.cfg"
+    export TMPDIR="${local_tmp_value}"
+fi
+
 BOT_BUILD_SCRIPT=bot/build.sh
 if [ -f ${BOT_BUILD_SCRIPT} ]; then
     echo "${BOT_BUILD_SCRIPT} script found in '${PWD}', so running it!"
