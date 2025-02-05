@@ -636,33 +636,37 @@ class EESSIBotSoftwareLayer(PyGHee):
         self.log(f"PR {pr.number}: determining directories to be moved to trash bin")
         job_dirs = determine_job_dirs(pr.number)
 
-        # 2) Get trash_bin_dir from configs
-        trash_bin_root_dir = self.cfg[config.SECTION_CLEAN_UP][config.CLEAN_UP_SETTING_TRASH_BIN_ROOT_DIR]
+        if job_dirs == []:
+            self.log(f"PR {pr.number}: No job directories found; nothing to move.")
+        else:
+            # 2) Get trash_bin_dir from configs
+            trash_bin_root_dir = self.cfg[config.SECTION_CLEAN_UP][config.CLEAN_UP_SETTING_TRASH_BIN_ROOT_DIR]
 
-        repo_name = request_body['repository']['full_name']
-        dt_start = datetime.now(timezone.utc)
-        trash_bin_dir = "/".join([trash_bin_root_dir, repo_name, dt_start.strftime('%Y.%m.%d')])
+            repo_name = request_body['repository']['full_name']
+            dt_start = datetime.now(timezone.utc)
+            trash_bin_dir = "/".join([trash_bin_root_dir, repo_name, dt_start.strftime('%Y.%m.%d')])
 
-        # Subdirectory with date of move. Also with repository name. Handle symbolic links (later?)
-        # cron job deletes symlinks?
+            # Subdirectory with date of move. Also with repository name. Handle symbolic links (later?)
+            # cron job deletes symlinks?
 
-        # 3) move the directories to the trash_bin
-        self.log(f"PR {pr.number}: moving directories to trash bin {trash_bin_dir}")
-        move_to_trash_bin(trash_bin_dir, job_dirs)
-        dt_end = datetime.now(timezone.utc)
-        dt_delta = dt_end - dt_start
-        seconds_elapsed = dt_delta.days * 24 * 3600 + dt_delta.seconds
-        self.log(f"PR {pr.number}: moved directories to trash bin {trash_bin_dir} (took {seconds_elapsed} seconds)")
+            # 3) move the directories to the trash_bin
+            self.log(f"PR {pr.number}: moving directories to trash bin {trash_bin_dir}")
+            move_to_trash_bin(trash_bin_dir, job_dirs)
+            dt_end = datetime.now(timezone.utc)
+            dt_delta = dt_end - dt_start
+            seconds_elapsed = dt_delta.days * 24 * 3600 + dt_delta.seconds
+            self.log(f"PR {pr.number}: moved directories to trash bin {trash_bin_dir} (took {seconds_elapsed} seconds)")
 
-        # 4) report move to pull request
-        repo_name = pr.base.repo.full_name
-        gh = github.get_instance()
-        repo = gh.get_repo(repo_name)
-        pull_request = repo.get_pull(pr.number)
-        clean_up_comment = self.cfg[config.SECTION_CLEAN_UP][config.CLEAN_UP_SETTING_MOVED_JOB_DIRS_COMMENT]
-        moved_comment = clean_up_comment.format(job_dirs=job_dirs, trash_bin_dir=trash_bin_dir)
-        issue_comment = pull_request.create_issue_comment(moved_comment)
-        return issue_comment
+            # 4) report move to pull request
+
+            repo_name = pr.base.repo.full_name
+            gh = github.get_instance()
+            repo = gh.get_repo(repo_name)
+            pull_request = repo.get_pull(pr.number)
+            clean_up_comment = self.cfg[config.SECTION_CLEAN_UP][config.CLEAN_UP_SETTING_MOVED_JOB_DIRS_COMMENT]
+            moved_comment = clean_up_comment.format(job_dirs=job_dirs, trash_bin_dir=trash_bin_dir)
+            issue_comment = pull_request.create_issue_comment(moved_comment)
+            return issue_comment
 
 
 def main():
