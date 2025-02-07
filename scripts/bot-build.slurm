@@ -23,9 +23,6 @@
 #  - the directory may contain any additional files references in job.cfg,
 #    for example, repos.cfg and configuration file bundles for repositories
 
-# CVL EDIT 31-01-2025: set permissive umask for building
-umask 0002
-
 echo "Starting bot-build.slurm"
 EXPORT_VARS_SCRIPT=cfg/export_vars.sh
 if [ -f ${EXPORT_VARS_SCRIPT} ]; then
