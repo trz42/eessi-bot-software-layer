@@ -46,7 +46,7 @@ while IFS= read -r line; do
 
     # If another section starts and we haven't found local_tmp, stop searching
     if [[ $line =~ ^\[.*\]$ && $inside_site_config == true ]]; then
-        break
+        inside_site_config=false
     fi
 
     # Extract 'local_tmp' when inside [site_config]
