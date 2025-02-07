@@ -44,7 +44,7 @@ while IFS= read -r line; do
         continue
     fi
 
-    # If another section starts and we haven't found local_tmp, stop searching
+    # If another section starts and we haven't found local_tmp, don't try to match
     if [[ $line =~ ^\[.*\]$ && $inside_site_config == true ]]; then
         inside_site_config=false
     fi
