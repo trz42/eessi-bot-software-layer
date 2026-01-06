@@ -1,3 +1,4 @@
+# Just for demo purposes.
 > [!NOTE]
 > In the future the installation and configuration of the bot will be moved
 > to the EESSI docs, likely under [Build-test-deploy bot](https://www.eessi.io/docs/bot/).
