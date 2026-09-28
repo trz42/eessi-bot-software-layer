@@ -775,15 +775,40 @@ allowed_jobargs = [{"key": "EB_ARGS", "value": "--installpath=/tmp/.*"}]
 allowed_jobargs = [{"key": "FOO", "value": ""}]
 ```
 
+**Multi-word values:** A `jobargs` value may contain multiple space-separated
+tokens (e.g. `EB_ARGS="--from-pr 345 --parallel=6"`). The value is split on
+spaces and grouped into argument units (a flag followed by its value, or a
+self-contained `--flag=value` token). Each unit must match at least one allowed
+pattern's `value` regex. Use `[= ]` in a pattern to match both `--flag=value`
+and `--flag value` forms with a single entry:
+
+```ini
+# allow --from-pr with a numeric argument, using either --from-pr=N or --from-pr N
+allowed_jobargs = [{"key": "EB_ARGS", "value": "--from-pr[= ][0-9]+"}]
+
+# allow multiple flags for EB_ARGS
+allowed_jobargs = [
+  {"key": "EB_ARGS", "value": "--from-pr[= ][0-9]+"},
+  {"key": "EB_ARGS", "value": "--parallel[= ][0-9]+"},
+  {"key": "EB_ARGS", "value": "--include-easyblock"}
+]
+```
+
+When quoting is used in the bot command (e.g.
+`jobargs:EB_ARGS="--from-pr 345 --parallel=6"`), the quotes are consumed by the
+parser and the value is re-quoted with double quotes when written to
+`export_vars.sh` (e.g. `export EB_ARGS="--from-pr 345 --parallel=6"`).
+
 `allowed_jobargs` defines a list of key-value patterns that are allowed to be
 specified in a PR command with the `jobargs` filter (or its alias
 `exportvariable`). Each entry is a dict with `key` and `value` keys whose values
 are regular expressions. An argument `KEY=VALUE` is accepted if its key matches
-one entry's `key` regex AND its value matches that same entry's `value` regex;
-otherwise it is rejected and no jobs are prepared. Patterns are matched using
-Python's `re` module (`re.search`), so the patterns are Python regular
-expressions. These variables will be exported into the build environment before
-running the `bot/build.sh` script.
+one entry's `key` regex AND every argument unit in its value matches at least
+one entry's `value` regex (for the same key); otherwise it is rejected and no
+jobs are prepared. Patterns are matched using Python's `re` module
+(`re.search`), so the patterns are Python regular expressions. These variables
+will be exported into the build environment before running the `bot/build.sh`
+script.
 
 If `allowed_jobargs` is not defined, the bot falls back to the legacy
 `allowed_exportvars` setting (see above), converting each exact `KEY=VALUE`
@@ -810,14 +835,33 @@ allowed_submitargs = [{"value": "--time=[0-9]{2}:[0-9]{2}:[0-9]{2}"}]
 allowed_submitargs = [{"value": "--(time|partition|mem)=.*"}]
 ```
 
+**Multiple Slurm arguments:** A single `submitargs` may contain multiple
+space-separated Slurm arguments (e.g. `submitargs:"--time=30 --mem=30G"`). The
+value is split on spaces and grouped into argument units, each of which must
+match at least one allowed pattern. Use `[= ]` to match both `--flag=value` and
+`--flag value` forms:
+
+```ini
+# allow --time and --mem with numeric values, using either form
+allowed_submitargs = [
+  {"value": "--time[= ][0-9]+"},
+  {"value": "--mem[= ][0-9]+G"},
+  {"value": "--ntasks[= ][0-9]+"}
+]
+```
+
+Quotes in the bot command (e.g. `submitargs:"--time 30 --mem 30G"`) are only
+used to let the parser accept multiple arguments in a single `submitargs`; the
+quotes are not retained for the `sbatch` command.
+
 `allowed_submitargs` defines a list of patterns that are allowed to be passed to
 the job submission command (e.g. `sbatch`) via the `submitargs` filter. Each
 entry is a dict with a `value` key whose value is a regular expression. An
-argument is accepted if it matches one entry's `value` regex; otherwise it is
-rejected and no jobs are prepared. Patterns are matched using Python's `re`
-module (`re.search`), so the patterns are Python regular expressions. Unlike
-`jobargs`, these options are NOT exported into the build environment -- they are
-appended to the `sbatch` command line only.
+argument is accepted if every argument unit matches at least one entry's `value`
+regex; otherwise it is rejected and no jobs are prepared. Patterns are matched
+using Python's `re` module (`re.search`), so the patterns are Python regular
+expressions. Unlike `jobargs`, these options are NOT exported into the build
+environment -- they are appended to the `sbatch` command line only.
 
 **Argument ordering:** The full submit command is constructed as:
 
@@ -840,14 +884,17 @@ allowed_submitargs = []
 
 **Security note:** As a defence-in-depth measure, the bot sanitizes all
 `jobargs` and `submitargs` values and rejects any argument that contains shell
-metacharacters. For `jobargs`, keys and values are validated separately: keys
-must be valid shell identifiers (`[a-zA-Z_][a-zA-Z0-9_]*`), and values may
-contain `$` (for variable references like `/tmp/$USER`) but no other shell
-metacharacters. For `submitargs`, the strict charset `[a-zA-Z0-9_=:./+,@-]` is
-used (no `$`, no spaces). This prevents shell injection even if a configured
-pattern is overly permissive (e.g. `value: ".*"`). Additionally, pattern entries
-that are not well-formed dicts with string `key`/`value` values are silently
-dropped at configuration read time.
+metacharacters. For `jobargs`, keys must be valid shell identifiers
+(`[a-zA-Z_][a-zA-Z0-9_]*`), and each space-separated value part is checked
+against the jobargs value charset (which allows `$` for variable references like
+`/tmp/$USER` but no other shell metacharacters). For `submitargs`, each
+space-separated part is checked against the strict charset
+`[a-zA-Z0-9_=:./+,@-]` (no `$`). Spaces are allowed _between_ argument units
+(after the parser splits the value) but not within a single token. This prevents
+shell injection even if a configured pattern is overly permissive (e.g.
+`value: ".*"`). Additionally, pattern entries that are not well-formed dicts
+with string `key`/`value` values are silently dropped at configuration read
+time.
 
 ```ini
 clone_git_repo_via = https

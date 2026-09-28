@@ -228,24 +228,71 @@ JOBARG_VALUE_RE = re.compile(r'^[a-zA-Z0-9_=:./+,@$-]*$')
 SUBMITARG_RE = re.compile(r'^[a-zA-Z0-9_=:./+,@-]+$')
 
 
+def pair_tokens(tokens):
+    """
+    Group a list of space-separated tokens into argument units.
+
+    A unit is either:
+    - a single token containing '=' (e.g. '--parallel=6') -- self-contained
+    - a flag (starting with '--') without '=' followed by a value token that
+      does not start with '--' (e.g. ('--from-pr', '345')) -- joined with a space
+    - a bare flag (starting with '--') without '=' and with no following value
+      (e.g. '--include-easyblock')
+    - any other single token (e.g. a bare value without a preceding flag)
+
+    Args:
+        tokens (list): list of token strings (already split on spaces)
+
+    Returns:
+        (list): list of unit strings; paired tokens are joined with a space
+    """
+    fn = sys._getframe().f_code.co_name
+
+    units = []
+    i = 0
+    while i < len(tokens):
+        token = tokens[i]
+        if '=' in token:
+            # Self-contained unit (e.g. '--time=30' or 'KEY=VALUE')
+            units.append(token)
+            i += 1
+        elif token.startswith('--'):
+            # Flag without '=' -- check if next token is a value
+            if i + 1 < len(tokens) and not tokens[i + 1].startswith('--'):
+                units.append(f"{token} {tokens[i + 1]}")
+                i += 2
+            else:
+                # Bare flag (no value)
+                units.append(token)
+                i += 1
+        else:
+            # Bare value without a preceding flag
+            units.append(token)
+            i += 1
+
+    log(f"{fn}(): tokens {tokens} paired into units {units}")
+    return units
+
+
 # Developed sanitize_arg with the help of a locally hosted glm5.2 via Codex.
 def sanitize_arg(arg, arg_type='jobargs'):
     """
-    Check that an argument does not contain shell metacharacters.
+    Check that a full argument (KEY=VALUE for jobargs, option string for
+    submitargs) does not contain shell metacharacters.
 
     This is a defence-in-depth check applied AFTER regex allow-list matching.
     Even if a configured pattern is overly permissive (e.g. value '.*'), this
-    function rejects any arg that contains characters which could be interpreted
-    by the shell (e.g. backticks, $(), ;, |, &, spaces, newlines).
+    function rejects any arg that contains characters which could be
+    interpreted by the shell (e.g. backticks, $(), ;, |, &, newlines).
 
-    For 'jobargs', the key and value are checked separately: the key must be a
-    valid shell identifier, and the value may be empty (e.g. 'FOO=' to unset a
-    variable) or contain '$' (for variable references) but no other shell
-    metacharacters. For 'submitargs', the bare option string is checked against
-    a strict charset (no '$', no spaces).
+    For 'jobargs', the key must be a valid shell identifier and the value is
+    checked against the jobargs value charset (which allows '$' for variable
+    references). For 'submitargs', each space-separated part of the option
+    string is checked against the submitargs charset (no '$', no spaces within
+    a part).
 
     Args:
-        arg (string): argument to check
+        arg (string): full argument to check (KEY=VALUE or option string)
         arg_type (string): 'jobargs' or 'submitargs' (used in log messages)
 
     Returns:
@@ -261,15 +308,54 @@ def sanitize_arg(arg, arg_type='jobargs'):
         if not JOBARG_KEY_RE.match(key):
             log(f"{fn}(): {arg_type} '{arg}' rejected (unsafe key '{key}')")
             return False
-        if not JOBARG_VALUE_RE.match(value):
-            log(f"{fn}(): {arg_type} '{arg}' rejected (unsafe value '{value}')")
-            return False
+        # Check each space-separated part of the value against the value charset
+        for part in value.split(' '):
+            if not JOBARG_VALUE_RE.match(part):
+                log(f"{fn}(): {arg_type} '{arg}' rejected (unsafe value part '{part}')")
+                return False
         return True
     else:
-        if not SUBMITARG_RE.match(arg):
-            log(f"{fn}(): {arg_type} '{arg}' rejected (contains unsafe characters)")
-            return False
+        # submitargs: check each space-separated part against the strict charset
+        for part in arg.split(' '):
+            if not SUBMITARG_RE.match(part):
+                log(f"{fn}(): {arg_type} '{arg}' rejected (unsafe part '{part}')")
+                return False
         return True
+
+
+def sanitize_unit(unit, arg_type='jobargs'):
+    """
+    Check that a single argument unit does not contain shell metacharacters.
+
+    A unit is a single token or a flag-value pair joined by a space (e.g.
+    '--from-pr 345'). For 'jobargs', the unit is a value part (the key is
+    validated separately in validate_args). For 'submitargs', the unit is an
+    option string. Each space-separated part of the unit is checked against
+    the appropriate charset.
+
+    Args:
+        unit (string): argument unit to check (may contain one space)
+        arg_type (string): 'jobargs' or 'submitargs' (used in log messages)
+
+    Returns:
+        (bool): True if the unit is safe, False otherwise
+    """
+    fn = sys._getframe().f_code.co_name
+
+    parts = unit.split(' ')
+    if arg_type == 'jobargs':
+        # Value parts: check against the jobargs value charset (allows '$')
+        for part in parts:
+            if not JOBARG_VALUE_RE.match(part):
+                log(f"{fn}(): {arg_type} unit '{unit}' rejected (unsafe part '{part}')")
+                return False
+    else:
+        # submitargs: check against the strict charset (no '$')
+        for part in parts:
+            if not SUBMITARG_RE.match(part):
+                log(f"{fn}(): {arg_type} unit '{unit}' rejected (unsafe part '{part}')")
+                return False
+    return True
 
 
 # Developed check_patterns_wellformed with the help of a locally hosted glm5.2 via Codex.
@@ -428,12 +514,21 @@ def validate_args(args, allowed_patterns, arg_type='jobargs'):
     """
     Validate a list of arguments against a list of allowed patterns.
 
-    For 'jobargs', each arg is a 'KEY=VALUE' string. It is accepted if there
-    is a pattern whose 'key' regex matches KEY and whose 'value' regex matches
-    VALUE (both for the same pattern entry).
+    For 'jobargs', each arg is a 'KEY=VALUE' string. The VALUE is split on
+    spaces into tokens, which are grouped into units by pair_tokens (e.g.
+    '--from-pr 345 --parallel=6' becomes ['--from-pr 345', '--parallel=6']).
+    The KEY must match one pattern's 'key' regex, and EVERY unit must match
+    at least one pattern's 'value' regex. The arg is accepted only if the key
+    matches and all units match.
 
-    For 'submitargs', each arg is a bare option string (e.g. '--time=01:00:00').
-    It is accepted if there is a pattern whose 'value' regex matches the arg.
+    For 'submitargs', each arg is a bare option string (e.g.
+    '--time=30 --mem=30G'). It is split on spaces into tokens, grouped into
+    units by pair_tokens, and every unit must match at least one pattern's
+    'value' regex.
+
+    Patterns are matched using Python's re module (re.search). A single
+    pattern using '[= ]' can match both '--flag=value' and '--flag value' forms
+    (e.g. '--time[= ][0-9]+' matches '--time=30' and '--time 30').
 
     Args:
         args (list): list of argument strings to validate
@@ -451,35 +546,90 @@ def validate_args(args, allowed_patterns, arg_type='jobargs'):
     rejected = []
 
     for arg in args:
-        matched = False
         if arg_type == 'jobargs':
             if '=' not in arg:
                 log(f"{fn}(): {arg_type} '{arg}' rejected (missing '=')")
                 rejected.append(arg)
                 continue
             key, value = arg.split('=', 1)
+            # Defence-in-depth: reject keys that are not valid shell identifiers
+            if not JOBARG_KEY_RE.match(key):
+                log(f"{fn}(): {arg_type} '{arg}' rejected (unsafe key '{key}')")
+                rejected.append(arg)
+                continue
+            # Check that the key matches at least one pattern
+            key_matched = False
             for pattern in allowed_patterns:
                 key_re = pattern.get('key', '')
-                val_re = pattern.get('value', '')
-                if re.search(key_re, key) and re.search(val_re, value):
-                    matched = True
+                if re.search(key_re, key):
+                    key_matched = True
                     break
+            if not key_matched:
+                log(f"{fn}(): {arg_type} '{arg}' rejected (key '{key}' does not match any pattern)")
+                rejected.append(arg)
+                continue
+            # Split the value into tokens and pair them into units
+            tokens = value.split(' ') if value else []
+            # Handle empty value (e.g. 'FOO=' to unset a variable)
+            if not tokens:
+                # Empty value is valid if a pattern whose key matches allows it
+                # (e.g. value: '')
+                matched = False
+                for pattern in allowed_patterns:
+                    pat_key_re = pattern.get('key', '')
+                    val_re = pattern.get('value', '')
+                    if re.search(pat_key_re, key) and re.search(val_re, ''):
+                        matched = True
+                        break
+                if matched:
+                    accepted.append(arg)
+                else:
+                    log(f"{fn}(): {arg_type} '{arg}' rejected (empty value not allowed)")
+                    rejected.append(arg)
+                continue
+            units = pair_tokens(tokens)
         else:
+            # submitargs: split the entire arg into tokens and pair them
+            tokens = arg.split(' ') if arg else []
+            if not tokens:
+                log(f"{fn}(): {arg_type} '{arg}' rejected (empty arg)")
+                rejected.append(arg)
+                continue
+            units = pair_tokens(tokens)
+
+        # Every unit must match at least one pattern's 'value' regex
+        all_units_matched = True
+        for unit in units:
+            unit_matched = False
             for pattern in allowed_patterns:
                 val_re = pattern.get('value', '')
-                if re.search(val_re, arg):
-                    matched = True
+                if arg_type == 'jobargs':
+                    key_re = pattern.get('key', '')
+                    # For jobargs, the unit must match a pattern whose key also matches
+                    if re.search(key_re, key) and re.search(val_re, unit):
+                        unit_matched = True
+                        break
+                else:
+                    if re.search(val_re, unit):
+                        unit_matched = True
+                        break
+            if not unit_matched:
+                all_units_matched = False
+                log(f"{fn}(): {arg_type} '{arg}' rejected (unit '{unit}' does not match any pattern)")
+                break
+
+        if all_units_matched:
+            # Defence-in-depth: sanitize each unit for shell metacharacters
+            all_safe = True
+            for unit in units:
+                if not sanitize_unit(unit, arg_type):
+                    all_safe = False
                     break
-        if matched:
-            # Defence-in-depth: even if the regex pattern matched, reject any
-            # arg that contains shell metacharacters to prevent injection via
-            # jobargs (sourced by the shell) or submitargs (shell=True in run_cmd)
-            if sanitize_arg(arg, arg_type):
+            if all_safe:
                 accepted.append(arg)
             else:
                 rejected.append(arg)
         else:
-            log(f"{fn}(): {arg_type} '{arg}' rejected (no matching pattern)")
             rejected.append(arg)
 
     return accepted, rejected
@@ -798,7 +948,19 @@ def prepare_export_vars_file(job_dir, exportvars):
     """
     fn = sys._getframe().f_code.co_name
 
-    content = '\n'.join(f'export {x}' for x in exportvars)
+    # Re-quote values containing spaces so the shell interprets them correctly
+    # when export_vars.sh is sourced (e.g. EB_ARGS="--from-pr 345 --parallel=6").
+    lines = []
+    for var in exportvars:
+        if '=' in var:
+            key, value = var.split('=', 1)
+            if ' ' in value:
+                lines.append(f'export {key}="{value}"')
+            else:
+                lines.append(f'export {var}')
+        else:
+            lines.append(f'export {var}')
+    content = '\n'.join(lines)
     export_vars_path = os.path.join(job_dir, 'cfg', EXPORT_VARS_FILE)
 
     with open(export_vars_path, 'w') as file:

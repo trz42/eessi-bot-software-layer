@@ -677,6 +677,130 @@ class TestValidateArgs:
         assert rejected == ["SKIP_TESTS=yes"]
 
 
+
+    def test_jobargs_multiword_equals_form(self):
+        from tasks.build import validate_args
+        patterns = [
+            {"key": "EB_ARGS", "value": "--from-pr[= ][0-9]+"},
+            {"key": "EB_ARGS", "value": "--parallel[= ][0-9]+"},
+        ]
+        accepted, rejected = validate_args(
+            ["EB_ARGS=--from-pr=345 --parallel=6"], patterns, arg_type="jobargs"
+        )
+        assert accepted == ["EB_ARGS=--from-pr=345 --parallel=6"]
+        assert rejected == []
+
+    def test_jobargs_multiword_space_form(self):
+        from tasks.build import validate_args
+        patterns = [
+            {"key": "EB_ARGS", "value": "--from-pr[= ][0-9]+"},
+            {"key": "EB_ARGS", "value": "--parallel[= ][0-9]+"},
+        ]
+        accepted, rejected = validate_args(
+            ["EB_ARGS=--from-pr 345 --parallel 6"], patterns, arg_type="jobargs"
+        )
+        assert accepted == ["EB_ARGS=--from-pr 345 --parallel 6"]
+        assert rejected == []
+
+    def test_jobargs_multiword_mixed_forms(self):
+        from tasks.build import validate_args
+        patterns = [
+            {"key": "EB_ARGS", "value": "--from-pr[= ][0-9]+"},
+            {"key": "EB_ARGS", "value": "--parallel[= ][0-9]+"},
+            {"key": "EB_ARGS", "value": "--include-easyblock"},
+        ]
+        accepted, rejected = validate_args(
+            ["EB_ARGS=--from-pr 345 --parallel=6 --include-easyblock"], patterns, arg_type="jobargs"
+        )
+        assert accepted == ["EB_ARGS=--from-pr 345 --parallel=6 --include-easyblock"]
+        assert rejected == []
+
+    def test_jobargs_multiword_rejected_unit(self):
+        from tasks.build import validate_args
+        patterns = [
+            {"key": "EB_ARGS", "value": "--from-pr[= ][0-9]+"},
+        ]
+        accepted, rejected = validate_args(
+            ["EB_ARGS=--from-pr 345 --evil-flag"], patterns, arg_type="jobargs"
+        )
+        assert accepted == []
+        assert rejected == ["EB_ARGS=--from-pr 345 --evil-flag"]
+
+    def test_submitargs_multiword_equals_form(self):
+        from tasks.build import validate_args
+        patterns = [
+            {"value": "--time[= ][0-9]+"},
+            {"value": "--mem[= ][0-9]+G"},
+        ]
+        accepted, rejected = validate_args(
+            ["--time=30 --mem=30G"], patterns, arg_type="submitargs"
+        )
+        assert accepted == ["--time=30 --mem=30G"]
+        assert rejected == []
+
+    def test_submitargs_multiword_space_form(self):
+        from tasks.build import validate_args
+        patterns = [
+            {"value": "--time[= ][0-9]+"},
+            {"value": "--mem[= ][0-9]+G"},
+            {"value": "--ntasks[= ][0-9]+"},
+        ]
+        accepted, rejected = validate_args(
+            ["--time 30 --mem 30G --ntasks 2"], patterns, arg_type="submitargs"
+        )
+        assert accepted == ["--time 30 --mem 30G --ntasks 2"]
+        assert rejected == []
+
+    def test_submitargs_multiword_rejected_unit(self):
+        from tasks.build import validate_args
+        patterns = [
+            {"value": "--time[= ][0-9]+"},
+        ]
+        accepted, rejected = validate_args(
+            ["--time 30 --evil-flag"], patterns, arg_type="submitargs"
+        )
+        assert accepted == []
+        assert rejected == ["--time 30 --evil-flag"]
+
+
+class TestPairTokens:
+    """Tests for pair_tokens function in tasks/build.py"""
+
+    def test_self_contained_units(self):
+        from tasks.build import pair_tokens
+        assert pair_tokens(["--time=30", "--mem=30G"]) == ["--time=30", "--mem=30G"]
+
+    def test_paired_units(self):
+        from tasks.build import pair_tokens
+        assert pair_tokens(["--from-pr", "345", "--parallel", "6"]) == [
+            "--from-pr 345", "--parallel 6"
+        ]
+
+    def test_mixed_forms(self):
+        from tasks.build import pair_tokens
+        assert pair_tokens(["--from-pr", "345", "--parallel=6"]) == [
+            "--from-pr 345", "--parallel=6"
+        ]
+
+    def test_bare_flag(self):
+        from tasks.build import pair_tokens
+        assert pair_tokens(["--include-easyblock"]) == ["--include-easyblock"]
+
+    def test_bare_flag_followed_by_flag(self):
+        from tasks.build import pair_tokens
+        assert pair_tokens(["--include-easyblock", "--verbose"]) == [
+            "--include-easyblock", "--verbose"
+        ]
+
+    def test_bare_flag_then_value(self):
+        from tasks.build import pair_tokens
+        assert pair_tokens(["--include-easyblock", "435"]) == ["--include-easyblock 435"]
+
+    def test_empty_list(self):
+        from tasks.build import pair_tokens
+        assert pair_tokens([]) == []
+
+
 # Developed with the help of a locally hosted glm5.2 via Codex.
 class TestGetAllowedArgs:
     """Tests for get_allowed_args function in tasks/build.py"""
@@ -837,17 +961,22 @@ class TestSanitizeArg:
         from tasks.build import sanitize_arg
         assert not sanitize_arg("VAR=value&&malicious", "jobargs")
 
-    def test_rejects_spaces_in_jobargs_value(self):
-        # Spaces in jobargs values are still rejected. Note: the upstream parser
-        # (tools/commands.py) splits commands on whitespace, so a value with
-        # spaces would already be broken before reaching sanitize_arg. Supporting
-        # quoted values with spaces would require parser changes.
+    def test_allows_spaces_in_jobargs_value(self):
+        # Spaces in jobargs values are now allowed: the upstream parser
+        # (tools/commands.py) uses shlex.split() which respects quoting, so
+        # a quoted value like VAR="--from-pr 345" reaches sanitize_arg intact.
+        # sanitize_arg checks each space-separated part against the value charset.
         from tasks.build import sanitize_arg
-        assert not sanitize_arg("VAR=with spaces", "jobargs")
+        assert sanitize_arg("VAR=--from-pr 345", "jobargs")
+        assert sanitize_arg("VAR=--from-pr 345 --parallel=6", "jobargs")
 
-    def test_rejects_spaces_in_submitargs(self):
+    def test_allows_spaces_in_submitargs(self):
+        # Spaces in submitargs are now allowed between tokens (e.g.
+        # '--time 30 --mem 30G'). Each space-separated part is checked
+        # individually against the submitargs charset.
         from tasks.build import sanitize_arg
-        assert not sanitize_arg("--time=01:00:00 echo dangerous", "submitargs")
+        assert sanitize_arg("--time=01:00:00 --mem=30G", "submitargs")
+        assert sanitize_arg("--time 30 --mem 30G", "submitargs")
 
     def test_rejects_dollar_in_submitargs(self):
         # '$' is not allowed in submitargs because they are appended to an
@@ -968,3 +1097,40 @@ class TestCheckPatternsWellformed:
         result = get_allowed_args(cfg, "allowed_submitargs")
         assert len(result) == 1
         assert result[0]["value"] == "--time=.*"
+
+class TestPrepareExportVarsFile:
+    """Tests for prepare_export_vars_file function in tasks/build.py"""
+
+    def test_simple_var_no_spaces(self, tmp_path):
+        from tasks.build import prepare_export_vars_file, EXPORT_VARS_FILE
+        import os
+        job_dir = str(tmp_path)
+        os.makedirs(os.path.join(job_dir, "cfg"))
+        prepare_export_vars_file(job_dir, ["SKIP_TESTS=yes"])
+        path = os.path.join(job_dir, "cfg", EXPORT_VARS_FILE)
+        with open(path) as file:
+            content = file.read()
+        assert "export SKIP_TESTS=yes" in content
+
+    def test_var_with_spaces_is_quoted(self, tmp_path):
+        from tasks.build import prepare_export_vars_file, EXPORT_VARS_FILE
+        import os
+        job_dir = str(tmp_path)
+        os.makedirs(os.path.join(job_dir, "cfg"))
+        prepare_export_vars_file(job_dir, ["EB_ARGS=--from-pr 345 --parallel=6"])
+        path = os.path.join(job_dir, "cfg", EXPORT_VARS_FILE)
+        with open(path) as file:
+            content = file.read()
+        assert 'export EB_ARGS="--from-pr 345 --parallel=6"' in content
+
+    def test_multiple_vars(self, tmp_path):
+        from tasks.build import prepare_export_vars_file, EXPORT_VARS_FILE
+        import os
+        job_dir = str(tmp_path)
+        os.makedirs(os.path.join(job_dir, "cfg"))
+        prepare_export_vars_file(job_dir, ["SKIP_TESTS=yes", "EB_ARGS=--from-pr 345"])
+        path = os.path.join(job_dir, "cfg", EXPORT_VARS_FILE)
+        with open(path) as file:
+            content = file.read()
+        assert "export SKIP_TESTS=yes" in content
+        assert 'export EB_ARGS="--from-pr 345"' in content
