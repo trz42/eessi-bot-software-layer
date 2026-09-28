@@ -193,7 +193,8 @@ class MockCommand():
     # Test 'build' command with quoted multi-word jobargs value
     ('build jobargs:EB_ARGS="--from-pr 345 --parallel=6"',
      nullcontext(MockCommand("build",
-                             action_filters=MockActionFilter([("exportvariable", "EB_ARGS=--from-pr 345 --parallel=6")])))),
+                             action_filters=MockActionFilter(
+                                 [("exportvariable", "EB_ARGS=--from-pr 345 --parallel=6")])))),
 
     # Test 'build' command with quoted multi-word submitargs value
     ('build submitargs:"--time=30 --mem=30G"',

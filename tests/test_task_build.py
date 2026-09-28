@@ -676,8 +676,6 @@ class TestValidateArgs:
         assert accepted == []
         assert rejected == ["SKIP_TESTS=yes"]
 
-
-
     def test_jobargs_multiword_equals_form(self):
         from tasks.build import validate_args
         patterns = [
@@ -1097,6 +1095,7 @@ class TestCheckPatternsWellformed:
         result = get_allowed_args(cfg, "allowed_submitargs")
         assert len(result) == 1
         assert result[0]["value"] == "--time=.*"
+
 
 class TestPrepareExportVarsFile:
     """Tests for prepare_export_vars_file function in tasks/build.py"""
