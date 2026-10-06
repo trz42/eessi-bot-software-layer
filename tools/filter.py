@@ -40,8 +40,6 @@ FILTER_COMPONENTS = [FILTER_COMPONENT_ACCEL,
                      FILTER_COMPONENT_SUBMITARGS
                      ]
 
-# Developed FILTER_COMPONENT_ALIASES (comment, definition and
-#   use in this file) with the help of a locally hosted glm5.2 via Codex.
 # Aliases map an alternative name to a canonical FILTER_COMPONENT.
 # 'jobargs' is an alias for 'exportvariable' (both specify key=value pairs that
 # are exported into the build job's environment).
@@ -148,8 +146,6 @@ class EESSIBotActionFilter:
             msg = COMPONENT_TOO_SHORT.format(component=component, pattern=pattern)
             log(msg)
             raise EESSIBotActionFilterError(msg)
-        # Developed FILTER_COMPONENT_ALIASES code with the help of a locally
-        #   hosted glm5.2 via Codex.
         # Resolve aliases first (e.g. 'jobargs' -> 'exportvariable') so that
         # prefix-matching below does not get confused by components sharing a
         # prefix (e.g. 'job' is a prefix of both 'jobargs' and 'jobid').
@@ -193,8 +189,6 @@ class EESSIBotActionFilter:
            EESSIBotActionFilterError: raised if filter_string does not conform
                to 'component:pattern' format or pattern is empty
         """
-        # Developed change to split on the first ':' with the help of a locally
-        #   hosted glm5.2 via Codex.
         # Split on the first ':' only so that the pattern may itself contain
         # colons (e.g. 'submitargs:--time=01:00:00' or
         # 'exportvariable:PATH=/usr/bin:/bin').
@@ -248,8 +242,6 @@ class EESSIBotActionFilter:
             msg = COMPONENT_TOO_SHORT.format(component=component, pattern=pattern)
             log(msg)
             raise EESSIBotActionFilterError(msg)
-        # Developed FILTER_COMPONENT_ALIASES code with the help of a locally hosted
-        #   glm5.2 via Codex.
         # Resolve aliases (e.g. 'jobargs' -> 'exportvariable') before matching.
         if component in FILTER_COMPONENT_ALIASES:
             component = FILTER_COMPONENT_ALIASES[component]
@@ -343,8 +335,6 @@ class EESSIBotActionFilter:
                 else:
                     check = False
                     break
-            # Developed skipping export variables and submit args with the help of
-            #   a locally hosted glm5.2 via Codex.
             # Skip export variables and submit args: they are not action filters
             elif af.component == FILTER_COMPONENT_EXPORT:
                 continue

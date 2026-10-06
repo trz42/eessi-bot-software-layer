@@ -55,7 +55,6 @@ _ERROR_NONE = "none"
 EXPORT_VARS_FILE = 'export_vars.sh'
 
 
-# addition of job.submit_opts was developed with the help of a locally hosted glm5.2 via Codex
 Job = namedtuple('Job',
                  ('working_dir', 'arch_target', 'repo_id', 'slurm_opts', 'year_month', 'pr_id', 'accelerator', 'owner',
                   'submit_opts'))
@@ -213,23 +212,20 @@ def get_node_types(cfg):
     return node_type_map
 
 
-# Developed comment and *_RE definitions with the help of a locally
-#   hosted glm5.2 via Codex.
 # --- Defence-in-depth character allow-lists ---
 # jobargs are written to export_vars.sh and sourced by the shell, so '$' is
 # legitimate in values (e.g. EB_ARGS="/tmp/$USER/pr12345"). Keys must be
 # valid shell identifiers. Injection metacharacters (backticks, $(), ;, |, &,
 # spaces, newlines, etc.) are always rejected.
-JOBARG_KEY_RE = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
+JOB_ARG_KEY_RE = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
 # An empty value is allowed (e.g. FOO= to unset a variable), hence '*' not '+'.
-JOBARG_VALUE_RE = re.compile(r'^[a-zA-Z0-9_=:./+,@$-]*$')
+JOB_ARG_VALUE_RE = re.compile(r'^[a-zA-Z0-9_=:./+,@$-]*$')
 # submitargs are appended to an sbatch command line executed with shell=True,
 # so they get the strictest charset (no '$', no spaces).
-SUBMITARG_RE = re.compile(r'^[a-zA-Z0-9_=:./+,@-]+$')
+SUBMIT_ARG_RE = re.compile(r'^[a-zA-Z0-9_=:./+,@-]+$')
 
 
-# Developed sanitize_arg with the help of a locally hosted glm5.2 via Codex.
-def sanitize_arg(arg, arg_type='jobargs'):
+def check_arg(arg, arg_type='jobargs'):
     """
     Check that an argument does not contain shell metacharacters.
 
@@ -238,7 +234,7 @@ def sanitize_arg(arg, arg_type='jobargs'):
     function rejects any arg that contains characters which could be interpreted
     by the shell (e.g. backticks, $(), ;, |, &, spaces, newlines).
 
-    For 'jobargs', the key and value are checked separately: the key must be a
+    If arg_type is 'jobargs', the key and value are checked separately: the key must be a
     valid shell identifier, and the value may be empty (e.g. 'FOO=' to unset a
     variable) or contain '$' (for variable references) but no other shell
     metacharacters. For 'submitargs', the bare option string is checked against
@@ -258,21 +254,20 @@ def sanitize_arg(arg, arg_type='jobargs'):
             log(f"{fn}(): {arg_type} '{arg}' rejected (missing '=')")
             return False
         key, value = arg.split('=', 1)
-        if not JOBARG_KEY_RE.match(key):
+        if not JOB_ARG_KEY_RE.match(key):
             log(f"{fn}(): {arg_type} '{arg}' rejected (unsafe key '{key}')")
             return False
-        if not JOBARG_VALUE_RE.match(value):
+        if not JOB_ARG_VALUE_RE.match(value):
             log(f"{fn}(): {arg_type} '{arg}' rejected (unsafe value '{value}')")
             return False
         return True
     else:
-        if not SUBMITARG_RE.match(arg):
+        if not SUBMIT_ARG_RE.match(arg):
             log(f"{fn}(): {arg_type} '{arg}' rejected (contains unsafe characters)")
             return False
         return True
 
 
-# Developed check_patterns_wellformed with the help of a locally hosted glm5.2 via Codex.
 def check_patterns_wellformed(patterns, setting_name):
     """
     Validate the structure of allowed-args patterns read from configuration.
@@ -317,7 +312,6 @@ def check_patterns_wellformed(patterns, setting_name):
     return valid
 
 
-# Developed check_allowed_args_config with the help of a locally hosted glm5.2 via Codex.
 def check_allowed_args_config(cfg):
     """
     Check at start-up that the allowed_jobargs, allowed_submitargs and (legacy)
@@ -353,7 +347,6 @@ def check_allowed_args_config(cfg):
     return ok
 
 
-# Developed get_allowed_args with the help of a locally hosted glm5.2 via Codex.
 def get_allowed_args(cfg, setting_name):
     """
     Obtain list of allowed key-value patterns for jobargs or submitargs.
@@ -423,7 +416,6 @@ def get_allowed_args(cfg, setting_name):
     return allowed
 
 
-# Developed validate_args with the help of a locally hosted glm5.2 via Codex.
 def validate_args(args, allowed_patterns, arg_type='jobargs'):
     """
     Validate a list of arguments against a list of allowed patterns.
@@ -474,7 +466,7 @@ def validate_args(args, allowed_patterns, arg_type='jobargs'):
             # Defence-in-depth: even if the regex pattern matched, reject any
             # arg that contains shell metacharacters to prevent injection via
             # jobargs (sourced by the shell) or submitargs (shell=True in run_cmd)
-            if sanitize_arg(arg, arg_type):
+            if check_arg(arg, arg_type):
                 accepted.append(arg)
             else:
                 rejected.append(arg)
@@ -859,8 +851,6 @@ def prepare_jobs(pr, cfg, event_info, action_filter, build_params):
         log(f"{fn}(): found no accelerator requirement")
         accelerator = None
 
-    # Developed code for handling jobargs and submitargs with the help of a
-    #   locally hosted glm5.2 via Codex.
     # determine jobargs from action_filter argument (jobargs is an alias for
     # exportvariable, so both are retrieved via FILTER_COMPONENT_EXPORT)
     jobargs = action_filter.get_filter_by_component(tools_filter.FILTER_COMPONENT_EXPORT)
@@ -1166,7 +1156,6 @@ def submit_job(job, cfg):
     if not os.path.exists(build_job_script_path):
         error(f"Build job script not found at {build_job_script_path}")
 
-    # addition of job.submit_opts was developed with the help of a locally hosted glm5.2 via Codex
     command_line = ' '.join([
         build_env_cfg[config.BUILDENV_SETTING_SUBMIT_COMMAND],
         build_env_cfg[config.BUILDENV_SETTING_SLURM_PARAMS],

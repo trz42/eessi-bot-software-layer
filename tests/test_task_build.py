@@ -615,7 +615,6 @@ def test_request_bot_build_issue_comments(monkeypatch):
     assert status_table['result'] == [':grin: SUCCESS']
 
 
-# Developed with the help of a locally hosted glm5.2 via Codex.
 class TestValidateArgs:
     """Tests for validate_args function in tasks/build.py"""
 
@@ -677,7 +676,6 @@ class TestValidateArgs:
         assert rejected == ["SKIP_TESTS=yes"]
 
 
-# Developed with the help of a locally hosted glm5.2 via Codex.
 class TestGetAllowedArgs:
     """Tests for get_allowed_args function in tasks/build.py"""
 
@@ -756,7 +754,6 @@ class TestGetAllowedArgs:
         assert any("could not be decoded" in msg for msg in log_msgs)
 
 
-# Developed with the help of a locally hosted glm5.2 via Codex.
 class TestCheckAllowedArgsConfig:
     """Tests for check_allowed_args_config function in tasks/build.py"""
 
@@ -793,80 +790,78 @@ class TestCheckAllowedArgsConfig:
         assert check_allowed_args_config(cfg) is True
 
 
-# Developed with the help of a locally hosted glm5.2 via Codex.
 class TestSanitizeArg:
-    """Tests for sanitize_arg function in tasks/build.py"""
+    """Tests for check_arg function in tasks/build.py"""
 
     def test_safe_jobargs(self):
-        from tasks.build import sanitize_arg
-        assert sanitize_arg("SKIP_TESTS=yes", "jobargs")
+        from tasks.build import check_arg
+        assert check_arg("SKIP_TESTS=yes", "jobargs")
 
     def test_safe_jobargs_with_dollar(self):
         # '$' is allowed in jobargs values (e.g. EB_ARGS=--installpath=/tmp/$USER/pr12345)
         # because jobargs are written to export_vars.sh and sourced by the shell.
-        from tasks.build import sanitize_arg
-        assert sanitize_arg("EB_ARGS=--installpath=/tmp/$USER/pr12345", "jobargs")
+        from tasks.build import check_arg
+        assert check_arg("EB_ARGS=--installpath=/tmp/$USER/pr12345", "jobargs")
 
     def test_safe_jobargs_empty_value(self):
         # An empty value is allowed (e.g. FOO= to unset a variable).
-        from tasks.build import sanitize_arg
-        assert sanitize_arg("FOO=", "jobargs")
+        from tasks.build import check_arg
+        assert check_arg("FOO=", "jobargs")
 
     def test_safe_submitargs(self):
-        from tasks.build import sanitize_arg
-        assert sanitize_arg("--time=01:00:00", "submitargs")
-        assert sanitize_arg("--export=ALL,FOO=bar", "submitargs")
+        from tasks.build import check_arg
+        assert check_arg("--time=01:00:00", "submitargs")
+        assert check_arg("--export=ALL,FOO=bar", "submitargs")
 
     def test_rejects_backticks(self):
-        from tasks.build import sanitize_arg
-        assert not sanitize_arg("VAR=yes`echo dangerous`", "jobargs")
+        from tasks.build import check_arg
+        assert not check_arg("VAR=yes`echo dangerous`", "jobargs")
 
     def test_rejects_dollar_paren(self):
-        from tasks.build import sanitize_arg
-        assert not sanitize_arg("VAR=$(malicious)", "jobargs")
+        from tasks.build import check_arg
+        assert not check_arg("VAR=$(malicious)", "jobargs")
 
     def test_rejects_semicolon(self):
-        from tasks.build import sanitize_arg
-        assert not sanitize_arg("--time=01:00:00;echo dangerous", "submitargs")
+        from tasks.build import check_arg
+        assert not check_arg("--time=01:00:00;echo dangerous", "submitargs")
 
     def test_rejects_pipe(self):
-        from tasks.build import sanitize_arg
-        assert not sanitize_arg("VAR=value|cat /etc/passwd", "jobargs")
+        from tasks.build import check_arg
+        assert not check_arg("VAR=value|cat /etc/passwd", "jobargs")
 
     def test_rejects_ampersand(self):
-        from tasks.build import sanitize_arg
-        assert not sanitize_arg("VAR=value&&malicious", "jobargs")
+        from tasks.build import check_arg
+        assert not check_arg("VAR=value&&malicious", "jobargs")
 
     def test_rejects_spaces_in_jobargs_value(self):
         # Spaces in jobargs values are still rejected. Note: the upstream parser
         # (tools/commands.py) splits commands on whitespace, so a value with
-        # spaces would already be broken before reaching sanitize_arg. Supporting
+        # spaces would already be broken before reaching check_arg. Supporting
         # quoted values with spaces would require parser changes.
-        from tasks.build import sanitize_arg
-        assert not sanitize_arg("VAR=with spaces", "jobargs")
+        from tasks.build import check_arg
+        assert not check_arg("VAR=with spaces", "jobargs")
 
     def test_rejects_spaces_in_submitargs(self):
-        from tasks.build import sanitize_arg
-        assert not sanitize_arg("--time=01:00:00 echo dangerous", "submitargs")
+        from tasks.build import check_arg
+        assert not check_arg("--time=01:00:00 echo dangerous", "submitargs")
 
     def test_rejects_dollar_in_submitargs(self):
         # '$' is not allowed in submitargs because they are appended to an
         # sbatch command line executed with shell=True.
-        from tasks.build import sanitize_arg
-        assert not sanitize_arg("--time=$FOO", "submitargs")
+        from tasks.build import check_arg
+        assert not check_arg("--time=$FOO", "submitargs")
 
     def test_rejects_injection_in_key(self):
         # A key like ${UNDEF:-rm -rf} must be rejected: keys must be valid
         # shell identifiers ([a-zA-Z_][a-zA-Z0-9_]*).
-        from tasks.build import sanitize_arg
-        assert not sanitize_arg("${UNDEF:-echo dangerous}=yes", "jobargs")
+        from tasks.build import check_arg
+        assert not check_arg("${UNDEF:-echo dangerous}=yes", "jobargs")
 
     def test_rejects_newline(self):
-        from tasks.build import sanitize_arg
-        assert not sanitize_arg("VAR=with\nnewline", "jobargs")
+        from tasks.build import check_arg
+        assert not check_arg("VAR=with\nnewline", "jobargs")
 
 
-# Developed with the help of a locally hosted glm5.2 via Codex.
 class TestValidateArgsSecurity:
     """Tests that validate_args blocks shell injection even with permissive patterns"""
 
@@ -912,7 +907,6 @@ class TestValidateArgsSecurity:
         assert rejected == ["${UNDEF:-echo dangerous}=yes"]
 
 
-# Developed with the help of a locally hosted glm5.2 via Codex.
 class TestCheckPatternsWellformed:
     """Tests for check_patterns_wellformed function in tasks/build.py.
 
