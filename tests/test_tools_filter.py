@@ -20,6 +20,8 @@ from tools.filter import (COMPONENT_TOO_SHORT,
                           COMPONENT_UNKNOWN,
                           EESSIBotActionFilter,
                           EESSIBotActionFilterError,
+                          FILTER_COMPONENT_JOB_ENV_VARS,
+                          FILTER_COMPONENT_SUBMIT_ARGS,
                           FILTER_EMPTY_PATTERN,
                           FILTER_FORMAT_ERROR)
 
@@ -361,21 +363,21 @@ def test_match_accelerator_syntax_equal(accel_filter_equal_syntax):
     assert expected == actual
 
 
-def test_jobargs_alias_resolves_to_exportvariable():
-    af = EESSIBotActionFilter("jobargs:SKIP_TESTS=yes")
+def test_job_env_vars_alias_resolves_to_exportvariable():
+    af = EESSIBotActionFilter("job_env_vars:SKIP_TESTS=yes")
     expected = "exportvariable:SKIP_TESTS=yes"
     actual = af.to_string()
     assert expected == actual
 
 
-def test_jobargs_alias_retrieved_via_export_component():
+def test_job_env_vars_alias_retrieved_via_export_component():
     from tools.filter import FILTER_COMPONENT_EXPORT
-    af = EESSIBotActionFilter("jobargs:SKIP_TESTS=yes")
+    af = EESSIBotActionFilter("job_env_vars:SKIP_TESTS=yes")
     actual = af.get_filter_by_component(FILTER_COMPONENT_EXPORT)
     assert actual == ["SKIP_TESTS=yes"]
 
 
-def test_job_prefix_matches_jobid_not_jobargs():
+def test_job_prefix_matches_jobid_not_job_env_vars():
     from tools.filter import FILTER_COMPONENT_JOBID
     from tools.filter import FILTER_COMPONENT_EXPORT
     af = EESSIBotActionFilter("job:123")
@@ -386,10 +388,10 @@ def test_job_prefix_matches_jobid_not_jobargs():
     assert actual_export == []
 
 
-def test_submitargs_component():
-    from tools.filter import FILTER_COMPONENT_SUBMITARGS
-    af = EESSIBotActionFilter("submitargs:--time=01:00:00")
-    actual = af.get_filter_by_component(FILTER_COMPONENT_SUBMITARGS)
+def test_submit_args_component():
+    from tools.filter import FILTER_COMPONENT_SUBMIT_ARGS
+    af = EESSIBotActionFilter("submit_args:--time=01:00:00")
+    actual = af.get_filter_by_component(FILTER_COMPONENT_SUBMIT_ARGS)
     assert actual == ["--time=01:00:00"]
 
 
@@ -400,25 +402,25 @@ def test_exportvariable_with_colon_in_value():
     assert actual == ["PATH=/usr/bin:/bin"]
 
 
-def test_check_filters_skips_submitargs():
-    af = EESSIBotActionFilter("arch:amd/zen2 submitargs:--time=01:00:00")
+def test_check_filters_skips_submit_args():
+    af = EESSIBotActionFilter("arch:amd/zen2 submit_args:--time=01:00:00")
     assert af.check_filters({"architecture": "amd/zen2"})
 
 
-def test_check_filters_skips_jobargs():
-    af = EESSIBotActionFilter("arch:amd/zen2 jobargs:SKIP_TESTS=yes")
+def test_check_filters_skips_job_env_vars():
+    af = EESSIBotActionFilter("arch:amd/zen2 job_env_vars:SKIP_TESTS=yes")
     assert af.check_filters({"architecture": "amd/zen2"})
 
 
-def test_multiple_submitargs():
-    from tools.filter import FILTER_COMPONENT_SUBMITARGS
-    af = EESSIBotActionFilter("submitargs:--time=01:00:00 submitargs:--partition=gpu")
-    actual = af.get_filter_by_component(FILTER_COMPONENT_SUBMITARGS)
+def test_multiple_submit_args():
+    from tools.filter import FILTER_COMPONENT_SUBMIT_ARGS
+    af = EESSIBotActionFilter("submit_args:--time=01:00:00 submit_args:--partition=gpu")
+    actual = af.get_filter_by_component(FILTER_COMPONENT_SUBMIT_ARGS)
     assert actual == ["--time=01:00:00", "--partition=gpu"]
 
 
-def test_multiple_jobargs():
+def test_multiple_job_env_vars():
     from tools.filter import FILTER_COMPONENT_EXPORT
-    af = EESSIBotActionFilter("jobargs:SKIP_TESTS=yes jobargs:DEBUG=true")
+    af = EESSIBotActionFilter("job_env_vars:SKIP_TESTS=yes job_env_vars:DEBUG=true")
     actual = af.get_filter_by_component(FILTER_COMPONENT_EXPORT)
     assert actual == ["SKIP_TESTS=yes", "DEBUG=true"]

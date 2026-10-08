@@ -57,7 +57,7 @@ EXPORT_VARS_FILE = 'export_vars.sh'
 
 Job = namedtuple('Job',
                  ('working_dir', 'arch_target', 'repo_id', 'slurm_opts', 'year_month', 'pr_id', 'accelerator', 'owner',
-                  'submit_opts'))
+                  'submit_args'))
 
 # global repo_cfg
 repo_cfg = {}
@@ -213,19 +213,24 @@ def get_node_types(cfg):
 
 
 # --- Defence-in-depth character allow-lists ---
-# jobargs are written to export_vars.sh and sourced by the shell, so '$' is
+# job_env_vars are written to export_vars.sh and sourced by the shell, so '$' is
 # legitimate in values (e.g. EB_ARGS="/tmp/$USER/pr12345"). Keys must be
 # valid shell identifiers. Injection metacharacters (backticks, $(), ;, |, &,
 # spaces, newlines, etc.) are always rejected.
-JOB_ARG_KEY_RE = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
+JOB_ENV_VARS_KEY_RE = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
 # An empty value is allowed (e.g. FOO= to unset a variable), hence '*' not '+'.
-JOB_ARG_VALUE_RE = re.compile(r'^[a-zA-Z0-9_=:./+,@$-]*$')
-# submitargs are appended to an sbatch command line executed with shell=True,
+JOB_ENV_VARS_VALUE_RE = re.compile(r'^[a-zA-Z0-9_=:./+,@$-]*$')
+# submit_args are appended to an sbatch command line executed with shell=True,
 # so they get the strictest charset (no '$', no spaces).
 SUBMIT_ARG_RE = re.compile(r'^[a-zA-Z0-9_=:./+,@-]+$')
 
+# Arg types describe the validation mode for check_arg() and validate_args(),
+# decoupling them from the filter-component naming scheme in tools.filter.
+ARG_TYPE_KEY_VALUE = 'key_eq_value'
+ARG_TYPE_STR_VALUE = 'str_value'
 
-def check_arg(arg, arg_type='jobargs'):
+
+def check_arg(arg, arg_type=ARG_TYPE_KEY_VALUE):
     """
     Check that an argument does not contain shell metacharacters.
 
@@ -234,46 +239,52 @@ def check_arg(arg, arg_type='jobargs'):
     function rejects any arg that contains characters which could be interpreted
     by the shell (e.g. backticks, $(), ;, |, &, spaces, newlines).
 
-    If arg_type is 'jobargs', the key and value are checked separately: the key must be a
-    valid shell identifier, and the value may be empty (e.g. 'FOO=' to unset a
-    variable) or contain '$' (for variable references) but no other shell
-    metacharacters. For 'submitargs', the bare option string is checked against
-    a strict charset (no '$', no spaces).
+    If arg_type is ARG_TYPE_KEY_VALUE, the key and value are checked separately:
+    the key must be a valid shell identifier, and the value may be empty (e.g.
+    'FOO=' to unset a variable) or contain '$' (for variable references) but no
+    other shell metacharacters. For ARG_TYPE_STR_VALUE, the bare option string is
+    checked against a strict charset (no '$', no spaces).
 
     Args:
         arg (string): argument to check
-        arg_type (string): 'jobargs' or 'submitargs' (used in log messages)
+        arg_type (string): ARG_TYPE_KEY_VALUE or ARG_TYPE_STR_VALUE (used in log
+            messages)
 
     Returns:
         (bool): True if the argument is safe, False otherwise
+
+    Raises:
+        ValueError: if arg_type is not a recognized arg type.
     """
     fn = sys._getframe().f_code.co_name
 
-    if arg_type == 'jobargs':
+    if arg_type == ARG_TYPE_KEY_VALUE:
         if '=' not in arg:
             log(f"{fn}(): {arg_type} '{arg}' rejected (missing '=')")
             return False
         key, value = arg.split('=', 1)
-        if not JOB_ARG_KEY_RE.match(key):
+        if not JOB_ENV_VARS_KEY_RE.match(key):
             log(f"{fn}(): {arg_type} '{arg}' rejected (unsafe key '{key}')")
             return False
-        if not JOB_ARG_VALUE_RE.match(value):
+        if not JOB_ENV_VARS_VALUE_RE.match(value):
             log(f"{fn}(): {arg_type} '{arg}' rejected (unsafe value '{value}')")
             return False
         return True
-    else:
+    if arg_type == ARG_TYPE_STR_VALUE:
         if not SUBMIT_ARG_RE.match(arg):
             log(f"{fn}(): {arg_type} '{arg}' rejected (contains unsafe characters)")
             return False
         return True
+    else:
+        raise ValueError(f"unknown arg_type '{arg_type}'")
 
 
 def check_patterns_wellformed(patterns, setting_name):
     """
     Validate the structure of allowed-args patterns read from configuration.
 
-    Each entry must be a dict. For jobargs, each entry must have 'key' and
-    'value' keys with string values. For submitargs, each entry must have a
+    Each entry must be a dict. For job_env_vars, each entry must have 'key' and
+    'value' keys with string values. For submit_args, each entry must have a
     'value' key with a string value. Entries that do not conform are dropped
     with a log message. A warning is logged for patterns whose 'value' regex
     is '.*' (matches anything), as these effectively disable the allow-list
@@ -297,12 +308,12 @@ def check_patterns_wellformed(patterns, setting_name):
         if not isinstance(entry, dict):
             log(f"{fn}(): {setting_name} entry {entry} is not a dict, ignoring")
             continue
-        if not isinstance(entry.get('value', ''), str):
-            log(f"{fn}(): {setting_name} entry {entry} has non-string 'value', ignoring")
+        if 'value' not in entry or not isinstance(entry['value'], str):
+            log(f"{fn}(): {setting_name} entry {entry} has missing or non-string 'value', ignoring")
             continue
-        if setting_name == config.BUILDENV_SETTING_ALLOWED_JOBARGS:
-            if not isinstance(entry.get('key', ''), str):
-                log(f"{fn}(): {setting_name} entry {entry} has non-string 'key', ignoring")
+        if setting_name == config.BUILDENV_SETTING_ALLOWED_JOB_ENV_VARS:
+            if 'key' not in entry or not isinstance(entry['key'], str):
+                log(f"{fn}(): {setting_name} entry {entry} has missing or non-string 'key', ignoring")
                 continue
         if entry.get('value') == '.*':
             log(f"{fn}(): WARNING {setting_name} entry {entry} uses '.*' for value, "
@@ -314,7 +325,7 @@ def check_patterns_wellformed(patterns, setting_name):
 
 def check_allowed_args_config(cfg):
     """
-    Check at start-up that the allowed_jobargs, allowed_submitargs and (legacy)
+    Check at start-up that the allowed_job_env_vars, allowed_submit_args and
     allowed_exportvars settings, if present, contain valid JSON. Logs an error
     and returns False if any setting cannot be decoded so the caller can refuse
     to start the bot.
@@ -330,8 +341,8 @@ def check_allowed_args_config(cfg):
 
     buildenv = cfg[config.SECTION_BUILDENV]
     settings = [
-        config.BUILDENV_SETTING_ALLOWED_JOBARGS,
-        config.BUILDENV_SETTING_ALLOWED_SUBMITARGS,
+        config.BUILDENV_SETTING_ALLOWED_JOB_ENV_VARS,
+        config.BUILDENV_SETTING_ALLOWED_SUBMIT_ARGS,
         config.BUILDENV_SETTING_ALLOWED_EXPORTVARS,
     ]
     ok = True
@@ -349,17 +360,17 @@ def check_allowed_args_config(cfg):
 
 def get_allowed_args(cfg, setting_name):
     """
-    Obtain list of allowed key-value patterns for jobargs or submitargs.
+    Obtain list of allowed key-value patterns for job_env_vars or submit_args.
 
     Each entry in the list is a dict with 'key' and 'value' keys whose values
-    are regular expressions. An argument 'KEY=VALUE' (for jobargs) or a bare
-    option string (for submitargs) is accepted if it matches one of the
-    patterns. For jobargs, the key must match the 'key' regex AND the value
+    are regular expressions. An argument 'KEY=VALUE' (for job_env_vars) or a bare
+    option string (for submit_args) is accepted if it matches one of the
+    patterns. For job_env_vars, the key must match the 'key' regex AND the value
     must match the 'value' regex of the same entry.
 
-    Auto-migration: for the jobargs setting, if 'allowed_jobargs' is not
-    defined in the configuration, the function falls back to the legacy
-    'allowed_exportvars' setting. Each legacy entry (an exact 'KEY=VALUE'
+    Auto-migration: for the job_env_vars setting, if 'allowed_job_env_vars' is not
+    defined in the configuration, the function falls back to the
+    'allowed_exportvars' setting. Each of these entries (an exact 'KEY=VALUE'
     string) is converted into a pattern {'key': '^KEY$', 'value': '^VALUE$'}
     so that existing exact-match behaviour is preserved.
 
@@ -367,12 +378,12 @@ def get_allowed_args(cfg, setting_name):
         cfg (ConfigParser): ConfigParser instance holding full configuration
             (typically read from 'app.cfg')
         setting_name (string): config setting name, one of
-            config.BUILDENV_SETTING_ALLOWED_JOBARGS or
-            config.BUILDENV_SETTING_ALLOWED_SUBMITARGS
+            config.BUILDENV_SETTING_ALLOWED_JOB_ENV_VARS or
+            config.BUILDENV_SETTING_ALLOWED_SUBMIT_ARGS
 
     Returns:
         (list): list of allowed pattern dicts, each with 'key' and 'value'
-            keys (for jobargs) or 'value' key only (for submitargs)
+            keys (for job_env_vars) or 'value' key only (for submit_args)
     """
     fn = sys._getframe().f_code.co_name
 
@@ -380,28 +391,26 @@ def get_allowed_args(cfg, setting_name):
     allowed_str = buildenv.get(setting_name)
     allowed = []
 
-    # --- BEGIN auto-migration from legacy 'allowed_exportvars' ---
-    # If allowed_jobargs is not set, fall back to allowed_exportvars and
+    # If allowed_job_env_vars is not set, fall back to allowed_exportvars and
     # convert each exact 'KEY=VALUE' string into a regex pattern.
-    if (setting_name == config.BUILDENV_SETTING_ALLOWED_JOBARGS
+    if (setting_name == config.BUILDENV_SETTING_ALLOWED_JOB_ENV_VARS
             and not allowed_str):
-        legacy_str = buildenv.get(config.BUILDENV_SETTING_ALLOWED_EXPORTVARS)
-        if legacy_str:
+        fallback_str = buildenv.get(config.BUILDENV_SETTING_ALLOWED_EXPORTVARS)
+        if fallback_str:
             try:
-                legacy = json.loads(legacy_str)
+                fallback = json.loads(fallback_str)
             except json.JSONDecodeError as err:
                 print(err)
-                log(f"{fn}(): ERROR Value for allowed_exportvars ({legacy_str}) could not be decoded: {err}")
+                log(f"{fn}(): ERROR Value for allowed_exportvars ({fallback_str}) could not be decoded: {err}")
                 return []
-            for item in legacy:
+            for item in fallback:
                 if '=' in item:
                     key, value = item.split('=', 1)
                     allowed.append({'key': f'^{re.escape(key)}$', 'value': f'^{re.escape(value)}$'})
                 else:
                     allowed.append({'value': f'^{re.escape(item)}$'})
-            log(f"{fn}(): migrated allowed_exportvars to allowed_jobargs '{json.dumps(allowed)}'")
+            log(f"{fn}(): migrated allowed_exportvars to allowed_job_env_vars '{json.dumps(allowed)}'")
             return check_patterns_wellformed(allowed, setting_name)
-    # --- END auto-migration from legacy 'allowed_exportvars' ---
 
     if allowed_str:
         try:
@@ -416,21 +425,23 @@ def get_allowed_args(cfg, setting_name):
     return allowed
 
 
-def validate_args(args, allowed_patterns, arg_type='jobargs'):
+def validate_args(args, allowed_patterns, arg_type=ARG_TYPE_KEY_VALUE):
     """
     Validate a list of arguments against a list of allowed patterns.
 
-    For 'jobargs', each arg is a 'KEY=VALUE' string. It is accepted if there
-    is a pattern whose 'key' regex matches KEY and whose 'value' regex matches
-    VALUE (both for the same pattern entry).
+    For ARG_TYPE_KEY_VALUE, each arg is a 'KEY=VALUE' string. It is accepted if
+    there is a pattern whose 'key' regex matches KEY and whose 'value' regex
+    matches VALUE (both for the same pattern entry).
 
-    For 'submitargs', each arg is a bare option string (e.g. '--time=01:00:00').
-    It is accepted if there is a pattern whose 'value' regex matches the arg.
+    For ARG_TYPE_STR_VALUE, each arg is a bare option string (e.g.
+    '--time=01:00:00'). It is accepted if there is a pattern whose 'value' regex
+    matches the arg.
 
     Args:
         args (list): list of argument strings to validate
         allowed_patterns (list): list of pattern dicts (from get_allowed_args)
-        arg_type (string): 'jobargs' or 'submitargs' -- determines validation mode
+        arg_type (string): ARG_TYPE_KEY_VALUE or ARG_TYPE_STR_VALUE -- determines
+            validation mode
 
     Returns:
         tuple of 2 elements containing
@@ -444,7 +455,7 @@ def validate_args(args, allowed_patterns, arg_type='jobargs'):
 
     for arg in args:
         matched = False
-        if arg_type == 'jobargs':
+        if arg_type == ARG_TYPE_KEY_VALUE:
             if '=' not in arg:
                 log(f"{fn}(): {arg_type} '{arg}' rejected (missing '=')")
                 rejected.append(arg)
@@ -453,20 +464,23 @@ def validate_args(args, allowed_patterns, arg_type='jobargs'):
             for pattern in allowed_patterns:
                 key_re = pattern.get('key', '')
                 val_re = pattern.get('value', '')
-                if re.search(key_re, key) and re.search(val_re, value):
+                if re.fullmatch(key_re, key) and re.fullmatch(val_re, value):
+                    matched = True
+                    break
+        elif arg_type == ARG_TYPE_STR_VALUE:
+            for pattern in allowed_patterns:
+                val_re = pattern.get('value', '')
+                if re.fullmatch(val_re, arg):
                     matched = True
                     break
         else:
-            for pattern in allowed_patterns:
-                val_re = pattern.get('value', '')
-                if re.search(val_re, arg):
-                    matched = True
-                    break
+            raise ValueError(f"unknown arg_type '{arg_type}'")
         if matched:
             # Defence-in-depth: even if the regex pattern matched, reject any
             # arg that contains shell metacharacters to prevent injection via
-            # jobargs (sourced by the shell) or submitargs (shell=True in run_cmd)
+            # job_env_vars (sourced by the shell) or submit_args (shell=True in run_cmd)
             if check_arg(arg, arg_type):
+                log(f"{fn}(): {arg_type} '{arg}' accepted (passes all checks)")
                 accepted.append(arg)
             else:
                 rejected.append(arg)
@@ -821,8 +835,8 @@ def prepare_jobs(pr, cfg, event_info, action_filter, build_params):
     build_env_cfg = get_build_env_cfg(cfg)
     node_map = get_node_types(cfg)
     repocfg = get_repo_cfg(cfg)
-    allowed_jobargs = get_allowed_args(cfg, config.BUILDENV_SETTING_ALLOWED_JOBARGS)
-    allowed_submitargs = get_allowed_args(cfg, config.BUILDENV_SETTING_ALLOWED_SUBMITARGS)
+    allowed_job_env_vars = get_allowed_args(cfg, config.BUILDENV_SETTING_ALLOWED_JOB_ENV_VARS)
+    allowed_submit_args = get_allowed_args(cfg, config.BUILDENV_SETTING_ALLOWED_SUBMIT_ARGS)
 
     base_repo_name = pr.base.repo.full_name
     log(f"{fn}(): pr.base.repo.full_name '{base_repo_name}'")
@@ -851,28 +865,32 @@ def prepare_jobs(pr, cfg, event_info, action_filter, build_params):
         log(f"{fn}(): found no accelerator requirement")
         accelerator = None
 
-    # determine jobargs from action_filter argument (jobargs is an alias for
+    # determine job_env_vars from action_filter argument (job_env_vars is an alias for
     # exportvariable, so both are retrieved via FILTER_COMPONENT_EXPORT)
-    jobargs = action_filter.get_filter_by_component(tools_filter.FILTER_COMPONENT_EXPORT)
+    job_env_vars = action_filter.get_filter_by_component(tools_filter.FILTER_COMPONENT_EXPORT)
 
-    # all jobargs must be allowed in order to run any jobs
-    if jobargs:
-        accepted_jobargs, rejected_jobargs = validate_args(jobargs, allowed_jobargs, arg_type='jobargs')
-        if rejected_jobargs:
-            log(f"{fn}(): jobargs(s) {rejected_jobargs} not allowed")
+    # all job_env_vars must be allowed in order to run any jobs
+    if job_env_vars:
+        accepted_job_env_vars, rejected_job_env_vars = validate_args(
+            job_env_vars,
+            allowed_job_env_vars,
+            arg_type=ARG_TYPE_KEY_VALUE
+        )
+        if rejected_job_env_vars:
+            log(f"{fn}(): job_env_vars(s) {rejected_job_env_vars} not allowed")
             return []
-        jobargs = accepted_jobargs
+        job_env_vars = accepted_job_env_vars
 
-    # determine submitargs from action_filter argument
-    submitargs = action_filter.get_filter_by_component(tools_filter.FILTER_COMPONENT_SUBMITARGS)
+    # determine submit_args from action_filter argument
+    submit_args = action_filter.get_filter_by_component(tools_filter.FILTER_COMPONENT_SUBMIT_ARGS)
 
-    # all submitargs must be allowed in order to run any jobs
-    if submitargs:
-        accepted_submitargs, rejected_submitargs = validate_args(submitargs, allowed_submitargs, arg_type='submitargs')
-        if rejected_submitargs:
-            log(f"{fn}(): submitargs(s) {rejected_submitargs} not allowed")
+    # all submit_args must be allowed in order to run any jobs
+    if submit_args:
+        accepted_submit_args, rejected_submit_args = validate_args(submit_args, allowed_submit_args, arg_type=ARG_TYPE_STR_VALUE)
+        if rejected_submit_args:
+            log(f"{fn}(): submit_args(s) {rejected_submit_args} not allowed")
             return []
-        submitargs = accepted_submitargs
+        submit_args = accepted_submit_args
 
     jobs = []
     # Looping over all node types in the node_map to create a context for each node type and repository
@@ -947,12 +965,12 @@ def prepare_jobs(pr, cfg, event_info, action_filter, build_params):
             prepare_job_cfg(job_dir, build_env_cfg, repocfg, repo_id, build_params[BUILD_PARAM_ARCH],
                             partition_info['os'], build_for_accel, node_type_name)
 
-            if jobargs:
-                prepare_export_vars_file(job_dir, jobargs)
+            if job_env_vars:
+                prepare_export_vars_file(job_dir, job_env_vars)
 
             # enlist jobs to proceed
             job = Job(job_dir, partition_info['cpu_subdir'], repo_id, partition_info['slurm_params'], year_month,
-                      pr_id, accelerator, job_owner, ' '.join(submitargs))
+                      pr_id, accelerator, job_owner, ' '.join(submit_args))
             jobs.append(job)
 
     log(f"{fn}(): {len(jobs)} jobs to proceed after applying white list")
@@ -1162,7 +1180,7 @@ def submit_job(job, cfg):
         time_limit,
         job.slurm_opts] +
         ([f"--job-name='{job_name}'"] if job_name else []) +
-        ([job.submit_opts] if job.submit_opts else []) +
+        ([job.submit_args] if job.submit_args else []) +
         [build_job_script_path])
 
     cmdline_output, cmdline_error, cmdline_exit_code = run_cmd(command_line,

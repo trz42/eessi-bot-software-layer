@@ -881,10 +881,10 @@ def main():
         print("Configuration check: FAILED")
         sys.exit(1)
 
-    # Verify that allowed_jobargs/submitargs/exportvars settings are valid JSON
+    # Verify that allowed_job_env_vars/submit_args/exportvars settings are valid JSON
     cfg = config.read_config()
     if not check_allowed_args_config(cfg):
-        print("Configuration check: FAILED (invalid allowed_args settings)")
+        print("Configuration check: FAILED (invalid allowed_{job_env_vars,submit_args} settings)")
         sys.exit(1)
 
     # Verify that the event handler is able to connect to the Git hosting platform
