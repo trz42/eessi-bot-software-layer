@@ -886,7 +886,9 @@ def prepare_jobs(pr, cfg, event_info, action_filter, build_params):
 
     # all submit_args must be allowed in order to run any jobs
     if submit_args:
-        accepted_submit_args, rejected_submit_args = validate_args(submit_args, allowed_submit_args, arg_type=ARG_TYPE_STR_VALUE)
+        accepted_submit_args, rejected_submit_args = validate_args(
+            submit_args, allowed_submit_args, arg_type=ARG_TYPE_STR_VALUE
+        )
         if rejected_submit_args:
             log(f"{fn}(): submit_args(s) {rejected_submit_args} not allowed")
             return []

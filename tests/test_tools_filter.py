@@ -20,8 +20,6 @@ from tools.filter import (COMPONENT_TOO_SHORT,
                           COMPONENT_UNKNOWN,
                           EESSIBotActionFilter,
                           EESSIBotActionFilterError,
-                          FILTER_COMPONENT_JOB_ENV_VARS,
-                          FILTER_COMPONENT_SUBMIT_ARGS,
                           FILTER_EMPTY_PATTERN,
                           FILTER_FORMAT_ERROR)
 

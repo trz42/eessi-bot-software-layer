@@ -878,7 +878,9 @@ class TestValidateArgsSecurity:
         # and should pass even with a permissive '.*' pattern.
         from tasks.build import validate_args
         patterns = [{"key": ".*", "value": ".*"}]
-        accepted, rejected = validate_args(["EB_ARGS=--installpath=/tmp/$USER/pr12345"], patterns, arg_type=ARG_TYPE_KEY_VALUE)
+        accepted, rejected = validate_args(
+            ["EB_ARGS=--installpath=/tmp/$USER/pr12345"], patterns, arg_type=ARG_TYPE_KEY_VALUE
+        )
         assert accepted == ["EB_ARGS=--installpath=/tmp/$USER/pr12345"]
         assert rejected == []
 
