@@ -131,9 +131,13 @@ class BaseGitRepository:
     _ALREADY_CLONED = (_MSG_REPO_ALREADY_CLONED, "", _EC_OK, ERROR_NONE)
     _NOT_CLONED_YET = ("", _ERR_MSG_REPO_NOT_CLONED_YET, _EC_NOT_OK)
 
-    def _get_pr_diff(self, pr_number, diff_filename):
+    def _get_pr_src_ref(self, pr_number):
         # 'pull/#/head' is used for PR ref names on GitHub, Codeberg, Gitea, ...
-        src_ref = f"pull/{pr_number}/head"
+        # This method must be overridden for GitLab as it uses its own PR ref naming scheme
+        return f"pull/{pr_number}/head"
+
+    def _get_pr_diff(self, pr_number, diff_filename):
+        src_ref = self._get_pr_src_ref(pr_number)
         dst_ref = f"pr{pr_number}"
 
         stdout, stderr, exit_code, error_stage = self.fetch(src_ref, dst_ref)
@@ -219,7 +223,7 @@ class BaseGitRepository:
         # - Clone repository
         # - Checkout base branch
         # - Get PR diff (i.e. diff of target branch compared to its merge base with base branch)
-        #   - This step must be implemented per Git hosting platform, as e.g. target branch ref naming may vary
+        #   - Beware that PR ref naming may vary between Git hosting platforms. Override _get_pr_src_ref() if needed.
         # - Apply PR diff
         diff_filename = f"{pr_number}.diff"
 
@@ -249,21 +253,10 @@ class GitHubGitRepository(BaseGitRepository):
 
 
 class GitLabGitRepository(BaseGitRepository):
-    def _get_pr_diff(self, pr_number, diff_filename):
+    def _get_pr_src_ref(self, pr_number):
         # Requires override for GitLab. Contrary to most other Git hosting
         # platforms, GitLab uses 'merge-requests/#/head' for PR ref names.
-        src_ref = f"merge-requests/{pr_number}/head"
-        dst_ref = f"pr{pr_number}"
-
-        stdout, stderr, exit_code, error_stage = self.fetch(src_ref, dst_ref)
-        if exit_code != 0:
-            return stdout, stderr, exit_code, error_stage
-
-        stdout, stderr, exit_code, error_stage = self.diff("HEAD", dst_ref, diff_filename, merge_base=True)
-        if exit_code != 0:
-            return stdout, stderr, exit_code, error_stage
-
-        return "Obtaining PR diff succeeded", "", self._EC_OK, ERROR_NONE
+        return f"merge-requests/{pr_number}/head"
 
 
 GitRepository = Union[GitHubGitRepository, GitLabGitRepository]

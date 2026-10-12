@@ -173,6 +173,14 @@ def test_BaseGitRepository(tmp_path):
     assert repo._repo_url == REPO_URL
 
 
+# Test BaseGitRepository._get_pr_src_ref()
+def test_BaseGitRepository_get_pr_src_ref(tmp_path):
+    pr_number = 42
+    expected_src_ref = f"pull/{pr_number}/head"
+    actual_src_ref = GenericGitRepository(REPO_URL, tmp_path)._get_pr_src_ref(pr_number)
+    assert actual_src_ref == expected_src_ref
+
+
 # Test BaseGitRepository._get_pr_diff()
 @pytest.mark.parametrize("fetch_return,diff_return,error_stage", [
     # Test fetch() fails
@@ -196,9 +204,11 @@ def test_BaseGitRepository(tmp_path):
         git.ERROR_NONE,
     ),
 ])
+@patch("tools.git.BaseGitRepository._get_pr_src_ref")
 @patch("tools.git.BaseGitRepository.fetch")
 @patch("tools.git.BaseGitRepository.diff")
-def test_BaseGitRepository_get_pr_diff(mock_diff, mock_fetch, tmp_path, fetch_return, diff_return, error_stage):
+def test_BaseGitRepository_get_pr_diff(mock_diff, mock_fetch, mock_get_pr_src_ref, tmp_path,
+                                       fetch_return, diff_return, error_stage):
     pr_number = 42
     src_ref = f"pull/{pr_number}/head"
     dst_ref = f"pr{pr_number}"
@@ -211,11 +221,13 @@ def test_BaseGitRepository_get_pr_diff(mock_diff, mock_fetch, tmp_path, fetch_re
     else:
         expected_output = ("Obtaining PR diff succeeded", "", git.BaseGitRepository._EC_OK, git.ERROR_NONE)
 
+    mock_get_pr_src_ref.return_value = src_ref
     mock_fetch.return_value = fetch_return
     mock_diff.return_value = diff_return
 
     actual_output = GenericGitRepository(REPO_URL, tmp_path)._get_pr_diff(pr_number, diff_filename)
 
+    mock_get_pr_src_ref.assert_called_once_with(pr_number)
     mock_fetch.assert_called_once_with(src_ref, dst_ref)
     if error_stage == git.ERROR_GIT_FETCH:
         mock_diff.assert_not_called()
@@ -664,8 +676,8 @@ BASE_GIT_REPOSITORY_ATTRIBUTES = [
     # GitHubGitRepository should not override anything
     (git.GitHubGitRepository, []),
 
-    # GitLabGitRepository should only override _get_pr_diff()
-    (git.GitLabGitRepository, ["_get_pr_diff"]),
+    # GitLabGitRepository should only override _get_pr_src_ref()
+    (git.GitLabGitRepository, ["_get_pr_src_ref"]),
 ])
 def test_GitRepository_subclasses(tmp_path, subclass, overrides):
     # The subclass should be a proper subclass of BaseGitRepository
@@ -689,55 +701,12 @@ def test_GitRepository_subclasses(tmp_path, subclass, overrides):
         assert is_overridden is should_be_overridden
 
 
-# Test GitLabGitRepository._get_pr_diff()
-@pytest.mark.parametrize("fetch_return,diff_return,error_stage", [
-    # Test fetch() fails
-    (
-        ("", "Fetch failed", 128, git.ERROR_GIT_FETCH),
-        ("", "", 0, git.ERROR_NONE),
-        git.ERROR_GIT_FETCH,
-    ),
-
-    # Test diff() fails
-    (
-        ("Fetch successful", "", 0, git.ERROR_NONE),
-        ("", "Diff failed", 128, git.ERROR_GIT_DIFF),
-        git.ERROR_GIT_DIFF,
-    ),
-
-    # Test _get_pr_diff() successful
-    (
-        ("Fetch successful", "", 0, git.ERROR_NONE),
-        ("Diff successful", "", 0, git.ERROR_NONE),
-        git.ERROR_NONE,
-    ),
-])
-@patch("tools.git.BaseGitRepository.fetch")
-@patch("tools.git.BaseGitRepository.diff")
-def test_GitLabGitRepository_get_pr_diff(mock_diff, mock_fetch, tmp_path, fetch_return, diff_return, error_stage):
+# Test GitLabGitRepository._get_pr_src_ref()
+def test_GitLabGitRepository_get_pr_src_ref(tmp_path):
     pr_number = 42
-    src_ref = f"merge-requests/{pr_number}/head"
-    dst_ref = f"pr{pr_number}"
-    diff_filename = f"{pr_number}.diff"
-
-    if error_stage == git.ERROR_GIT_FETCH:
-        expected_output = fetch_return
-    elif error_stage == git.ERROR_GIT_DIFF:
-        expected_output = diff_return
-    else:
-        expected_output = ("Obtaining PR diff succeeded", "", git.BaseGitRepository._EC_OK, git.ERROR_NONE)
-
-    mock_fetch.return_value = fetch_return
-    mock_diff.return_value = diff_return
-
-    actual_output = git.GitLabGitRepository(REPO_URL, tmp_path)._get_pr_diff(pr_number, diff_filename)
-
-    mock_fetch.assert_called_once_with(src_ref, dst_ref)
-    if error_stage == git.ERROR_GIT_FETCH:
-        mock_diff.assert_not_called()
-    else:
-        mock_diff.assert_called_once_with("HEAD", dst_ref, diff_filename, merge_base=True)
-    assert actual_output == expected_output
+    expected_src_ref = f"merge-requests/{pr_number}/head"
+    actual_src_ref = git.GitLabGitRepository(REPO_URL, tmp_path)._get_pr_src_ref(pr_number)
+    assert actual_src_ref == expected_src_ref
 
 
 # Test create_git_repository_instance()
