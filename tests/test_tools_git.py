@@ -219,7 +219,8 @@ def test_BaseGitRepository_get_pr_diff(mock_diff, mock_fetch, mock_get_pr_src_re
     elif error_stage == git.ERROR_GIT_DIFF:
         expected_output = diff_return
     else:
-        expected_output = ("Obtaining PR diff succeeded", "", git.BaseGitRepository._EC_OK, git.ERROR_NONE)
+        expected_output = (git.BaseGitRepository._MSG_PR_DIFF_SUCCESS, "",
+                           git.BaseGitRepository._EXIT_CODE_OK, git.ERROR_NONE)
 
     mock_get_pr_src_ref.return_value = src_ref
     mock_fetch.return_value = fetch_return
@@ -280,9 +281,9 @@ def test_BaseGitRepository_make_dirs(tmp_path, test_case, is_success_case):
 
     if is_success_case:
         assert os.path.exists(repo_path) and os.path.isdir(repo_path)
-        assert stdout == "Creating directories succeeded"
+        assert stdout == git.BaseGitRepository._MSG_MAKE_DIRS_SUCCESS
         assert stderr == ""
-        assert exit_code == git.BaseGitRepository._EC_OK
+        assert exit_code == git.BaseGitRepository._EXIT_CODE_OK
         assert error_stage == git.ERROR_NONE
     else:
         if test_case == "exists-as-file":
@@ -292,7 +293,7 @@ def test_BaseGitRepository_make_dirs(tmp_path, test_case, is_success_case):
             assert not repo_path.exists()
         assert stdout == ""
         assert stderr.startswith(f"Unable to set up directory '{repo_path}' for Git repository '{REPO_URL}': ")
-        assert exit_code == git.BaseGitRepository._EC_NOT_OK
+        assert exit_code == git.BaseGitRepository._EXIT_CODE_NOT_OK
         assert error_stage == git.ERROR_MAKE_DIRS
 
 
@@ -301,7 +302,7 @@ def test_BaseGitRepository_make_dirs(tmp_path, test_case, is_success_case):
     # Test _make_dirs() fails
     (
         False,
-        ("", "Failed to create directory", git.BaseGitRepository._EC_NOT_OK, git.ERROR_MAKE_DIRS),
+        ("", "Failed to create directory", git.BaseGitRepository._EXIT_CODE_NOT_OK, git.ERROR_MAKE_DIRS),
         ("", "", 0),
         git.ERROR_MAKE_DIRS,
     ),
@@ -309,7 +310,7 @@ def test_BaseGitRepository_make_dirs(tmp_path, test_case, is_success_case):
     # Test cloning fails
     (
         False,
-        ("Directory created successfully", "", git.BaseGitRepository._EC_OK, git.ERROR_NONE),
+        (git.BaseGitRepository._MSG_MAKE_DIRS_SUCCESS, "", git.BaseGitRepository._EXIT_CODE_OK, git.ERROR_NONE),
         ("", "Cloning failed", 128),
         git.ERROR_GIT_CLONE,
     ),
@@ -317,7 +318,7 @@ def test_BaseGitRepository_make_dirs(tmp_path, test_case, is_success_case):
     # Test clone() successful
     (
         False,
-        ("Directory created successfully", "", git.BaseGitRepository._EC_OK, git.ERROR_NONE),
+        (git.BaseGitRepository._MSG_MAKE_DIRS_SUCCESS, "", git.BaseGitRepository._EXIT_CODE_OK, git.ERROR_NONE),
         ("", "Cloning into dir...", 0),  # git logs to stderr by default
         git.ERROR_NONE,
     ),
@@ -325,7 +326,7 @@ def test_BaseGitRepository_make_dirs(tmp_path, test_case, is_success_case):
     # Test clone() has succeeded previously (i.e., _cloned is true)
     (
         True,
-        ("", "", git.BaseGitRepository._EC_OK, git.ERROR_NONE),
+        ("", "", git.BaseGitRepository._EXIT_CODE_OK, git.ERROR_NONE),
         ("", "", 0),
         git.ERROR_NONE,
     ),
@@ -585,7 +586,7 @@ def test_BaseGitRepository_apply(mock_run_cmd, tmp_path, cloned, run_cmd_return)
     (
         ("", "Cloning into dir...", 0, git.ERROR_NONE),
         ("", "Switched to branch", 0, git.ERROR_NONE),
-        ("Obtaining PR diff succeeded", "", git.BaseGitRepository._EC_OK, git.ERROR_NONE),
+        (git.BaseGitRepository._MSG_PR_DIFF_SUCCESS, "", git.BaseGitRepository._EXIT_CODE_OK, git.ERROR_NONE),
         ("", "Apply failed", 128, git.ERROR_GIT_APPLY),
         git.ERROR_GIT_APPLY,
     ),
@@ -594,7 +595,7 @@ def test_BaseGitRepository_apply(mock_run_cmd, tmp_path, cloned, run_cmd_return)
     (
         ("", "Cloning into dir...", 0, git.ERROR_NONE),
         ("", "Switched to branch", 0, git.ERROR_NONE),
-        ("Obtaining PR diff succeeded", "", git.BaseGitRepository._EC_OK, git.ERROR_NONE),
+        (git.BaseGitRepository._MSG_PR_DIFF_SUCCESS, "", git.BaseGitRepository._EXIT_CODE_OK, git.ERROR_NONE),
         ("", "", 0, git.ERROR_NONE),
         git.ERROR_NONE,
     ),
@@ -644,7 +645,8 @@ def test_BaseGitRepository_download_pr(mock_apply, mock_get_pr_diff, mock_checko
     elif error_stage == git.ERROR_GIT_APPLY:
         expected_output = apply_return
     else:
-        expected_output = ("Downloading PR succeeded", "", git.BaseGitRepository._EC_OK, git.ERROR_NONE)
+        expected_output = (git.BaseGitRepository._MSG_DOWNLOAD_PR_SUCCESS, "",
+                           git.BaseGitRepository._EXIT_CODE_OK, git.ERROR_NONE)
 
     assert actual_output == expected_output
 
@@ -660,7 +662,7 @@ def test_GitRepository():
 # List of constants and methods defined in BaseGitRepository - used in subclass tests
 BASE_GIT_REPOSITORY_ATTRIBUTES = [
     # Constants
-    "_EC_OK", "_EC_NOT_OK",
+    "_EXIT_CODE_OK", "_EXIT_CODE_NOT_OK",
     "_MSG_REPO_ALREADY_CLONED", "_ERR_MSG_REPO_NOT_CLONED_YET",
     "_ALREADY_CLONED", "_NOT_CLONED_YET",
 

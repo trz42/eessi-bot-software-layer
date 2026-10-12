@@ -400,10 +400,9 @@ def download_pr(event_info, arch_job_dir, clone_via=None):
 
     git_host = get_git_hosting_platform()
     repo = create_git_repository_instance(repo_url, arch_job_dir, git_host)
-    output, error_msg, exit_code, error_stage = repo.download_pr(pr_number, base_branch)
 
     # Return download_pr() output directly
-    return output, error_msg, exit_code, error_stage
+    return repo.download_pr(pr_number, base_branch)
 
 
 def comment_download_pr(base_repo_name, pr_number, download_pr_exit_code, download_pr_error, error_stage):

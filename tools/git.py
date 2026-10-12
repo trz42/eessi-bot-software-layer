@@ -11,10 +11,11 @@
 
 # Standard library imports
 import os
+import sys
 from typing import Union
 
 # Third party imports (anything installed into the local Python environment)
-# (none)
+from pyghee.utils import log
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
 from connections import github, gitlab
@@ -124,12 +125,17 @@ class BaseGitRepository:
         self._directory = directory
         self._cloned = False
 
-    _EC_OK = 0
-    _EC_NOT_OK = 1
+    _EXIT_CODE_OK = 0
+    _EXIT_CODE_NOT_OK = 1
+
     _MSG_REPO_ALREADY_CLONED = "The repository has already been cloned!"
     _ERR_MSG_REPO_NOT_CLONED_YET = "The repository has not been cloned yet!"
-    _ALREADY_CLONED = (_MSG_REPO_ALREADY_CLONED, "", _EC_OK, ERROR_NONE)
-    _NOT_CLONED_YET = ("", _ERR_MSG_REPO_NOT_CLONED_YET, _EC_NOT_OK)
+    _MSG_PR_DIFF_SUCCESS = "Obtaining PR diff succeeded"
+    _MSG_MAKE_DIRS_SUCCESS = "Creating directories succeeded"
+    _MSG_DOWNLOAD_PR_SUCCESS = "Downloading PR succeeded"
+
+    _ALREADY_CLONED = (_MSG_REPO_ALREADY_CLONED, "", _EXIT_CODE_OK, ERROR_NONE)
+    _NOT_CLONED_YET = ("", _ERR_MSG_REPO_NOT_CLONED_YET, _EXIT_CODE_NOT_OK)
 
     def _get_pr_src_ref(self, pr_number):
         # 'pull/#/head' is used for PR ref names on GitHub, Codeberg, Gitea, ...
@@ -148,15 +154,15 @@ class BaseGitRepository:
         if exit_code != 0:
             return stdout, stderr, exit_code, error_stage
 
-        return "Obtaining PR diff succeeded", "", self._EC_OK, ERROR_NONE
+        return self._MSG_PR_DIFF_SUCCESS, "", self._EXIT_CODE_OK, ERROR_NONE
 
     def _make_dirs(self):
         try:
             os.makedirs(self._directory, exist_ok=True)
         except Exception as err:
             err_msg = f"Unable to set up directory '{self._directory}' for Git repository '{self._repo_url}': '{err}'"
-            return "", err_msg, self._EC_NOT_OK, ERROR_MAKE_DIRS
-        return "Creating directories succeeded", "", self._EC_OK, ERROR_NONE
+            return "", err_msg, self._EXIT_CODE_NOT_OK, ERROR_MAKE_DIRS
+        return self._MSG_MAKE_DIRS_SUCCESS, "", self._EXIT_CODE_OK, ERROR_NONE
 
     def clone(self):
         if self._cloned:
@@ -227,7 +233,7 @@ class BaseGitRepository:
         # - Apply PR diff
         diff_filename = f"{pr_number}.diff"
 
-        # Clone repo - if it is already cloned it returns _EC_OK = 0
+        # Clone repo - if it is already cloned it returns _EXIT_CODE_OK = 0
         stdout, stderr, exit_code, error_stage = self.clone()
         if exit_code != 0:
             return stdout, stderr, exit_code, error_stage
@@ -244,7 +250,7 @@ class BaseGitRepository:
         if exit_code != 0:
             return stdout, stderr, exit_code, error_stage
 
-        return "Downloading PR succeeded", "", self._EC_OK, ERROR_NONE
+        return self._MSG_DOWNLOAD_PR_SUCCESS, "", self._EXIT_CODE_OK, ERROR_NONE
 
 
 class GitHubGitRepository(BaseGitRepository):
@@ -282,4 +288,7 @@ def create_git_repository_instance(repo_url, directory, git_host):
         return GitHubGitRepository(repo_url, directory)
     elif git_host == GITLAB:
         return GitLabGitRepository(repo_url, directory)
+
+    fn = sys._getframe().f_code.co_name
+    log(f"{fn}(): No GitRepository class for '{git_host}', returning None.")
     return None
