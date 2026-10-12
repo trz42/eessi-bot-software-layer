@@ -1167,7 +1167,7 @@ make_dirs_failure = Unable to create the target directory.
 `make_dirs_failure` is shown when `GitRepository._make_dirs()` failed.
 
 ```ini
-make_dirs_tip = _Tip: Check that you have write permission in the lowest existing level of the path, and that no part of the path exists as a file._
+make_dirs_tip = _Tip: This could be a problem with write permissions or disk space._
 ```
 
 `make_dirs_tip` should contain some hint on how to deal with the issue. It is shown when `GitRepository._make_dirs()` failed.
