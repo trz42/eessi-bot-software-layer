@@ -263,15 +263,15 @@ def check_arg(arg, arg_type=ARG_TYPE_KEY_VALUE):
             log(f"{fn}(): {arg_type} '{arg}' rejected (missing '=')")
             return False
         key, value = arg.split('=', 1)
-        if not JOB_ENV_VARS_KEY_RE.match(key):
+        if not JOB_ENV_VARS_KEY_RE.fullmatch(key):
             log(f"{fn}(): {arg_type} '{arg}' rejected (unsafe key '{key}')")
             return False
-        if not JOB_ENV_VARS_VALUE_RE.match(value):
+        if not JOB_ENV_VARS_VALUE_RE.fullmatch(value):
             log(f"{fn}(): {arg_type} '{arg}' rejected (unsafe value '{value}')")
             return False
         return True
     if arg_type == ARG_TYPE_STR_VALUE:
-        if not SUBMIT_ARG_RE.match(arg):
+        if not SUBMIT_ARG_RE.fullmatch(arg):
             log(f"{fn}(): {arg_type} '{arg}' rejected (contains unsafe characters)")
             return False
         return True
