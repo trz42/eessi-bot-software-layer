@@ -12,6 +12,7 @@
 # Standard library imports
 from collections import namedtuple
 import re
+import shlex
 
 # Third party imports (anything installed into the local Python environment)
 from pyghee.utils import log
@@ -299,6 +300,8 @@ class EESSIBotActionFilter:
         for _filter in self.action_filters:
             cm = _filter.component
             re = _filter.pattern
+            if any(char.isspace() for char in re):
+                re = shlex.quote(re)
             filter_str_list.append(f"{cm}:{re}")
         return " ".join(filter_str_list)
 

@@ -11,6 +11,7 @@
 
 # Standard library imports
 from contextlib import nullcontext
+import shlex
 from unittest.mock import patch
 
 # Third party imports (anything installed into the local Python environment)
@@ -147,7 +148,12 @@ class MockActionFilter():
         return self.action_filters == other.action_filters
 
     def to_string(self):
-        return " ".join([":".join(af) for af in self.action_filters])
+        filter_strings = []
+        for component, pattern in self.action_filters:
+            if any(char.isspace() for char in pattern):
+                pattern = shlex.quote(pattern)
+            filter_strings.append(f"{component}:{pattern}")
+        return " ".join(filter_strings)
 
 
 class MockCommand():

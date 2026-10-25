@@ -213,7 +213,7 @@ allowed_exportvars = []
 # to a file `export_vars.sh` which is sourced before the `bot/build.sh` script
 # runs. The `VALUE` part can contain multiple space-separated _argument units_
 # enclosed in double quotes. An example argument could look as follows
-# 
+#
 # job_env_vars:EB_ARGS="--from-pr 345 --parallel=6"
 #
 # The list `allowed_job_env_vars` defines which `KEY=VALUE` pairs in
@@ -273,7 +273,7 @@ allowed_job_env_vars = []
 # with the format `submit_args:OPTIONS`. The `OPTIONS` contain multiple
 # space-separated _argument units_ enclosed in double quotes. An example
 # argument could look as follows
-# 
+#
 # submit_args:"--time 10 --mem=20G"
 #
 # The list `allowed_submit_args` defines which options in `submit_args` filters

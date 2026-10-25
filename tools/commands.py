@@ -105,11 +105,16 @@ class EESSIBotCommand:
 
         Raises:
             EESSIBotCommandError: if EESSIBotActionFilterError is caught while
-                creating and EESSIBotActionFilter
+                creating and EESSIBotActionFilter, or if the command contains
+                invalid quoting
             Exception: if any other exception was caught
         """
         # TODO add function name to log messages
-        cmd_as_list = shlex.split(cmd_str)
+        try:
+            cmd_as_list = shlex.split(cmd_str)
+        except ValueError as err:
+            log(f"ERROR parsing bot command '{cmd_str}' failed with {err}")
+            raise EESSIBotCommandError("invalid quoting in bot command") from err
         self.command = cmd_as_list[0]  # E.g. 'build' or 'help'
         self.general_args = []
         self.action_filters = None

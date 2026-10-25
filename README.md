@@ -884,7 +884,7 @@ allowed_submit_args = []
 `job_env_vars` and `submit_args` values and rejects any argument that contains shell
 metacharacters. For `job_env_vars`, keys must be valid shell identifiers that are checked against the
 pattern `tasks.build.JOB_ENV_VARS_KEY_RE`, and each space-separated value part is checked
-against the `tasks.build.JOB_ENV_VARS_KEY_RE` value charset (which allows `$` for variable references like
+against the `tasks.build.JOB_ENV_VARS_VALUE_RE` charset (which allows `$` for variable references like
 `/tmp/$USER` but no other shell metacharacters). For `submit_args`, each
 space-separated part is checked against the character allow-list defined by
 `tasks.build.SUBMIT_ARG_RE`. Spaces are allowed _between_ argument units
