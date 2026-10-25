@@ -29,7 +29,7 @@ import pytest
 from tasks.build import Job, create_pr_comment, request_bot_build_issue_comments
 from tools import run_cmd, run_subprocess
 from tools.build_params import EESSIBotBuildParams
-from tasks.build import ARG_TYPE_KEY_VALUE, ARG_TYPE_STR_VALUE
+from tasks.build import validate_args, ARG_TYPE_KEY_VALUE, ARG_TYPE_STR_VALUE
 from tools.job_metadata import create_metadata_file, read_metadata_file
 from tools.pr_comments import PRCommentInfo, get_submitted_job_comment
 
@@ -616,7 +616,6 @@ def test_request_bot_build_issue_comments(monkeypatch):
     assert status_table['result'] == [':grin: SUCCESS']
 
 
-from tasks.build import validate_args, ARG_TYPE_KEY_VALUE, ARG_TYPE_STR_VALUE
 class TestValidateArgs:
     """Tests for validate_args function in tasks/build.py"""
 
@@ -980,7 +979,6 @@ class TestCheckArgumentUnit:
         assert not check_argument_unit("VAR=with\nnewline", ARG_TYPE_KEY_VALUE)
 
 
-from tasks.build import validate_args
 class TestValidateArgsSecurity:
     """Tests that validate_args blocks shell injection even with permissive patterns"""
 

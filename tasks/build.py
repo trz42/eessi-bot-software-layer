@@ -309,6 +309,7 @@ def check_argument_unit(arg_unit, arg_type=ARG_TYPE_KEY_VALUE):
 
     return True
 
+
 def check_patterns_wellformed(patterns, setting_name):
     """
     Validate the structure of allowed-args patterns read from configuration.
@@ -494,7 +495,6 @@ def validate_args(args, allowed_patterns, arg_type=ARG_TYPE_KEY_VALUE):
     rejected = []
 
     for arg in args:
-        matched = False
         if arg_type == ARG_TYPE_KEY_VALUE:
             if '=' not in arg:
                 log(f"{fn}(): {arg_type} '{arg}' rejected (missing '=')")
