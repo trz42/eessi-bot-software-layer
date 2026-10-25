@@ -191,21 +191,21 @@ class MockCommand():
                              build_params={"architecture": "x86_64/intel/icelake", "accelerator": "nvidia/cc90"}))),
 
     # Test 'build' command with quoted multi-word jobargs value
-    ('build jobargs:EB_ARGS="--from-pr 345 --parallel=6"',
+    ('build job_env_vars:EB_ARGS="--from-pr 345 --parallel=6"',
      nullcontext(MockCommand("build",
                              action_filters=MockActionFilter(
                                  [("exportvariable", "EB_ARGS=--from-pr 345 --parallel=6")])))),
 
     # Test 'build' command with quoted multi-word submitargs value
-    ('build submitargs:"--time=30 --mem=30G"',
+    ('build submit_args:"--time=30 --mem=30G"',
      nullcontext(MockCommand("build",
-                             action_filters=MockActionFilter([("submitargs", "--time=30 --mem=30G")])))),
+                             action_filters=MockActionFilter([("submit_args", "--time=30 --mem=30G")])))),
 
     # Test 'build' command with both jobargs and submitargs (quoted)
-    ('build jobargs:EB_ARGS="--from-pr 345" submitargs:"--time 30 --mem 30G"',
+    ('build job_env_vars:EB_ARGS="--from-pr 345" submit_args:"--time 30 --mem 30G"',
      nullcontext(MockCommand("build",
                              action_filters=MockActionFilter([("exportvariable", "EB_ARGS=--from-pr 345"),
-                                                              ("submitargs", "--time 30 --mem 30G")])))),
+                                                              ("submit_args", "--time 30 --mem 30G")])))),
 ])
 def test_EESSIBotCommand(cmd_str, expectation):
     with expectation as expected_command:

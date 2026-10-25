@@ -17,8 +17,6 @@
 #
 # license: GPLv2
 #
-# Some changes in this file were developed with the help of a locally hosted glm5.2 via Codex.
-#
 
 # Standard library imports
 import sys
@@ -87,14 +85,14 @@ REQUIRED_CONFIG = {
         # config.DEPLOYCFG_SETTING_SIGNING,                          # optional
         config.DEPLOYCFG_SETTING_UPLOAD_POLICY],                   # required
     config.SECTION_DOWNLOAD_PR_COMMENTS: [
-        config.DOWNLOAD_PR_COMMENTS_SETTING_CURL_FAILURE,          # required
-        config.DOWNLOAD_PR_COMMENTS_SETTING_CURL_TIP,              # required
         config.DOWNLOAD_PR_COMMENTS_SETTING_GIT_APPLY_FAILURE,     # required
         config.DOWNLOAD_PR_COMMENTS_SETTING_GIT_APPLY_TIP,         # required
         config.DOWNLOAD_PR_COMMENTS_SETTING_GIT_CHECKOUT_FAILURE,  # required
         config.DOWNLOAD_PR_COMMENTS_SETTING_GIT_CHECKOUT_TIP,      # required
         config.DOWNLOAD_PR_COMMENTS_SETTING_GIT_CLONE_FAILURE,     # required
         config.DOWNLOAD_PR_COMMENTS_SETTING_GIT_CLONE_TIP,         # required
+        config.DOWNLOAD_PR_COMMENTS_SETTING_MAKE_DIRS_FAILURE,     # required
+        config.DOWNLOAD_PR_COMMENTS_SETTING_MAKE_DIRS_TIP,         # required
         config.DOWNLOAD_PR_COMMENTS_SETTING_PR_DIFF_FAILURE,       # required
         config.DOWNLOAD_PR_COMMENTS_SETTING_PR_DIFF_TIP],          # required
     config.SECTION_EVENT_HANDLER: [
@@ -199,16 +197,21 @@ class EESSIBotSoftwareLayer(PyGHee):
         Raises:
             Exception: raises any exception that is not of type EESSIBotCommandError
         """
-        issue_url = event_info.issue_url
+        # The bot only handles comments on PRs, skip issue comments etc.
+        if not event_info.is_pr_comment:
+            self.log("Received non-PR comment - skipping")
+            return
+
         action = event_info.action
         sender = event_info.event_triggered_by
         owner = event_info.comment_created_by
         repo_name = event_info.repo_name
-        pr_number = event_info.issue_number
+        pr_number = event_info.pr_number
+        pr_url = event_info.pr_url
 
         # TODO add request body text (['comment']['body']) to log message when
         #      log level is set to debug
-        self.log(f"Comment in {issue_url} (owned by @{owner}) {action} by @{sender}")
+        self.log(f"Comment in {pr_url} (owned by @{owner}) {action} by @{sender}")
 
         app_name = get_app_name(self.cfg)
         command_response_fmt = self.cfg[config.SECTION_BOT_CONTROL][config.BOT_CONTROL_SETTING_COMMAND_RESPONSE_FMT]
@@ -367,7 +370,7 @@ class EESSIBotSoftwareLayer(PyGHee):
             )
             issue_comment.edit(comment_body)
 
-            self.log(f"issue_comment event (url {issue_url}) handled!")
+            self.log(f"issue_comment event (url {pr_url}) handled!")
 
     # PyGHee gets the event type by subscripting event_info, i.e., it gets 'note' for GL comment events
     handle_note_event = handle_issue_comment_event
@@ -585,7 +588,7 @@ class EESSIBotSoftwareLayer(PyGHee):
             build_msg += "not submitting build jobs"
             return build_msg
 
-        if check_build_permission(pr, event_info):
+        if check_build_permission(event_info):
             # use filter from command
             submitted_jobs = submit_build_jobs(pr, event_info, bot_command.action_filters, bot_command.build_params)
             if submitted_jobs is None or len(submitted_jobs) == 0:
@@ -754,7 +757,7 @@ class EESSIBotSoftwareLayer(PyGHee):
 
         # Jobs can only be cancelled by the user who submitted the job
         # -> No need to proceed if user cannot submit jobs
-        if not check_build_permission(pr, event_info):
+        if not check_build_permission(event_info):
             self.log(f"User '{user}' does not have build permission - skipping cancellation.")
             return f"\n  - User `{user}` cannot submit or cancel build jobs."
 
@@ -883,10 +886,10 @@ def main():
         print("Configuration check: FAILED")
         sys.exit(1)
 
-    # Verify that allowed_jobargs/submitargs/exportvars settings are valid JSON
+    # Verify that allowed_job_env_vars/submit_args/exportvars settings are valid JSON
     cfg = config.read_config()
     if not check_allowed_args_config(cfg):
-        print("Configuration check: FAILED (invalid allowed_args settings)")
+        print("Configuration check: FAILED (invalid allowed_{job_env_vars,submit_args} settings)")
         sys.exit(1)
 
     # Verify that the event handler is able to connect to the Git hosting platform

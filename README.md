@@ -1,5 +1,3 @@
-<!-- Some sections in this file were developed with the help of a locally hosted glm5.2 via Codex. -->
-
 > [!NOTE]
 > In the future the installation and configuration of the bot will be moved
 > to the EESSI docs, likely under [Build-test-deploy bot](https://www.eessi.io/docs/bot/).
@@ -759,23 +757,23 @@ allowed_exportvars = []
 ```
 
 ```ini
-allowed_jobargs = [{"key": "SKIP_TESTS", "value": "yes|no"}, {"key": "DEBUG_.*", "value": "true|false"}]
+allowed_job_env_vars = [{"key": "SKIP_TESTS", "value": "yes|no"}, {"key": "DEBUG_.*", "value": "true|false"}]
 ```
 
 More advanced examples:
 
 ```ini
 # allow any value for EB_ARGS (e.g. EB_ARGS=--installpath=/tmp/$USER/pr12345)
-allowed_jobargs = [{"key": "EB_ARGS", "value": ".*"}]
+allowed_job_env_vars = [{"key": "EB_ARGS", "value": ".*"}]
 
 # allow a specific set of install paths
-allowed_jobargs = [{"key": "EB_ARGS", "value": "--installpath=/tmp/.*"}]
+allowed_job_env_vars = [{"key": "EB_ARGS", "value": "--installpath=/tmp/.*"}]
 
 # allow unsetting a variable (empty value)
-allowed_jobargs = [{"key": "FOO", "value": ""}]
+allowed_job_env_vars = [{"key": "FOO", "value": ""}]
 ```
 
-**Multi-word values:** A `jobargs` value may contain multiple space-separated
+**Multi-word values:** A `job_env_vars` value may contain multiple space-separated
 tokens (e.g. `EB_ARGS="--from-pr 345 --parallel=6"`). The value is split on
 spaces and grouped into argument units (a flag followed by its value, or a
 self-contained `--flag=value` token). Each unit must match at least one allowed
@@ -784,10 +782,10 @@ and `--flag value` forms with a single entry:
 
 ```ini
 # allow --from-pr with a numeric argument, using either --from-pr=N or --from-pr N
-allowed_jobargs = [{"key": "EB_ARGS", "value": "--from-pr[= ][0-9]+"}]
+allowed_job_env_vars = [{"key": "EB_ARGS", "value": "--from-pr[= ][0-9]+"}]
 
 # allow multiple flags for EB_ARGS
-allowed_jobargs = [
+allowed_job_env_vars = [
   {"key": "EB_ARGS", "value": "--from-pr[= ][0-9]+"},
   {"key": "EB_ARGS", "value": "--parallel[= ][0-9]+"},
   {"key": "EB_ARGS", "value": "--include-easyblock"}
@@ -795,22 +793,22 @@ allowed_jobargs = [
 ```
 
 When quoting is used in the bot command (e.g.
-`jobargs:EB_ARGS="--from-pr 345 --parallel=6"`), the quotes are consumed by the
+`job_env_vars:EB_ARGS="--from-pr 345 --parallel=6"`), the quotes are consumed by the
 parser and the value is re-quoted with double quotes when written to
 `export_vars.sh` (e.g. `export EB_ARGS="--from-pr 345 --parallel=6"`).
 
-`allowed_jobargs` defines a list of key-value patterns that are allowed to be
-specified in a PR command with the `jobargs` filter (or its alias
+`allowed_job_env_vars` defines a list of key-value patterns that are allowed to be
+specified in a PR command with the `job_env_vars` filter (or its alias
 `exportvariable`). Each entry is a dict with `key` and `value` keys whose values
 are regular expressions. An argument `KEY=VALUE` is accepted if its key matches
 one entry's `key` regex AND every argument unit in its value matches at least
 one entry's `value` regex (for the same key); otherwise it is rejected and no
 jobs are prepared. Patterns are matched using Python's `re` module
-(`re.search`), so the patterns are Python regular expressions. These variables
+(`re.fullmatch`), so the patterns are Python regular expressions. These variables
 will be exported into the build environment before running the `bot/build.sh`
 script.
 
-If `allowed_jobargs` is not defined, the bot falls back to the legacy
+If `allowed_job_env_vars` is not defined, the bot falls back to the existing
 `allowed_exportvars` setting (see above), converting each exact `KEY=VALUE`
 string into an equivalent regex pattern. This preserves backward compatibility
 for existing deployments.
@@ -818,78 +816,78 @@ for existing deployments.
 A reasonable default setting is
 
 ```ini
-allowed_jobargs = []
+allowed_job_env_vars = []
 ```
 
 ```ini
-allowed_submitargs = [{"value": "--time=.*"}, {"value": "--partition=.*"}]
+allowed_submit_args = [{"value": "--time=.*"}, {"value": "--partition=.*"}]
 ```
 
 More advanced examples:
 
 ```ini
 # allow a specific time format only
-allowed_submitargs = [{"value": "--time=[0-9]{2}:[0-9]{2}:[0-9]{2}"}]
+allowed_submit_args = [{"value": "--time=[0-9]{2}:[0-9]{2}:[0-9]{2}"}]
 
 # allow multiple options with one pattern
-allowed_submitargs = [{"value": "--(time|partition|mem)=.*"}]
+allowed_submit_args = [{"value": "--(time|partition|mem)=.*"}]
 ```
 
-**Multiple Slurm arguments:** A single `submitargs` may contain multiple
-space-separated Slurm arguments (e.g. `submitargs:"--time=30 --mem=30G"`). The
+**Multiple Slurm arguments:** A single `submit_args` may contain multiple
+space-separated Slurm arguments (e.g. `submit_args:"--time=30 --mem=30G"`). The
 value is split on spaces and grouped into argument units, each of which must
 match at least one allowed pattern. Use `[= ]` to match both `--flag=value` and
 `--flag value` forms:
 
 ```ini
 # allow --time and --mem with numeric values, using either form
-allowed_submitargs = [
+allowed_submit_args = [
   {"value": "--time[= ][0-9]+"},
   {"value": "--mem[= ][0-9]+G"},
   {"value": "--ntasks[= ][0-9]+"}
 ]
 ```
 
-Quotes in the bot command (e.g. `submitargs:"--time 30 --mem 30G"`) are only
-used to let the parser accept multiple arguments in a single `submitargs`; the
+Quotes in the bot command (e.g. `submit_args:"--time 30 --mem 30G"`) are only
+used to let the parser accept multiple arguments in a single `submit_args`; the
 quotes are not retained for the `sbatch` command.
 
-`allowed_submitargs` defines a list of patterns that are allowed to be passed to
-the job submission command (e.g. `sbatch`) via the `submitargs` filter. Each
+`allowed_submit_args` defines a list of patterns that are allowed to be passed to
+the job submission command (e.g. `sbatch`) via the `submit_args` filter. Each
 entry is a dict with a `value` key whose value is a regular expression. An
 argument is accepted if every argument unit matches at least one entry's `value`
 regex; otherwise it is rejected and no jobs are prepared. Patterns are matched
-using Python's `re` module (`re.search`), so the patterns are Python regular
-expressions. Unlike `jobargs`, these options are NOT exported into the build
+using Python's `re` module (`re.fullmatch`), so the patterns are Python regular
+expressions. Unlike `job_env_vars`, these options are NOT exported into the build
 environment -- they are appended to the `sbatch` command line only.
 
 **Argument ordering:** The full submit command is constructed as:
 
 ```bash
-<submit_command> <slurm_params> <time_limit> <slurm_opts> [--job-name=...] <submit_opts> <script>
+<submit_command> <slurm_params> <time_limit> <slurm_opts> [--job-name=...] <submit_args> <script>
 ```
 
 where `<slurm_params>` is the global setting from `[buildenv]`, `<slurm_opts>`
-comes from the node type's `slurm_params` in the node map, and `<submit_opts>`
-are the user-supplied submitargs. Because submitargs are placed _after_
+comes from the node type's `slurm_params` in the node map, and `<submit_args>`
+are the user-supplied submit_args. Because submit_args are placed _after_
 `slurm_params` and `slurm_opts`, they can override values set by the site
 configuration (e.g. partition, time limit, memory). Site operators should be
-aware of this when defining `allowed_submitargs` patterns.
+aware of this when defining `allowed_submit_args` patterns.
 
 A reasonable default setting is
 
 ```ini
-allowed_submitargs = []
+allowed_submit_args = []
 ```
 
 **Security note:** As a defence-in-depth measure, the bot sanitizes all
-`jobargs` and `submitargs` values and rejects any argument that contains shell
-metacharacters. For `jobargs`, keys must be valid shell identifiers
-(`[a-zA-Z_][a-zA-Z0-9_]*`), and each space-separated value part is checked
-against the jobargs value charset (which allows `$` for variable references like
-`/tmp/$USER` but no other shell metacharacters). For `submitargs`, each
-space-separated part is checked against the strict charset
-`[a-zA-Z0-9_=:./+,@-]` (no `$`). Spaces are allowed _between_ argument units
+`job_env_vars` and `submit_args` values and rejects any argument that contains shell
+metacharacters. For `job_env_vars`, keys must be valid shell identifiers that are checked against the
+pattern `tasks.build.JOB_ENV_VARS_KEY_RE`, and each space-separated value part is checked
+against the `tasks.build.JOB_ENV_VARS_KEY_RE` value charset (which allows `$` for variable references like
+`/tmp/$USER` but no other shell metacharacters). For `submit_args`, each
+space-separated part is checked against the character allow-list defined by
+`tasks.build.SUBMIT_ARG_RE`. Spaces are allowed _between_ argument units
 (after the parser splits the value) but not within a single token. This prevents
 shell injection even if a configured pattern is overly permissive (e.g.
 `value: ".*"`). Additionally, pattern entries that are not well-formed dicts
@@ -1301,6 +1299,18 @@ The `[download_pr_comments]` section sets templates for messages related to
 downloading the contents of a pull request.
 
 ```ini
+make_dirs_failure = Unable to create the target directory.
+```
+
+`make_dirs_failure` is shown when `GitRepository._make_dirs()` failed.
+
+```ini
+make_dirs_tip = _Tip: This could be a problem with write permissions or disk space._
+```
+
+`make_dirs_tip` should contain some hint on how to deal with the issue. It is shown when `GitRepository._make_dirs()` failed.
+
+```ini
 git_clone_failure = Unable to clone the target repository.
 ```
 
@@ -1326,18 +1336,6 @@ git_checkout_tip = _Tip: Ensure that the branch name is correct and the target b
 is shown when `git checkout` failed.
 
 ```ini
-curl_failure = Unable to download the `.diff` file.
-```
-
-`curl_failure` is shown when downloading the `PR_NUMBER.diff`
-
-```ini
-curl_tip = _Tip: This could be a connection failure. Try again and if the issue remains check if the address is correct_
-```
-
-`curl_tip` should help in how to deal with failing downloads of the `.diff` file.
-
-```ini
 git_apply_failure = Unable to download or merge changes between the source branch and the destination branch.
 ```
 
@@ -1358,7 +1356,7 @@ pr_diff_failure = Unable to obtain PR diff.
 The value of `pr_diff_failure` is shown when the `.diff` file could not be obtained.
 
 ```ini
-pr_diff_tip = _Tip: This could be a problem with SSH access to the repository._
+pr_diff_tip = _Tip: This could be a problem with HTTPS/SSH access to the repository._
 ```
 
 The value of `pr_diff_tip` should guide the maintainer / bot administrator about resolving the cause for the failing procedure to obtain the `.diff` file.

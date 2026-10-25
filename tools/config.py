@@ -14,8 +14,6 @@
 #
 # license: GPLv2
 #
-# Some changes in this file were developed with the help of a locally hosted glm5.2 via Codex.
-#
 
 # Standard library imports
 import configparser
@@ -43,8 +41,8 @@ BOT_CONTROL_SETTING_CHATLEVEL = 'chatlevel'
 
 SECTION_BUILDENV = 'buildenv'
 BUILDENV_SETTING_ALLOWED_EXPORTVARS = 'allowed_exportvars'
-BUILDENV_SETTING_ALLOWED_JOBARGS = 'allowed_jobargs'
-BUILDENV_SETTING_ALLOWED_SUBMITARGS = 'allowed_submitargs'
+BUILDENV_SETTING_ALLOWED_JOB_ENV_VARS = 'allowed_job_env_vars'
+BUILDENV_SETTING_ALLOWED_SUBMIT_ARGS = 'allowed_submit_args'
 BUILDENV_SETTING_ALLOW_UPDATE_SUBMIT_OPTS = 'allow_update_submit_opts'
 BUILDENV_SETTING_BUILD_JOB_SCRIPT = 'build_job_script'
 BUILDENV_SETTING_BUILD_LOGS_DIR = 'build_logs_dir'
@@ -82,14 +80,14 @@ DEPLOYCFG_SETTING_SIGNING_SCRIPT = 'script'
 DEPLOYCFG_SETTING_UPLOAD_POLICY = 'upload_policy'
 
 SECTION_DOWNLOAD_PR_COMMENTS = 'download_pr_comments'
-DOWNLOAD_PR_COMMENTS_SETTING_CURL_FAILURE = 'curl_failure'
-DOWNLOAD_PR_COMMENTS_SETTING_CURL_TIP = 'curl_tip'
 DOWNLOAD_PR_COMMENTS_SETTING_GIT_APPLY_FAILURE = 'git_apply_failure'
 DOWNLOAD_PR_COMMENTS_SETTING_GIT_APPLY_TIP = 'git_apply_tip'
 DOWNLOAD_PR_COMMENTS_SETTING_GIT_CHECKOUT_FAILURE = 'git_checkout_failure'
 DOWNLOAD_PR_COMMENTS_SETTING_GIT_CHECKOUT_TIP = 'git_checkout_tip'
 DOWNLOAD_PR_COMMENTS_SETTING_GIT_CLONE_FAILURE = 'git_clone_failure'
 DOWNLOAD_PR_COMMENTS_SETTING_GIT_CLONE_TIP = 'git_clone_tip'
+DOWNLOAD_PR_COMMENTS_SETTING_MAKE_DIRS_FAILURE = 'make_dirs_failure'
+DOWNLOAD_PR_COMMENTS_SETTING_MAKE_DIRS_TIP = 'make_dirs_tip'
 DOWNLOAD_PR_COMMENTS_SETTING_PR_DIFF_FAILURE = 'pr_diff_failure'
 DOWNLOAD_PR_COMMENTS_SETTING_PR_DIFF_TIP = 'pr_diff_tip'
 

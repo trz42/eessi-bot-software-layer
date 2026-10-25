@@ -17,7 +17,7 @@ from typing import Union
 # (none)
 
 # Local application imports (anything from EESSI/eessi-bot-software-layer)
-from connections import gitlab
+from connections import github, gitlab
 from tools.git import get_git_hosting_platform, GITHUB, GITLAB
 
 
@@ -74,11 +74,7 @@ class BaseEventInfo():
         raise NotImplementedError()
 
     @cached_property
-    def issue_number(self):
-        raise NotImplementedError()
-
-    @cached_property
-    def issue_url(self):
+    def is_pr_comment(self):
         raise NotImplementedError()
 
     @cached_property
@@ -94,6 +90,10 @@ class BaseEventInfo():
         raise NotImplementedError()
 
     @cached_property
+    def pr_base_branch(self):
+        raise NotImplementedError()
+
+    @cached_property
     def pr_merged_status(self):
         raise NotImplementedError()
 
@@ -105,6 +105,14 @@ class BaseEventInfo():
     def repo_name(self):
         raise NotImplementedError()
 
+    @cached_property
+    def repo_git_https(self):
+        raise NotImplementedError()
+
+    @cached_property
+    def repo_git_ssh(self):
+        raise NotImplementedError()
+
 
 class GitHubEventInfo(BaseEventInfo):
     """
@@ -113,6 +121,15 @@ class GitHubEventInfo(BaseEventInfo):
     def __init__(self, event_info):
         super().__init__(event_info)
         self._request_body = event_info["raw_request_body"]
+
+    @cached_property
+    def _pr_obj(self):
+        pr_obj = None
+        if self.event_type == "pull_request" or self.is_pr_comment:
+            gh = github.get_instance()
+            repo = gh.get_repo(self.repo_name)
+            pr_obj = repo.get_pull(self.pr_number)
+        return pr_obj
 
     @cached_property
     def action(self):
@@ -143,12 +160,9 @@ class GitHubEventInfo(BaseEventInfo):
         return self.event_info["type"]
 
     @cached_property
-    def issue_number(self):
-        return self._request_body["issue"]["number"]
-
-    @cached_property
-    def issue_url(self):
-        return self._request_body["issue"]["html_url"]
+    def is_pr_comment(self):
+        # Events from PR comments include a "pull_request" object in the "issue" object
+        return (self.event_type == "issue_comment") and ("pull_request" in self._request_body["issue"])
 
     @cached_property
     def label_name(self):
@@ -156,28 +170,64 @@ class GitHubEventInfo(BaseEventInfo):
 
     @cached_property
     def pr_number(self):
+        pr_number = -1
         if self.event_type == "pull_request":
             pr_number = self._request_body["pull_request"]["number"]
-        else:
-            # Allow accessing 'pr_number' when handling 'issue_comment' events by falling back to 'issue_number'
-            pr_number = self.issue_number
+        elif self.is_pr_comment:
+            pr_number = self._request_body["issue"]["number"]
         return pr_number
 
     @cached_property
     def pr_title(self):
-        return self._request_body["pull_request"]["title"]
+        pr_title = ""
+        if self.event_type == "pull_request":
+            pr_title = self._request_body["pull_request"]["title"]
+        elif self.is_pr_comment:
+            pr_title = self._request_body["issue"]["title"]
+        return pr_title
+
+    @cached_property
+    def pr_base_branch(self):
+        pr_base_branch = ""
+        if self.event_type == "pull_request":
+            pr_base_branch = self._request_body["pull_request"]["base"]["ref"]
+        elif self.is_pr_comment:
+            # issue_comment events do not include base branch info - retrieve via GH API
+            pr = self._pr_obj
+            pr_base_branch = pr.base.ref
+        return pr_base_branch
 
     @cached_property
     def pr_merged_status(self):
-        return self._request_body["pull_request"]["merged"]
+        state = None
+        if self.event_type == "pull_request":
+            state = self._request_body["pull_request"]["merged"]
+        elif self.is_pr_comment:
+            # issue_comment events do not include merged status - retrieve via GH API
+            pr = self._pr_obj
+            state = pr.merged
+        return state
 
     @cached_property
     def pr_url(self):
-        return self._request_body["pull_request"]["html_url"]
+        pr_url = ""
+        if self.event_type == "pull_request":
+            pr_url = self._request_body["pull_request"]["html_url"]
+        elif self.is_pr_comment:
+            pr_url = self._request_body["issue"]["pull_request"]["html_url"]
+        return pr_url
 
     @cached_property
     def repo_name(self):
         return self._request_body["repository"]["full_name"]
+
+    @cached_property
+    def repo_git_https(self):
+        return self._request_body["repository"]["clone_url"]
+
+    @cached_property
+    def repo_git_ssh(self):
+        return self._request_body["repository"]["ssh_url"]
 
 
 class GitLabEventInfo(BaseEventInfo):
@@ -262,31 +312,9 @@ class GitLabEventInfo(BaseEventInfo):
         gl_event_type = self.event_info["type"]
         return self._EVENT_TYPE_MAP.get(gl_event_type, self._UNKNOWN)
 
-    # The bot does not handle issue events, but comment events can come from both issue and MR comments.
-    # We therefore need to check what type of comment it is to get the issue numbers and URLs.
     @cached_property
-    def issue_number(self):
-        noteable_type = self._object_attributes["noteable_type"]
-        if noteable_type == "MergeRequest":
-            issue_iid = self._request_body["merge_request"]["iid"]
-        elif noteable_type == "Issue":
-            issue_iid = self._request_body["issue"]["iid"]
-        else:
-            # Comments may also come from commits etc. - default to -1
-            issue_iid = -1
-        return issue_iid
-
-    @cached_property
-    def issue_url(self):
-        noteable_type = self._object_attributes["noteable_type"]
-        if noteable_type == "MergeRequest":
-            issue_url = self._request_body["merge_request"]["url"]
-        elif noteable_type == "Issue":
-            issue_url = self._request_body["issue"]["url"]
-        else:
-            # Comments may also come from commits etc. - default to empty string
-            issue_url = ""
-        return issue_url
+    def is_pr_comment(self):
+        return (self.event_type == "issue_comment") and (self._object_attributes["noteable_type"] == "MergeRequest")
 
     @cached_property
     def label_name(self):
@@ -311,39 +339,60 @@ class GitLabEventInfo(BaseEventInfo):
     # events from comments on MRs store information about the MR in the 'merge_request' field.
     @cached_property
     def pr_number(self):
+        pr_iid = -1
         if self.event_type == "pull_request":
             pr_iid = self._object_attributes["iid"]
-        else:
+        elif self.is_pr_comment:
             pr_iid = self._request_body["merge_request"]["iid"]
         return pr_iid
 
     @cached_property
     def pr_title(self):
+        pr_title = ""
         if self.event_type == "pull_request":
             pr_title = self._object_attributes["title"]
-        else:
+        elif self.is_pr_comment:
             pr_title = self._request_body["merge_request"]["title"]
         return pr_title
 
     @cached_property
-    def pr_merged_status(self):
+    def pr_base_branch(self):
+        pr_base_branch = ""
         if self.event_type == "pull_request":
-            state = self._object_attributes["state"]
-        else:
-            state = self._request_body["merge_request"]["state"]
-        return state == "merged"
+            pr_base_branch = self._object_attributes["target_branch"]
+        elif self.is_pr_comment:
+            pr_base_branch = self._request_body["merge_request"]["target_branch"]
+        return pr_base_branch
+
+    @cached_property
+    def pr_merged_status(self):
+        state = None
+        if self.event_type == "pull_request":
+            state = self._object_attributes["state"] == "merged"
+        elif self.is_pr_comment:
+            state = self._request_body["merge_request"]["state"] == "merged"
+        return state
 
     @cached_property
     def pr_url(self):
+        url = ""
         if self.event_type == "pull_request":
             url = self._object_attributes["url"]
-        else:
+        elif self.is_pr_comment:
             url = self._request_body["merge_request"]["url"]
         return url
 
     @cached_property
     def repo_name(self):
         return self._request_body["project"]["path_with_namespace"]
+
+    @cached_property
+    def repo_git_https(self):
+        return self._request_body["project"]["git_http_url"]
+
+    @cached_property
+    def repo_git_ssh(self):
+        return self._request_body["project"]["git_ssh_url"]
 
 
 # Type for subclasses of BaseEventInfo
