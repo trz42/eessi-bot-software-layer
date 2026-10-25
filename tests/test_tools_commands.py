@@ -218,3 +218,19 @@ def test_EESSIBotCommand(cmd_str, expectation):
         command = commands.EESSIBotCommand(cmd_str)
         assert command == expected_command
         assert command.to_string() == expected_command.to_string()
+
+
+def test_unclosed_quote_raises_command_error():
+    with pytest.raises(commands.EESSIBotCommandError):
+        commands.EESSIBotCommand('build submit_args:"--time 30')
+
+
+def test_to_string_round_trips_quoted_filters():
+    cmd_str = ('build job_env_vars:EB_ARGS="--from-pr 345 --parallel=6" '
+               'submit_args:"--time 30 --mem=30G"')
+    command = commands.EESSIBotCommand(cmd_str)
+    reparsed_command = commands.EESSIBotCommand(command.to_string())
+
+    assert reparsed_command.command == command.command
+    assert reparsed_command.action_filters.action_filters == command.action_filters.action_filters
+    assert reparsed_command.build_params == command.build_params
