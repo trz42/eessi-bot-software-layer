@@ -225,52 +225,6 @@ ARG_TYPE_KEY_VALUE = 'key_eq_value'
 ARG_TYPE_STR_VALUE = 'str_value'
 
 
-def pair_tokens(tokens):
-    """
-    Group a list of space-separated tokens into argument units.
-
-    A unit is either:
-    - a single token containing '=' (e.g. '--parallel=6') -- self-contained
-    - a flag (starting with '--') without '=' followed by a value token that
-      does not start with '--' (e.g. ('--from-pr', '345')) -- joined with a space
-    - a bare flag (starting with '--') without '=' and with no following value
-      (e.g. '--include-easyblock')
-    - any other single token (e.g. a bare value without a preceding flag)
-
-    Args:
-        tokens (list): list of token strings (already split on spaces)
-
-    Returns:
-        (list): list of unit strings; paired tokens are joined with a space
-    """
-    fn = sys._getframe().f_code.co_name
-
-    units = []
-    i = 0
-    while i < len(tokens):
-        token = tokens[i]
-        if '=' in token:
-            # Self-contained unit (e.g. '--time=30' or 'KEY=VALUE')
-            units.append(token)
-            i += 1
-        elif token.startswith('--'):
-            # Flag without '=' -- check if next token is a value
-            if i + 1 < len(tokens) and not tokens[i + 1].startswith('--'):
-                units.append(f"{token} {tokens[i + 1]}")
-                i += 2
-            else:
-                # Bare flag (no value)
-                units.append(token)
-                i += 1
-        else:
-            # Bare value without a preceding flag
-            units.append(token)
-            i += 1
-
-    log(f"{fn}(): tokens {tokens} paired into units {units}")
-    return units
-
-
 def check_argument_unit(arg_unit, arg_type=ARG_TYPE_KEY_VALUE):
     """
     Check that a single argument unit does not contain shell metacharacters.
@@ -590,6 +544,52 @@ def validate_args(args, allowed_patterns, arg_type=ARG_TYPE_KEY_VALUE):
             rejected.append(arg)
 
     return accepted, rejected
+
+
+def pair_tokens(tokens):
+    """
+    Group a list of space-separated tokens into argument units.
+
+    A unit is either:
+    - a single token containing '=' (e.g. '--parallel=6') -- self-contained
+    - a flag (starting with '--') without '=' followed by a value token that
+      does not start with '--' (e.g. ('--from-pr', '345')) -- joined with a space
+    - a bare flag (starting with '--') without '=' and with no following value
+      (e.g. '--include-easyblock')
+    - any other single token (e.g. a bare value without a preceding flag)
+
+    Args:
+        tokens (list): list of token strings (already split on spaces)
+
+    Returns:
+        (list): list of unit strings; paired tokens are joined with a space
+    """
+    fn = sys._getframe().f_code.co_name
+
+    units = []
+    i = 0
+    while i < len(tokens):
+        token = tokens[i]
+        if '=' in token:
+            # Self-contained unit (e.g. '--time=30' or 'KEY=VALUE')
+            units.append(token)
+            i += 1
+        elif token.startswith('--'):
+            # Flag without '=' -- check if next token is a value
+            if i + 1 < len(tokens) and not tokens[i + 1].startswith('--'):
+                units.append(f"{token} {tokens[i + 1]}")
+                i += 2
+            else:
+                # Bare flag (no value)
+                units.append(token)
+                i += 1
+        else:
+            # Bare value without a preceding flag
+            units.append(token)
+            i += 1
+
+    log(f"{fn}(): tokens {tokens} paired into units {units}")
+    return units
 
 
 def get_repo_cfg(cfg):
