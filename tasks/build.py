@@ -460,14 +460,13 @@ def validate_args(args, allowed_patterns, arg_type=ARG_TYPE_KEY_VALUE):
     """
     Validate a list of arguments against a list of allowed patterns.
 
-    TODO: revise matching description (cf README.md)
-
     For ARG_TYPE_KEY_VALUE, each arg is a 'KEY=VALUE' string. The VALUE is split
     on spaces into tokens, which are grouped into units by pair_tokens (e.g.
     '--from-pr 345 --parallel=6' becomes ['--from-pr 345', '--parallel=6']).
-    The KEY must match one pattern's 'key' regex, and every unit must match
-    at least one pattern's 'value' regex. The arg is accepted only if the key
-    matches and all units match.
+    The KEY must match at least one pattern's 'key' regex, and every unit must
+    match the 'value' regex of at least one pattern whose 'key' regex also
+    matches that same KEY. An empty VALUE is accepted only if a key-matching
+    pattern explicitly allows it.
 
     For ARG_TYPE_STR_VALUE, each arg is a bare option string (e.g.
     '--time=30 --mem=30G'). It is split on spaces into tokens, grouped into
